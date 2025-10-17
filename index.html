@@ -3,36 +3,42 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v8</title>
+<title>TrailCoach AI v8.1</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="manifest.json">
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;overflow-x:hidden;}
-h1{text-align:center;font-size:22px;margin:8px 0;}
-.card{background:#fff;border-radius:12px;padding:12px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08);}
-label{display:block;margin:6px 0 4px;font-weight:600;}
-input,select{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;}
-button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:6px;}
-button.save{background:#34c759;}button.orange{background:#ff9500;}button.red{background:#ff3b30;}
-.week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
-.week h3{margin:0;cursor:pointer;font-size:17px;}
-.days{margin-top:6px;padding-left:10px;display:none;}
-.days div{padding:4px 0;border-bottom:1px solid #eee;}
-.small{font-size:13px;color:#666;}
-.toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:2px 8px;font-size:13px;margin-top:-4px;}
-.checkbox-group{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
-.checkbox-group label{font-weight:500;display:flex;align-items:center;gap:4px;background:#f2f2f2;padding:4px 8px;border-radius:8px;}
+  :root{--gap:8px;--card-radius:12px;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;overflow-x:hidden;}
+  h1{text-align:center;font-size:22px;margin:8px 0;}
+  .card{background:#fff;border-radius:var(--card-radius);padding:12px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  label{display:block;margin:6px 0 4px;font-weight:600;}
+  input[type="number"], select, input[type="text"]{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;}
+  button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:6px;}
+  button.save{background:#34c759;} button.orange{background:#ff9500;} button.red{background:#ff3b30;}
+  .week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
+  .week h3{margin:0;cursor:pointer;font-size:17px;}
+  .days{margin-top:6px;padding-left:10px;display:none;}
+  .days div{padding:4px 0;border-bottom:1px solid #eee;}
+  .small{font-size:13px;color:#666;}
+  .toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:6px 10px;font-size:13px;margin-top:-4px;}
+  .checkbox-group{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .checkbox-group label{display:flex;align-items:center;gap:6px;background:#f2f2f2;padding:6px 10px;border-radius:8px;font-weight:500;font-size:15px;}
+  .checkbox-group input{width:auto;height:auto;margin:0;}
+  /* responsive: rendi i label più larghi su schermo piccolo */
+  @media(max-width:420px){
+    .checkbox-group label{flex:1 1 48%; min-width:120px; text-align:left; padding:8px;}
+  }
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v8</h1>
+<h1>🏔️ TrailCoach AI v8.1</h1>
 
 <div class="card" id="settingsCard">
   <div>
     <span style="font-weight:600;">⚙️ Impostazioni</span>
-    <button id="toggleSettings" class="toggle-btn">Nascondi</button>
+    <button id="toggleSettings" class="toggle-btn" aria-expanded="true">Nascondi</button>
   </div>
   <div id="settingsContent">
     <label>Livello atleta</label>
@@ -54,15 +60,15 @@ button.save{background:#34c759;}button.orange{background:#ff9500;}button.red{bac
     <label>Allenamenti totali a settimana</label>
     <input id="allenTot" type="number" value="4" min="2" max="7" />
 
-    <label>Giorni palestra</label>
+    <label>Giorni palestra (seleziona i giorni precisi)</label>
     <div class="checkbox-group" id="giorniPalestra">
-      <label><input type="checkbox" value="Lunedì">Lun</label>
-      <label><input type="checkbox" value="Martedì">Mar</label>
-      <label><input type="checkbox" value="Mercoledì">Mer</label>
-      <label><input type="checkbox" value="Giovedì">Gio</label>
-      <label><input type="checkbox" value="Venerdì">Ven</label>
-      <label><input type="checkbox" value="Sabato">Sab</label>
-      <label><input type="checkbox" value="Domenica">Dom</label>
+      <label><input type="checkbox" value="Lunedì">Lunedì</label>
+      <label><input type="checkbox" value="Martedì">Martedì</label>
+      <label><input type="checkbox" value="Mercoledì">Mercoledì</label>
+      <label><input type="checkbox" value="Giovedì">Giovedì</label>
+      <label><input type="checkbox" value="Venerdì">Venerdì</label>
+      <label><input type="checkbox" value="Sabato">Sabato</label>
+      <label><input type="checkbox" value="Domenica">Domenica</label>
     </div>
 
     <button id="genLocal" class="save">⚙️ Genera piano</button>
@@ -81,10 +87,11 @@ button.save{background:#34c759;}button.orange{background:#ff9500;}button.red{bac
 </div>
 
 <script>
-// === Funzioni base ===
+// === Stato e utilità ===
 let planData=[], progress={km:0,ascent:0}, targetKm=0, targetAsc=0;
-const STORAGE_KEY="trailcoach_plan_v8";
+const STORAGE_KEY="trailcoach_plan_v8_1";
 
+/* progressione */
 function progressione(lvl){
   switch(lvl){
     case "principiante": return [0.5,0.6,0.7,0.8,0.9,1.0];
@@ -94,6 +101,7 @@ function progressione(lvl){
   }
 }
 
+/* genera una lista di allenamenti corsa variabili */
 function generaAllenamentiCorsa(num){
   const allenamentiBase=[
     "🏃 Corsa facile",
@@ -104,98 +112,135 @@ function generaAllenamentiCorsa(num){
     "🏃 Fondo lento",
     "🏃 Fartlek naturale"
   ];
-  return allenamentiBase.slice(0,num);
+  // se num > base.length, ricicliamo la lista
+  const res=[];
+  for(let i=0;i<num;i++) res.push(allenamentiBase[i % allenamentiBase.length]);
+  return res;
 }
 
+/* genera il piano settimanale combinando palestra e corsa */
 function generaPiano(lvl, km, asc, weeks, allenTot, giorniPalestra){
   const prog=progressione(lvl);
   planData=[];
   const giorniSettimana=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
-
-  for(let w=1;w<=weeks;w++){
-    const p=prog[Math.min(w-1,prog.length-1)];
-    const giorniCorsa=allenTot - giorniPalestra.length;
-    const allenCorsa=generaAllenamentiCorsa(giorniCorsa);
-    const allenSettimana=[];
-
-    giorniSettimana.forEach(g=>{
-      if(giorniPalestra.includes(g)) allenSettimana.push(`🏋️ ${g} – Palestra / Forza e Core`);
-      else if(allenCorsa.length>0) allenSettimana.push(`${g} – ${allenCorsa.shift()}`);
-    });
-
+  for(let w=1; w<=weeks; w++){
+    const p = prog[Math.min(w-1, prog.length-1)];
+    const giorniPalestraSet = giorniPalestra.slice(); // copia
+    const giorniCorsaNum = Math.max(0, allenTot - giorniPalestraSet.length);
+    const corsaList = generaAllenamentiCorsa(giorniCorsaNum);
+    const settimanaArr = [];
+    // creiamo un array di slot di allenamento per la settimana:
+    // priorizziamo i giorni palestra fissi, e riempiamo con corsa dove possibile
+    let corsaIdx = 0;
+    for(const g of giorniSettimana){
+      if(giorniPalestraSet.includes(g)){
+        settimanaArr.push(`${g} – 🏋️ Palestra (Forza & Core)`);
+      } else {
+        if(corsaIdx < corsaList.length && settimanaArr.filter(s => s.includes('–')).length < allenTot){
+          settimanaArr.push(`${g} – ${corsaList[corsaIdx++]}`);
+        } else {
+          // giorno senza allenamento
+          settimanaArr.push(`${g} – Riposo`);
+        }
+      }
+    }
     planData.push({
-      settimana:w,
-      targetKm:(km*p).toFixed(1),
-      targetAsc:Math.round(asc*p),
-      allenamenti:allenSettimana
+      settimana: w,
+      targetKm: (km*p).toFixed(1),
+      targetAsc: Math.round(asc*p),
+      allenamenti: settimanaArr
     });
   }
-
-  salvaLocale(); renderPiano(); drawChart(); toggleSettings(false);
+  salvaLocale(); renderPiano(); drawChart(); hideSettings();
 }
 
-// === Render Piano ===
+/* render piano */
 function renderPiano(){
   const div=document.getElementById("planView");
   div.innerHTML="";
+  if(planData.length===0){ div.textContent="Nessun piano ancora generato."; return; }
   planData.forEach(w=>{
     const week=document.createElement("div");
     week.className="week";
-    week.innerHTML=`<h3>📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc}m</h3>`;
-    const days=document.createElement("div");
-    days.className="days";
-    w.allenamenti.forEach(d=>{
-      const dd=document.createElement("div");
-      dd.textContent=d;
-      days.appendChild(dd);
+    week.innerHTML = `<h3>📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc} m</h3>`;
+    const days=document.createElement("div"); days.className="days";
+    w.allenamenti.forEach(a=>{
+      const dd=document.createElement("div"); dd.textContent=a; days.appendChild(dd);
     });
     week.appendChild(days);
-    week.querySelector("h3").onclick=()=>days.style.display=days.style.display==="none"?"block":"none";
+    week.querySelector("h3").onclick = ()=> days.style.display = days.style.display === "block" ? "none" : "block";
     div.appendChild(week);
   });
 }
 
-// === Chart ===
+/* chart minimo */
 function drawChart(){
-  const c=document.getElementById("progressChart"),ctx=c.getContext("2d");
+  const c=document.getElementById("progressChart"), ctx=c.getContext("2d");
   ctx.clearRect(0,0,c.width,c.height);
-  ctx.fillStyle="#007aff";ctx.fillRect(40,80,280,25);
-  ctx.fillStyle="#ff9500";ctx.fillRect(40,120,280,25);
-  ctx.fillStyle="#000";ctx.fillText("Km",10,98);ctx.fillText("D+",10,138);
-  document.getElementById("chartText").textContent=`Piano generato con ${planData.length} settimane.`;
+  ctx.fillStyle="#007aff"; ctx.fillRect(40,80,280,25);
+  ctx.fillStyle="#ff9500"; ctx.fillRect(40,120,280,25);
+  ctx.fillStyle="#000"; ctx.fillText("Km",10,98); ctx.fillText("D+",10,138);
+  document.getElementById("chartText").textContent = planData.length ? `Piano generato: ${planData.length} settimane` : "Nessun piano generato";
 }
 
-// === Salvataggio locale ===
+/* salvataggio */
 function salvaLocale(){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify({planData}));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({planData}));
 }
 function caricaLocale(){
-  const raw=localStorage.getItem(STORAGE_KEY);
-  if(!raw)return;
-  try{const data=JSON.parse(raw);planData=data.planData||[];renderPiano();drawChart();}catch(e){}
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) return;
+  try{
+    const data = JSON.parse(raw);
+    planData = data.planData || [];
+    renderPiano(); drawChart();
+  }catch(e){ console.log("Errore load", e); }
 }
 
-// === Eventi ===
-document.getElementById("genLocal").onclick=()=>{
-  const lvl=livello.value;
-  targetKm=+document.getElementById("obbKm").value;
-  targetAsc=+document.getElementById("obbD+").value;
-  const weeks=+document.getElementById("settimane").value;
-  const allenTot=+document.getElementById("allenTot").value;
-  const giorniSel=[...document.querySelectorAll("#giorniPalestra input:checked")].map(c=>c.value);
-  if(!targetKm||!targetAsc){alert("Inserisci obiettivi gara.");return;}
-  generaPiano(lvl,targetKm,targetAsc,weeks,allenTot,giorniSel);
-};
-
-function toggleSettings(show){
-  const content=document.getElementById("settingsContent");
-  const btn=document.getElementById("toggleSettings");
-  if(show===undefined) show = content.classList.contains("hidden");
-  if(show){content.classList.remove("hidden");btn.textContent="Nascondi";}
-  else{content.classList.add("hidden");btn.textContent="Mostra";}
+/* gestione settings: funzioni robuste */
+function showSettings(){
+  const content = document.getElementById("settingsContent");
+  const btn = document.getElementById("toggleSettings");
+  content.style.display = "block";
+  btn.textContent = "Nascondi";
+  btn.setAttribute("aria-expanded","true");
 }
-document.getElementById("toggleSettings").onclick=()=>toggleSettings();
+function hideSettings(){
+  const content = document.getElementById("settingsContent");
+  const btn = document.getElementById("toggleSettings");
+  content.style.display = "none";
+  btn.textContent = "Mostra";
+  btn.setAttribute("aria-expanded","false");
+}
+function toggleSettings(){
+  const content = document.getElementById("settingsContent");
+  // se non è esplicitamente settato, assumiamo visibile
+  const visible = (content.style.display !== "none");
+  if(visible) hideSettings(); else showSettings();
+}
+
+/* eventi */
+document.getElementById("toggleSettings").addEventListener("click", toggleSettings);
+
+document.getElementById("genLocal").addEventListener("click", ()=>{
+  const lvl = document.getElementById("livello").value;
+  targetKm = +document.getElementById("obbKm").value;
+  targetAsc = +document.getElementById("obbD+").value;
+  const weeks = +document.getElementById("settimane").value;
+  const allenTot = +document.getElementById("allenTot").value;
+  const giorniSel = [...document.querySelectorAll("#giorniPalestra input:checked")].map(i=>i.value);
+  if(!targetKm || !targetAsc){ alert("Inserisci obiettivi gara (km e dislivello)."); return; }
+  // sanity: se giorni palestra selezionati > allenTot, avvisa
+  if(giorniSel.length > allenTot){
+    if(!confirm(`Hai selezionato ${giorniSel.length} giorni palestra ma hai impostato ${allenTot} allenamenti totali. Procedere?`)) return;
+  }
+  generaPiano(lvl, targetKm, targetAsc, weeks, allenTot, giorniSel);
+});
+
+/* inizializzazione */
 caricaLocale();
+window.addEventListener("load", ()=>{ setTimeout(()=> window.scrollTo(0,1), 300); });
+
 </script>
 </body>
 </html>
