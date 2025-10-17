@@ -1,1 +1,247 @@
-indbsbsn
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+<title>TrailCoach AI v6</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+
+<!-- Manifest per PWA -->
+<link rel="manifest" href="manifest.json">
+
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;overflow-x:hidden;}
+h1{text-align:center;font-size:22px;margin:8px 0;}
+.card{background:#fff;border-radius:12px;padding:12px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+label{display:block;margin:6px 0 4px;font-weight:600;}
+input,select{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;}
+button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:6px;}
+button.save{background:#34c759;}button.orange{background:#ff9500;}button.red{background:#ff3b30;}
+.week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
+.week h3{margin:0;cursor:pointer;font-size:17px;}
+.days{margin-top:6px;padding-left:10px;display:none;}
+.days div{padding:4px 0;border-bottom:1px solid #eee;}
+.small{font-size:13px;color:#666;}
+canvas{width:100%;max-width:400px;margin:10px auto;display:block;}
+.hidden{display:none;}
+.history-item{border-bottom:1px solid #eee;padding:4px 0;font-size:14px;}
+.toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:2px 8px;font-size:13px;margin-top:-4px;}
+</style>
+</head>
+<body>
+<h1>🏔️ TrailCoach AI</h1>
+
+<div class="card" id="settingsCard">
+  <div>
+    <span style="font-weight:600;">⚙️ Impostazioni</span>
+    <button id="toggleSettings" class="toggle-btn">Nascondi</button>
+  </div>
+  <div id="settingsContent">
+    <label>Livello atleta</label>
+    <select id="livello">
+      <option value="principiante">Principiante</option>
+      <option value="intermedio">Intermedio</option>
+      <option value="avanzato">Avanzato</option>
+    </select>
+
+    <label>Obiettivo distanza gara (km)</label>
+    <input id="obbKm" type="number" placeholder="es. 20" />
+
+    <label>Obiettivo dislivello gara (m)</label>
+    <input id="obbD+" type="number" placeholder="es. 1000" />
+
+    <label>Durata piano (settimane)</label>
+    <input id="settimane" type="number" value="8" min="1" max="52" />
+
+    <button id="genLocal" class="save">⚙️ Genera piano</button>
+  </div>
+</div>
+
+<div class="card">
+  <label>Carica file .fit (allenamento Zepp/Garmin)</label>
+  <input id="fitFile" type="file" accept=".fit" />
+  <div id="fitInfo" class="small">Carica per aggiornare il progresso.</div>
+</div>
+
+<div class="card">
+  <label>Avanzamento</label>
+  <canvas id="progressChart" width="360" height="180"></canvas>
+  <div id="chartText" class="small"></div>
+</div>
+
+<div class="card">
+  <label>Piano settimanale</label>
+  <div id="planView">Nessun piano ancora generato.</div>
+</div>
+
+<div class="card">
+  <label>Storico allenamenti</label>
+  <div id="historyList" class="small">Nessun allenamento caricato.</div>
+</div>
+
+<script>
+// --- FitParser mock ---
+!function(t){t.FitParser=function(){return{parse:(a,e)=>{try{e(null,{sessions:[{total_distance:Math.random()*10+5,total_ascent:200+Math.random()*500}]})}catch(r){e(r)}}}}}(window);
+
+// --- Dati globali ---
+let planData=[], progress={km:0,ascent:0}, targetKm=0, targetAsc=0, history=[];
+const STORAGE_KEY="trailcoach_plan_v6";
+
+// --- Progressione in base al livello ---
+function progressione(lvl){
+  switch(lvl){
+    case "principiante": return [0.5,0.6,0.7,0.8,0.9,1.0];
+    case "intermedio":   return [0.6,0.7,0.8,0.9,1.0];
+    case "avanzato":     return [0.7,0.8,0.9,1.0];
+    default: return [0.6,0.8,1.0];
+  }
+}
+
+// --- Genera piano base ---
+function generaPiano(lvl, km, asc, weeks){
+  const prog = progressione(lvl);
+  planData=[];
+  for(let w=1;w<=weeks;w++){
+    const p=prog[Math.min(w-1,prog.length-1)];
+    planData.push({
+      settimana:w,
+      targetKm:(km*p).toFixed(1),
+      targetAsc:Math.round(asc*p),
+      completato:false,
+      allenamenti:[
+        "Lunedì – Corsa facile",
+        "Mercoledì – Ripetute collinari",
+        "Sabato – Lungo trail"
+      ]
+    });
+  }
+  salvaLocale(); renderPiano(); drawChart(); toggleSettings(false);
+}
+
+// --- Renderizza piano ---
+function renderPiano(){
+  const div=document.getElementById("planView");
+  div.innerHTML="";
+  planData.forEach(w=>{
+    const week=document.createElement("div");week.className="week";
+    week.innerHTML=`<h3>📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc}m ${w.completato?"✅":""}</h3>`;
+    const days=document.createElement("div");days.className="days";
+    w.allenamenti.forEach(d=>{const dd=document.createElement("div");dd.textContent=d;days.appendChild(dd);});
+    week.appendChild(days);
+    week.querySelector("h3").onclick=()=>days.style.display=days.style.display==="none"?"block":"none";
+    div.appendChild(week);
+  });
+}
+
+// --- Grafico progresso ---
+function drawChart(){
+  const c=document.getElementById("progressChart"), ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  const percKm=Math.min(progress.km/targetKm,1);
+  const percAsc=Math.min(progress.ascent/targetAsc,1);
+  ctx.fillStyle="#007aff";ctx.fillRect(40,80,280*percKm,25);
+  ctx.fillStyle="#ccc";ctx.fillRect(40+280*percKm,80,280*(1-percKm),25);
+  ctx.fillStyle="#ff9500";ctx.fillRect(40,120,280*percAsc,25);
+  ctx.fillStyle="#ccc";ctx.fillRect(40+280*percAsc,120,280*(1-percAsc),25);
+  ctx.fillStyle="#000";ctx.fillText("Km",10,98);ctx.fillText("D+",10,138);
+  document.getElementById("chartText").textContent=
+    `${progress.km.toFixed(1)} km / ${targetKm} km — +${progress.ascent.toFixed(0)} m / +${targetAsc} m`;
+}
+
+// --- Storico allenamenti ---
+function renderHistory(){
+  const div=document.getElementById("historyList");
+  div.innerHTML = history.length
+    ? history.map(h=>`<div class="history-item">${h.date} → ${h.km.toFixed(1)} km, +${h.asc.toFixed(0)} m</div>`).join("")
+    : "Nessun allenamento caricato.";
+}
+
+// --- Salvataggio locale ---
+function salvaLocale(){
+  const data={planData,progress,targetKm,targetAsc,history};
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+}
+function caricaLocale(){
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(!raw) return;
+  try{
+    const data=JSON.parse(raw);
+    planData=data.planData||[];progress=data.progress||{km:0,ascent:0};
+    targetKm=data.targetKm||0;targetAsc=data.targetAsc||0;
+    history=data.history||[];
+    renderPiano();drawChart();renderHistory();
+    if(planData.length>0) toggleSettings(false);
+  }catch(e){console.log("Errore load",e);}
+}
+
+// --- Eventi ---
+document.getElementById("genLocal").onclick=()=>{
+  const lvl=livello.value;
+  targetKm=+document.getElementById("obbKm").value;
+  targetAsc=+document.getElementById("obbD+").value;
+  const weeks=+document.getElementById("settimane").value;
+  if(!targetKm||!targetAsc){alert("Inserisci obiettivi gara.");return;}
+  progress={km:0,ascent:0};
+  history=[];
+  generaPiano(lvl,targetKm,targetAsc,weeks);
+};
+
+// --- Lettura file .fit ---
+document.getElementById("fitFile").addEventListener("change",async(ev)=>{
+  const file=ev.target.files[0];if(!file)return;
+  const info=document.getElementById("fitInfo");info.textContent="⏳ Lettura file...";
+  try{
+    const ab=await file.arrayBuffer();
+    const parser=new FitParser();
+    parser.parse(ab,(e,data)=>{
+      if(e){info.textContent="Errore file";return;}
+      const s=data.sessions?.[0];
+      const dist=s.total_distance||0, asc=s.total_ascent||0;
+      progress.km += dist; progress.ascent += asc;
+      const date=new Date().toLocaleDateString("it-IT");
+      history.unshift({date,km:dist,asc});
+      aggiornaPiano();
+      info.textContent=`🏁 Totale: ${progress.km.toFixed(1)} km / +${progress.ascent.toFixed(0)} m`;
+      salvaLocale();
+    });
+  }catch(e){info.textContent="Errore: "+e;}
+});
+
+// --- Aggiornamento piano ---
+function aggiornaPiano(){
+  let cumKm=0;
+  planData.forEach(w=>{
+    cumKm += +w.targetKm;
+    if(progress.km >= cumKm){w.completato=true;}
+  });
+  renderPiano(); drawChart(); renderHistory();
+}
+
+// --- Mostra/nascondi impostazioni ---
+function toggleSettings(show){
+  const content=document.getElementById("settingsContent");
+  const btn=document.getElementById("toggleSettings");
+  if(show===undefined) show = content.classList.contains("hidden");
+  if(show){content.classList.remove("hidden");btn.textContent="Nascondi";}
+  else{content.classList.add("hidden");btn.textContent="Mostra";}
+}
+document.getElementById("toggleSettings").onclick=()=>toggleSettings();
+
+// --- Avvio ---
+caricaLocale();
+window.addEventListener("load",()=>{setTimeout(()=>window.scrollTo(0,1),500);});
+</script>
+
+<!-- Registrazione service worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log('Service Worker registrato'))
+    .catch(err => console.log('Errore registrazione SW:', err));
+}
+</script>
+
+</body>
+</html>
