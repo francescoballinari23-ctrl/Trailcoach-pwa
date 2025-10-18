@@ -3,45 +3,38 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v9</title>
+<title>TrailCoach AI v9.1</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="manifest.json">
 <style>
-:root{--gap:8px;--card-radius:12px;}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;overflow-x:hidden;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;}
 h1{text-align:center;font-size:22px;margin:8px 0;}
-.card{background:#fff;border-radius:var(--card-radius);padding:12px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.card{background:#fff;border-radius:12px;padding:12px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08);}
 label{display:block;margin:6px 0 4px;font-weight:600;}
-input[type="number"], select, input[type="text"]{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;}
+input,select{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;}
 button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:6px;}
-button.save{background:#34c759;} button.orange{background:#ff9500;} button.red{background:#ff3b30;}
+button.save{background:#34c759;}button.orange{background:#ff9500;}button.red{background:#ff3b30;}
 .week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
 .week h3{margin:0;cursor:pointer;font-size:17px;}
 .days{margin-top:6px;padding-left:10px;display:none;}
 .days div{padding:4px 0;border-bottom:1px solid #eee;}
 .small{font-size:13px;color:#666;}
-.toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:6px 10px;font-size:13px;margin-top:-4px;}
-.checkbox-group{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
-.checkbox-group label{display:flex;align-items:center;gap:8px;background:#f2f2f2;padding:6px 10px;border-radius:8px;font-weight:500;font-size:15px;}
-.checkbox-group input{width:auto;height:auto;margin:0;}
-.checkbox-group label span{white-space: nowrap;}
-@media(max-width:420px){.checkbox-group label{flex:1 1 48%; min-width:120px; text-align:left; padding:8px;}}
-.summary{padding:8px;border-radius:8px;background:#fff7e6;border:1px solid #ffe5b4;font-size:14px;margin-bottom:8px;}
+canvas{width:100%;max-width:400px;margin:10px auto;display:block;}
+.hidden{display:none;}
+.toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:2px 8px;font-size:13px;margin-top:-4px;}
+.day-select label{display:inline-block;margin:4px 6px;padding:4px 8px;border:1px solid #ccc;border-radius:6px;}
+.day-select input{margin-right:4px;}
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v9</h1>
-
-<div class="card" id="topSummaryCard" style="display:none;">
-  <div id="summaryText" class="summary"></div>
-</div>
+<h1>🏔️ TrailCoach AI v9.1</h1>
 
 <div class="card" id="settingsCard">
   <div>
     <span style="font-weight:600;">⚙️ Impostazioni</span>
-    <button id="toggleSettings" class="toggle-btn" aria-expanded="true">Nascondi</button>
+    <button id="toggleSettings" class="toggle-btn">Nascondi</button>
   </div>
   <div id="settingsContent">
     <label>Livello atleta</label>
@@ -60,18 +53,18 @@ button.save{background:#34c759;} button.orange{background:#ff9500;} button.red{b
     <label>Durata piano (settimane)</label>
     <input id="settimane" type="number" value="8" min="1" max="52" />
 
-    <label>Allenamenti totali a settimana</label>
+    <label>Allenamenti totali / settimana</label>
     <input id="allenTot" type="number" value="4" min="2" max="7" />
 
-    <label>Giorni palestra (seleziona i giorni precisi)</label>
-    <div class="checkbox-group" id="giorniPalestra">
-      <label><input type="checkbox" value="Lunedì"><span>Lunedì</span></label>
-      <label><input type="checkbox" value="Martedì"><span>Martedì</span></label>
-      <label><input type="checkbox" value="Mercoledì"><span>Mercoledì</span></label>
-      <label><input type="checkbox" value="Giovedì"><span>Giovedì</span></label>
-      <label><input type="checkbox" value="Venerdì"><span>Venerdì</span></label>
-      <label><input type="checkbox" value="Sabato"><span>Sabato</span></label>
-      <label><input type="checkbox" value="Domenica"><span>Domenica</span></label>
+    <label>Giorni palestra 🏋️</label>
+    <div class="day-select" id="palestraDays">
+      <label><input type="checkbox" value="Lunedì">Lun</label>
+      <label><input type="checkbox" value="Martedì">Mar</label>
+      <label><input type="checkbox" value="Mercoledì">Mer</label>
+      <label><input type="checkbox" value="Giovedì">Gio</label>
+      <label><input type="checkbox" value="Venerdì">Ven</label>
+      <label><input type="checkbox" value="Sabato">Sab</label>
+      <label><input type="checkbox" value="Domenica">Dom</label>
     </div>
 
     <button id="genLocal" class="save">⚙️ Genera piano</button>
@@ -81,12 +74,12 @@ button.save{background:#34c759;} button.orange{background:#ff9500;} button.red{b
 <div class="card">
   <label>Carica file .fit (allenamento Zepp/Garmin)</label>
   <input id="fitFile" type="file" accept=".fit" />
-  <div id="fitInfo" class="small">Nessun file caricato.</div>
+  <div id="fitInfo" class="small">Carica per aggiornare il progresso.</div>
 </div>
 
 <div class="card">
   <label>Avanzamento</label>
-  <canvas id="progressChart" width="360" height="140"></canvas>
+  <canvas id="progressChart" width="360" height="180"></canvas>
   <div id="chartText" class="small"></div>
 </div>
 
@@ -97,159 +90,166 @@ button.save{background:#34c759;} button.orange{background:#ff9500;} button.red{b
 
 <div class="card">
   <label>Storico allenamenti</label>
-  <div id="historyList" class="small">Nessun allenamento registrato.</div>
+  <div id="historyList" class="small">Nessun allenamento caricato.</div>
 </div>
 
 <script>
-// ===== Mock FitParser =====
-!function(t){t.FitParser=function(){return{parse:(a,e)=>{try{ const r=Math.random(); e(null,{sessions:[{total_distance:5+r*15,total_ascent:Math.round(100+r*800)}]});}catch(err){e(err)}}}}}(window);
+// Simulatore FitParser
+!function(t){t.FitParser=function(){return{parse:(a,e)=>{try{e(null,{sessions:[{total_distance:Math.random()*10+5,total_ascent:200+Math.random()*500}]})}catch(r){e(r)}}}}}(window);
 
-// ===== Stato e storage =====
-const STORAGE_KEY = "trailcoach_v9_data";
-let state = {
-  settings: { livello:"principiante", obbKm:20, obbAsc:1000, settimane:8, allenTot:4, giorniPalestra:[] },
-  planData: [],
-  progress: { km:0, ascent:0 },
-  history: []
-};
+const STORAGE_KEY="trailcoach_v9_1";
+let planData=[], progress={km:0,ascent:0}, targetKm=0,targetAsc=0,history=[];
 
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function loadState(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ try{ state=JSON.parse(raw); }catch(e){console.log("Errore parse storage",e);} }}
-
-// ===== Utils generazione =====
 function progressione(lvl){
-  switch(lvl){ case "principiante": return [0.5,0.6,0.7,0.8,0.9,1.0]; case "intermedio": return [0.6,0.7,0.8,0.9,1.0]; case "avanzato": return [0.7,0.8,0.9,1.0]; default: return [0.6,0.8,1.0]; }
-}
-function generaAllenamentiCorsa(num){ const base=["🏃 Corsa facile","⛰️ Ripetute collinari","🏃 Progressivo","🏃 Medio costante","⛰️ Lungo trail","🏃 Fondo lento","🏃 Fartlek naturale"]; const res=[]; for(let i=0;i<num;i++) res.push(base[i%base.length]); return res; }
-
-// ===== Generazione piano dinamico =====
-function generaPianoFromSettings(){
-  const s = state.settings;
-  const prog = progressione(s.livello);
-  const giorniSettimana=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
-  const giorniPalestra = s.giorniPalestra.slice();
-  const allenTot = s.allenTot;
-
-  const plan = [];
-  for(let w=1; w<=s.settimane; w++){
-    const p = prog[Math.min(w-1, prog.length-1)];
-    // settimana di scarico se piano >6 settimane e ogni 4 settimane
-    let scarico = (s.settimane>6 && w%4===0) ? 0.7 : 1;
-    const targetKm = +(s.obbKm*p*scarico).toFixed(1);
-    const targetAsc = Math.round(s.obbAsc*p*scarico);
-
-    // distribuzione allenamenti
-    const giorniCorsaNum = Math.max(0, allenTot - giorniPalestra.length);
-    const corsaList = generaAllenamentiCorsa(giorniCorsaNum);
-    let corsaIdx=0;
-    const settimanaArr = [];
-    for(const g of giorniSettimana){
-      if(giorniPalestra.includes(g)){
-        settimanaArr.push(`${g} – 🏋️ Palestra (Forza & Core)`);
-      }else{
-        if(corsaIdx<corsaList.length && settimanaArr.filter(x=>x.includes("–") && !x.includes("Riposo")).length<allenTot){
-          settimanaArr.push(`${g} – ${corsaList[corsaIdx++]}`);
-        }else{
-          settimanaArr.push(`${g} – Riposo`);
-        }
-      }
-    }
-    plan.push({settimana:w,targetKm,targetAsc,allenamenti:settimanaArr,completato:false});
+  switch(lvl){
+    case "principiante": return [0.5,0.6,0.7,0.8,0.9,1.0];
+    case "intermedio": return [0.6,0.7,0.8,0.9,1.0];
+    case "avanzato": return [0.7,0.8,0.9,1.0];
+    default: return [0.6,0.8,1.0];
   }
-  state.planData=plan;
-  saveState();
-  renderAll();
 }
 
-// ===== Render =====
-function renderSummary(){
-  const summaryCard=document.getElementById("topSummaryCard");
-  if(!state.planData||state.planData.length===0){ summaryCard.style.display="none"; return; }
-  summaryCard.style.display="block";
-  const s=state.settings;
-  const giorniP=s.giorniPalestra.length;
-  const corsa=Math.max(0,s.allenTot-giorniP);
-  document.getElementById("summaryText").textContent=`Allenamenti/settimana: ${s.allenTot} — Palestra: ${giorniP} — Corsa: ${corsa}`;
+function generaPiano(lvl,km,asc,weeks,allenTot,giorniPalestra){
+  const prog=progressione(lvl);
+  planData=[];
+  for(let w=1;w<=weeks;w++){
+    let coeff=prog[Math.min(w-1,prog.length-1)];
+    if(weeks>6 && w%4===0 && w>4) coeff*=0.7; // settimana di scarico
+    planData.push({
+      settimana:w,
+      targetKm:(km*coeff).toFixed(1),
+      targetAsc:Math.round(asc*coeff),
+      completato:false,
+      allenamenti:creaAllenamenti(allenTot,giorniPalestra)
+    });
+  }
+  salvaLocale();renderPiano();drawChart();toggleSettings(false);
+}
+
+function creaAllenamenti(allenTot,giorniPalestra){
+  const allCorsa=["Corsa facile","Ripetute collinari","Lungo trail","Medio","Progressivo"];
+  let giorni=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+  let lista=[];
+  giorni.forEach(g=>{
+    if(giorniPalestra.includes(g)) lista.push(`${g} – 🏋️ Palestra`);
+    else if(lista.filter(a=>a.includes("Corsa")).length < allenTot - giorniPalestra.length)
+      lista.push(`${g} – 🏃 ${allCorsa[Math.floor(Math.random()*allCorsa.length)]}`);
+    else lista.push(`${g} – Riposo`);
+  });
+  return lista;
 }
 
 function renderPiano(){
-  const div=document.getElementById("planView"); div.innerHTML="";
-  if(!state.planData||state.planData.length===0){ div.textContent="Nessun piano ancora generato."; return; }
-  state.planData.forEach(w=>{
-    const week=document.createElement("div"); week.className="week";
-    week.innerHTML=`<h3>📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc} m ${w.completato?"✅":""}</h3>`;
-    const days=document.createElement("div"); days.className="days";
-    w.allenamenti.forEach(a=>{ const dd=document.createElement("div"); dd.textContent=a; days.appendChild(dd); });
+  const div=document.getElementById("planView");
+  div.innerHTML="";
+  planData.forEach(w=>{
+    const week=document.createElement("div");
+    week.className="week";
+    week.innerHTML=`<h3>📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc}m ${w.completato?"✅":""}</h3>`;
+    const days=document.createElement("div");
+    days.className="days";
+    w.allenamenti.forEach(d=>{const dd=document.createElement("div");dd.textContent=d;days.appendChild(dd);});
     week.appendChild(days);
-    week.querySelector("h3").onclick=()=>days.style.display=(days.style.display==="block"?"none":"block");
+    week.querySelector("h3").onclick=()=>days.style.display=days.style.display==="none"?"block":"none";
     div.appendChild(week);
   });
 }
 
-function renderProgress(){
-  const c=document.getElementById("progressChart"), ctx=c.getContext("2d");
+function drawChart(){
+  const c=document.getElementById("progressChart"),ctx=c.getContext("2d");
   ctx.clearRect(0,0,c.width,c.height);
-  const totalTargetKm=state.planData.reduce((acc,w)=>acc+(w.targetKm||0),0)||state.settings.obbKm;
-  const percKm=Math.min(state.progress.km/totalTargetKm,1);
-  ctx.fillStyle="#007aff"; ctx.fillRect(20,50,(c.width-40)*percKm,20);
-  ctx.fillStyle="#ccc"; ctx.fillRect(20+(c.width-40)*percKm,50,(c.width-40)*(1-percKm),20);
-  ctx.fillStyle="#000"; ctx.fillText(`Km: ${state.progress.km.toFixed(1)} / ${totalTargetKm} km`,20,45);
-  ctx.fillText(`D+: ${state.progress.ascent.toFixed(0)} m`,20,95);
-  document.getElementById("chartText").textContent=`Storico: ${state.history.length} allenamenti caricati.`;
+  const percKm=Math.min(progress.km/targetKm,1);
+  const percAsc=Math.min(progress.ascent/targetAsc,1);
+  ctx.fillStyle="#007aff";ctx.fillRect(40,80,280*percKm,25);
+  ctx.fillStyle="#ccc";ctx.fillRect(40+280*percKm,80,280*(1-percKm),25);
+  ctx.fillStyle="#ff9500";ctx.fillRect(40,120,280*percAsc,25);
+  ctx.fillStyle="#ccc";ctx.fillRect(40+280*percAsc,120,280*(1-percAsc),25);
+  ctx.fillStyle="#000";ctx.fillText("Km",10,98);ctx.fillText("D+",10,138);
+  document.getElementById("chartText").textContent=
+  `${progress.km.toFixed(1)} km / ${targetKm} km — +${progress.ascent.toFixed(0)} m / +${targetAsc} m`;
+}
+
+function aggiornaPiano(){
+  let cum=0;
+  planData.forEach(w=>{cum+=+w.targetKm;if(progress.km>=cum)w.completato=true;});
+  renderPiano();drawChart();renderHistory();
 }
 
 function renderHistory(){
   const div=document.getElementById("historyList");
-  if(!state.history||state.history.length===0){ div.textContent="Nessun allenamento registrato."; return; }
-  div.innerHTML=state.history.map(h=>`${h.date} → ${h.km.toFixed(1)} km, +${h.asc.toFixed(0)} m (${h.filename})`).join("<br>");
+  div.innerHTML=history.length?history.map(h=>`<div>${h.date} → ${h.km.toFixed(1)} km, +${h.asc.toFixed(0)} m</div>`).join(""):"Nessun allenamento caricato.";
 }
 
-function renderAll(){ renderSummary(); renderPiano(); renderProgress(); renderHistory(); }
+function salvaLocale(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({planData,progress,targetKm,targetAsc,history}));
+}
+function caricaLocale(){
+  const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return;
+  try{const d=JSON.parse(raw);
+    planData=d.planData||[];progress=d.progress||{km:0,ascent:0};
+    targetKm=d.targetKm||0;targetAsc=d.targetAsc||0;
+    history=d.history||[];
+    renderPiano();drawChart();renderHistory();
+    if(planData.length>0)toggleSettings(false);
+  }catch(e){console.log("Errore load",e);}
+}
 
-// ===== Eventi =====
-document.getElementById("toggleSettings").onclick=()=>{
-  const content=document.getElementById("settingsContent");
-  const btn=document.getElementById("toggleSettings");
-  if(content.style.display==="none"){ content.style.display="block"; btn.textContent="Nascondi"; }
-  else{ content.style.display="none"; btn.textContent="Mostra"; }
-};
+function adattaPianoAutomaticamente(){
+  if(history.length<3)return;
+  const last3=history.slice(0,3);
+  const mediaKm=last3.reduce((a,b)=>a+b.km,0)/3;
+  const mediaTarget=targetKm/planData.length;
+  const ratio=mediaKm/mediaTarget;
+  planData.forEach((w,i)=>{
+    if(!w.completato){
+      if(ratio>1.1){w.targetKm=(w.targetKm*1.05).toFixed(1);w.targetAsc=Math.round(w.targetAsc*1.05);}
+      else if(ratio<0.8){w.targetKm=(w.targetKm*0.9).toFixed(1);w.targetAsc=Math.round(w.targetAsc*0.9);}
+      if(ratio<0.8 && i%4===0){w.targetKm=(w.targetKm*0.7).toFixed(1);}
+    }
+  });
+  salvaLocale();renderPiano();
+}
 
 document.getElementById("genLocal").onclick=()=>{
-  const s=state.settings;
-  s.livello=document.getElementById("livello").value;
-  s.obbKm=+document.getElementById("obbKm").value;
-  s.obbAsc=+document.getElementById("obbD+").value;
-  s.settimane=+document.getElementById("settimane").value;
-  s.allenTot=+document.getElementById("allenTot").value;
-  s.giorniPalestra=[...document.querySelectorAll("#giorniPalestra input:checked")].map(x=>x.value);
-  if(!s.obbKm||!s.obbAsc){ alert("Inserisci obiettivi gara."); return; }
-  generaPianoFromSettings();
+  const lvl=livello.value;
+  targetKm=+document.getElementById("obbKm").value;
+  targetAsc=+document.getElementById("obbD+").value;
+  const weeks=+document.getElementById("settimane").value;
+  const allenTot=+document.getElementById("allenTot").value;
+  const giorniPalestra=[...document.querySelectorAll("#palestraDays input:checked")].map(i=>i.value);
+  if(!targetKm||!targetAsc){alert("Inserisci obiettivi gara.");return;}
+  progress={km:0,ascent:0};history=[];
+  generaPiano(lvl,targetKm,targetAsc,weeks,allenTot,giorniPalestra);
 };
 
-document.getElementById("fitFile").addEventListener("change", async(ev)=>{
-  const file=ev.target.files[0]; if(!file) return;
-  const info=document.getElementById("fitInfo"); info.textContent="⏳ Lettura file...";
+document.getElementById("fitFile").addEventListener("change",async ev=>{
+  const file=ev.target.files[0];if(!file)return;
+  const info=document.getElementById("fitInfo");info.textContent="⏳ Lettura file...";
   try{
-    const ab=await file.arrayBuffer();
-    const parser=new FitParser();
+    const ab=await file.arrayBuffer();const parser=new FitParser();
     parser.parse(ab,(e,data)=>{
-      if(e){info.textContent="Errore file"; return;}
-      const s=data.sessions?.[0]; if(!s) return;
-      state.progress.km+=s.total_distance||0;
-      state.progress.ascent+=s.total_ascent||0;
-      const date=new Date().toLocaleDateString("it-IT");
-      state.history.unshift({date,km:s.total_distance||0,asc:s.total_ascent||0,filename:file.name});
-      // aggiornamento completamento settimane dinamico
-      let cumKm=0;
-      state.planData.forEach(w=>{ cumKm+=w.targetKm; w.completato=(state.progress.km>=cumKm); });
-      saveState(); renderAll();
-      info.textContent=`🏁 Totale: ${state.progress.km.toFixed(1)} km / +${state.progress.ascent.toFixed(0)} m`;
+      if(e){info.textContent="Errore file";return;}
+      const s=data.sessions?.[0];const dist=s.total_distance||0,asc=s.total_ascent||0;
+      progress.km+=dist;progress.ascent+=asc;
+      history.unshift({date:new Date().toLocaleDateString("it-IT"),km:dist,asc});
+      aggiornaPiano();adattaPianoAutomaticamente();
+      info.textContent=`🏁 Totale: ${progress.km.toFixed(1)} km / +${progress.ascent.toFixed(0)} m`;
+      salvaLocale();
     });
-  }catch(err){ info.textContent="Errore: "+err; }
+  }catch(e){info.textContent="Errore: "+e;}
 });
 
-// ===== Avvio =====
-loadState(); renderAll();
+function toggleSettings(show){
+  const c=document.getElementById("settingsContent");
+  const b=document.getElementById("toggleSettings");
+  if(show===undefined)show=c.classList.contains("hidden");
+  if(show){c.classList.remove("hidden");b.textContent="Nascondi";}
+  else{c.classList.add("hidden");b.textContent="Mostra";}
+}
+document.getElementById("toggleSettings").onclick=()=>toggleSettings();
+
+caricaLocale();
+window.addEventListener("load",()=>setTimeout(()=>window.scrollTo(0,1),500));
 </script>
 </body>
 </html>
