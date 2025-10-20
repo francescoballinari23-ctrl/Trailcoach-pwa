@@ -33,6 +33,16 @@
 </style>
 </head>
 <body>
+// analisi erroi
+<script>
+window.onerror = function(msg, url, line, col, err) {
+  // Mostra popup con l’errore
+  alert(`Errore JS:\nMessaggio: ${msg}\nLinea: ${line}\nColonna: ${col}`);
+  // Log nel console (utile se apri la pagina su desktop)
+  console.log("Errore JS:", msg, "URL:", url, "Linea:", line, "Colonna:", col, "Errore:", err);
+  return false; // lascia che l’errore si propaghi anche normalmente
+};
+</script>
 <h1>🏔️ TrailCoach AI v11</h1>
 
 <div class="card" id="topSummaryCard" style="display:none;">
