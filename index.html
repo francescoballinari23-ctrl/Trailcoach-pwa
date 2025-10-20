@@ -3,47 +3,37 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v10 (Fit Fix)</title>
+<title>🏔️ TrailCoach AI v11</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="manifest.json">
 <style>
-  :root{--card-radius:12px;}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;}
-  h1{text-align:center;font-size:22px;margin:6px 0;}
-  .card{background:#fff;border-radius:var(--card-radius);padding:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.06);}
-  label{display:block;margin:8px 0 6px;font-weight:600;}
-  input[type="number"], select{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;}
-  button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:8px;cursor:pointer;}
-  button.reset{background:#ff3b30;margin-left:8px;}
-  .week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
-  .week h3{margin:0;cursor:pointer;font-size:17px;display:flex;justify-content:space-between;align-items:center;}
-  .days{margin-top:6px;padding-left:10px;display:none;}
-  .days .day{padding:6px 0;border-bottom:1px solid #eee;}
-  .small{font-size:13px;color:#666;margin-top:6px;}
-  .toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:6px 10px;font-size:13px;margin-top:-4px;}
-  .checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
-  .checkbox-grid-bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
-  .chk-btn{display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;background:#f2f2f2;cursor:pointer;border:1px solid transparent;font-weight:700;}
-  .chk-btn.active{background:#007aff;color:#fff;border-color:#0060d6;}
-  .detail{background:#fff;border-radius:8px;padding:10px;margin:6px 0 10px;border:1px solid #eee;font-size:14px;}
-  .muted{color:#666;font-size:13px;}
-  .fileline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
-  .meta{font-size:13px;color:#333;margin-top:6px;}
+:root { --card-radius: 12px; }
+body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial; background:#fafafa; color:#111; margin:12px; }
+h1 { text-align:center; font-size:22px; margin:8px 0; }
+.card { background:#fff; border-radius:var(--card-radius); padding:12px; margin:10px 0; box-shadow:0 1px 6px rgba(0,0,0,.06); }
+button { background:#007aff; color:#fff; border:none; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; }
+button.reset { background:#ff3b30; margin-left:8px; }
+.chk-btn { display:flex; align-items:center; justify-content:center; padding:8px; border-radius:8px; background:#f2f2f2; cursor:pointer; font-weight:700; border:1px solid transparent; }
+.chk-btn.active { background:#007aff; color:#fff; border-color:#005be2; }
+.checkbox-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px; }
+.checkbox-grid-bottom { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px; }
+.week { background:#f7f9ff; border-radius:8px; margin:8px 0; padding:8px 10px; }
+.week h3 { display:flex; justify-content:space-between; align-items:center; margin:0; font-size:17px; cursor:pointer; }
+.days { margin-top:6px; padding-left:10px; display:none; }
+.days .day { padding:6px 0; border-bottom:1px solid #eee; }
+.detail { background:#fff; border-radius:8px; padding:10px; margin:6px 0; border:1px solid #eee; font-size:14px; }
+.muted { color:#666; font-size:13px; }
+.fileline { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+.meta { font-size:13px; color:#333; margin-top:6px; }
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v10</h1>
-
-<div class="card" id="topSummaryCard" style="display:none;">
-  <div id="summaryText" class="muted"></div>
-</div>
+<h1>🏔️ TrailCoach AI v11</h1>
 
 <div class="card" id="settingsCard">
   <div>
-    <span style="font-weight:600;">⚙️ Impostazioni</span>
-    <button id="toggleSettings" class="toggle-btn" aria-expanded="true">Nascondi</button>
+    <strong>⚙️ Impostazioni</strong>
   </div>
   <div id="settingsContent">
     <label>Livello atleta</label>
@@ -54,36 +44,32 @@
     </select>
 
     <label>Obiettivo distanza gara (km)</label>
-    <input id="obbKm" type="number" placeholder="es. 20" />
+    <input id="obbKm" type="number" placeholder="es. 20">
 
     <label>Obiettivo dislivello gara (m)</label>
-    <input id="obbD+" type="number" placeholder="es. 1000" />
+    <input id="obbAsc" type="number" placeholder="es. 1000">
 
     <label>Durata piano (settimane)</label>
-    <input id="settimane" type="number" value="8" min="1" max="52" />
+    <input id="settimane" type="number" value="8" min="1" max="52">
 
-    <label>Allenamenti totali a settimana</label>
-    <input id="allenTot" type="number" value="4" min="2" max="7" />
+    <label>Allenamenti totali/settimana</label>
+    <input id="allenTot" type="number" value="4" min="2" max="7">
 
     <label>Giorni palestra</label>
-    <div>
-      <div class="checkbox-grid" id="palestraTop">
-        <div class="chk-btn" data-day="Lunedì">Lun</div>
-        <div class="chk-btn" data-day="Martedì">Mar</div>
-        <div class="chk-btn" data-day="Mercoledì">Mer</div>
-      </div>
-      <div class="checkbox-grid-bottom" id="palestraBottom">
-        <div class="chk-btn" data-day="Giovedì">Gio</div>
-        <div class="chk-btn" data-day="Venerdì">Ven</div>
-        <div class="chk-btn" data-day="Sabato">Sab</div>
-        <div class="chk-btn" data-day="Domenica">Dom</div>
-      </div>
+    <div class="checkbox-grid" id="palestraTop">
+      <div class="chk-btn" data-day="Lunedì">Lun</div>
+      <div class="chk-btn" data-day="Martedì">Mar</div>
+      <div class="chk-btn" data-day="Mercoledì">Mer</div>
+    </div>
+    <div class="checkbox-grid-bottom" id="palestraBottom">
+      <div class="chk-btn" data-day="Giovedì">Gio</div>
+      <div class="chk-btn" data-day="Venerdì">Ven</div>
+      <div class="chk-btn" data-day="Sabato">Sab</div>
+      <div class="chk-btn" data-day="Domenica">Dom</div>
     </div>
 
-    <div style="margin-top:8px;">
-      <button id="genLocal" class="save">⚙️ Genera piano</button>
-      <button id="resetData" class="reset">🗑️ Reset dati</button>
-    </div>
+    <button id="genLocal">⚙️ Genera piano</button>
+    <button id="resetData" class="reset">🗑️ Reset</button>
   </div>
 </div>
 
@@ -97,167 +83,206 @@
   <div id="historyList" class="small">Nessun allenamento registrato.</div>
 </div>
 
-<input id="hiddenFileInput" type="file" accept=".fit" style="display:none" />
+<input id="hiddenFileInput" type="file" accept=".fit,.gpx" style="display:none" />
 
-<!-- ✅ libreria corretta e funzionante -->
+<!-- Parser FIT -->
 <script src="https://unpkg.com/fit-file-parser@1.1.4/dist/fit-file-parser.min.js"></script>
 
 <script>
-// ---------------------- Stato e storage ----------------------
-const STORAGE_KEY="trailcoach_v10_state";
-const DEFAULT_STATE={settings:{livello:"principiante",obbKm:20,obbAsc:1000,settimane:8,allenTot:4,giorniPalestra:[]},planData:[],history:[]};
-let STATE=JSON.parse(JSON.stringify(DEFAULT_STATE));
-function saveState(){ localStorage.setItem(STORAGE_KEY,JSON.stringify(STATE)); }
-function loadState(){ const raw=localStorage.getItem(STORAGE_KEY); if(raw) STATE=JSON.parse(raw); }
+// ---------------------- Stato ----------------------
+const STORAGE_KEY="trailcoach_v11_state";
+let STATE={settings:{livello:"principiante",obbKm:20,obbAsc:1000,settimane:8,allenTot:4,giorniPalestra:[]},planData:[],history:[]};
+const GIORNI=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(STATE));}
+function loadState(){const r=localStorage.getItem(STORAGE_KEY);if(r)STATE=JSON.parse(r);}
 
 // ---------------------- Utility ----------------------
-function paceByLevel(lvl){ return lvl==="principiante"?6:lvl==="intermedio"?5.5:5; }
-function formatTime(mins){ const h=Math.floor(mins/60); const m=Math.round(mins%60); return h>0?`${h}h ${m}m`:`${m}m`; }
-function tipoAllenamentoForIndex(i){ const types=["Fondo facile","Ripetute collinari","Progressivo","Medio costante","Lungo trail","Fartlek","Fondo lento"]; return types[i%types.length]; }
-function creaDettagliAllenamento(type,weeklyKm,weeklyAsc,runsCount,indexRun,livello,isScarico){
-  const baseDistFractions=new Array(runsCount).fill(1); if(runsCount>0) baseDistFractions[runsCount-1]=1.4;
-  const sum=baseDistFractions.reduce((a,b)=>a+b,0);
-  const fraction=runsCount>0?baseDistFractions[indexRun]/sum:0;
-  let dist=weeklyKm*fraction; if(isScarico) dist*=0.7;
-  let asc=weeklyAsc*fraction; if(isScarico) asc*=0.7;
-  const pace=paceByLevel(livello); const durationMin=dist*pace;
-  let details="";
-  if(type.includes("Ripetute")) details=`${Math.min(12,Math.max(4,Math.round(dist)))}×400 m in salita, recupero 90–120s`;
-  else if(type.includes("Progressivo")) details=`Progressivo: aumenta ritmo negli ultimi km`;
-  else if(type.includes("Medio")) details=`Medio: ${Math.max(4,Math.round(dist*0.6))} km a ritmo sostenuto`;
-  else if(type.includes("Lungo")) details=`Lungo: ritmo lento, endurance`;
-  else if(type.includes("Fartlek")) details=`Fartlek: alternare 2–3' veloce / 2' lento`;
-  else details=`Ritmo facile, tecnica e recupero`;
-  return {distance:+dist.toFixed(1),ascent:Math.round(asc),durationMin:Math.round(durationMin),detailText:details};
+function paceByLevel(l){return l==="principiante"?6:l==="intermedio"?5.5:5;}
+function formatTime(m){const h=Math.floor(m/60),mm=Math.round(m%60);return h>0?`${h}h ${mm}m`:`${mm}m`;}
+
+// ---------------------- Generazione piano ----------------------
+function tipoAllenamentoForIndex(i){
+  const arr=["Fondo facile","Ripetute collinari","Progressivo","Medio costante","Lungo trail","Fartlek","Fondo lento"];
+  return arr[i%arr.length];
 }
 
-// ---------------------- Genera piano ----------------------
+function creaDettagliAllenamento(type,weeklyKm,weeklyAsc,runsCount,runIndex,livello,isScarico){
+  const fractions=new Array(runsCount).fill(1);fractions[runsCount-1]=1.4;
+  const sum=fractions.reduce((a,b)=>a+b,0);const fraction=fractions[runIndex]/sum;
+  let dist=weeklyKm*fraction;if(isScarico)dist*=0.7;
+  let asc=weeklyAsc*fraction;if(isScarico)asc*=0.7;
+  const pace=paceByLevel(livello);const duration=dist*pace;
+  let detail="";if(type.includes("Ripetute"))detail=`${Math.round(dist)}×400m salita`;else if(type.includes("Lungo"))detail="Ritmo lento e costante";else if(type.includes("Progressivo"))detail="Ultimi km più veloci";else if(type.includes("Medio"))detail="Ritmo medio controllato";else detail="Corsa facile o rigenerante";
+  return {distance:+dist.toFixed(1),ascent:Math.round(asc),durationMin:Math.round(duration),detailText:detail};
+}
+
 function selectRunDays(allenTot,giorniPalestra){
   const runNeeded=Math.max(0,allenTot-giorniPalestra.length);
-  const free=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"].filter(d=>!giorniPalestra.includes(d));
-  if(runNeeded>=free.length) return free.slice(0,runNeeded);
-  const step=free.length/runNeeded; const out=[];
+  const free=GIORNI.filter(d=>!giorniPalestra.includes(d));
+  if(runNeeded>=free.length)return free.slice();
+  const step=free.length/runNeeded;const out=[];
   for(let i=0;i<runNeeded;i++){out.push(free[Math.floor(i*step+step/2)]);}
   return out;
 }
-function generaPiano(settings){
-  const plan=[]; const prog=settings.livello==="principiante"?[0.5,0.6,0.7,0.8,0.9,1.0]:settings.livello==="intermedio"?[0.6,0.7,0.8,0.9,1.0]:[0.7,0.8,0.9,1.0];
-  for(let w=1;w<=settings.settimane;w++){
-    const coeff=prog[Math.min(w-1,prog.length-1)];
-    const isScarico=w%4===0&&settings.settimane>6;
-    const km=+(settings.obbKm*coeff*(isScarico?0.7:1)).toFixed(1);
-    const asc=Math.round(settings.obbAsc*coeff*(isScarico?0.7:1));
-    const runDays=selectRunDays(settings.allenTot,settings.giorniPalestra);
-    const settimana=[]; let runIndex=0;
-    const giorni=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
-    for(const g of giorni){
-      if(settings.giorniPalestra.includes(g)) settimana.push({day:g,type:"Palestra",summary:"🏋️ Palestra"});
-      else if(runDays.includes(g)){
-        const type=tipoAllenamentoForIndex(runIndex);
-        const d=creaDettagliAllenamento(type,km,asc,runDays.length,runIndex,settings.livello,isScarico);
-        settimana.push({day:g,type:"Corsa",summary:`🏃 ${type}`,details:d});
-        runIndex++;
-      } else settimana.push({day:g,type:"Riposo",summary:"Riposo"});
+
+function generaPiano(s){
+  const plan=[];
+  for(let w=1;w<=s.settimane;w++){
+    const coeff=w/s.settimane;const isScarico=w%4===0;
+    const km=+(s.obbKm*coeff*(isScarico?0.7:1)).toFixed(1);
+    const asc=Math.round(s.obbAsc*coeff*(isScarico?0.7:1));
+    const runDays=selectRunDays(s.allenTot,s.giorniPalestra);
+    const runsCount=runDays.length;let runIndex=0;
+    const settimana=[];
+    for(const d of GIORNI){
+      if(s.giorniPalestra.includes(d)){
+        settimana.push({day:d,type:"Palestra",summary:"🏋️ Palestra",completed:false});
+      }else if(runDays.includes(d)){
+        const t=tipoAllenamentoForIndex(runIndex);
+        const det=creaDettagliAllenamento(t,km,asc,runsCount,runIndex++,s.livello,isScarico);
+        settimana.push({day:d,type:"Corsa",summary:`🏃 ${t} — ${det.distance} km`,details:det,completed:false});
+      }else{
+        settimana.push({day:d,type:"Riposo",summary:"Riposo",completed:false});
+      }
     }
     plan.push({settimana:w,targetKm:km,targetAsc:asc,allenamenti:settimana,isScarico});
   }
-  STATE.settings=settings; STATE.planData=plan; saveState(); renderPiano();
+  STATE.planData=plan;STATE.settings=s;saveState();renderAll();
 }
 
-// ---------------------- Rendering ----------------------
-function renderPiano(){
-  const c=document.getElementById("planView"); c.innerHTML="";
-  if(!STATE.planData.length){c.textContent="Nessun piano ancora generato.";return;}
-  STATE.planData.forEach((w)=>{
-    const week=document.createElement("div"); week.className="week";
-    const h=document.createElement("h3");
-    h.innerHTML=`📅 Settimana ${w.settimana} — ${w.targetKm} km / +${w.targetAsc} m ${w.isScarico?"(scarico)":""}`;
-    const t=document.createElement("button"); t.textContent="Apri"; t.style.fontSize="13px"; h.appendChild(t);
-    week.appendChild(h);
-    const days=document.createElement("div"); days.className="days";
-    w.allenamenti.forEach((a)=>{
-      const d=document.createElement("div"); d.className="day";
-      d.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
-      if(a.details){
-        const det=document.createElement("div"); det.className="detail";
-        det.innerHTML=`<div>${a.details.distance} km — +${a.details.ascent} m — ${formatTime(a.details.durationMin)}</div><div><em>${a.details.detailText}</em></div>`;
-        d.appendChild(det);
-        const upload=document.createElement("button"); upload.textContent="📎 Carica .fit"; upload.style.fontSize="13px";
-        upload.addEventListener("click",()=>triggerUploadFor(a,w));
-        d.appendChild(upload);
-      }
-      days.appendChild(d);
-    });
-    t.addEventListener("click",()=>{days.style.display=days.style.display==="block"?"none":"block";t.textContent=days.style.display==="block"?"Chiudi":"Apri";});
-    week.appendChild(days); c.appendChild(week);
+// ---------------------- Render ----------------------
+function renderSettingsToUI(){
+  const s=STATE.settings;
+  document.getElementById("livello").value=s.livello;
+  document.getElementById("obbKm").value=s.obbKm;
+  document.getElementById("obbAsc").value=s.obbAsc;
+  document.getElementById("settimane").value=s.settimane;
+  document.getElementById("allenTot").value=s.allenTot;
+  document.querySelectorAll(".chk-btn").forEach(b=>{
+    b.classList.toggle("active",s.giorniPalestra.includes(b.getAttribute("data-day")));
   });
-  renderHistory();
 }
 
-// ---------------------- Upload FIT ----------------------
-function triggerUploadFor(activity,week){
-  const input=document.getElementById("hiddenFileInput");
-  input.onchange=(e)=>{
-    const file=e.target.files[0]; if(!file)return;
+function renderPiano(){
+  const c=document.getElementById("planView");c.innerHTML="";
+  if(!STATE.planData.length){c.textContent="Nessun piano generato.";return;}
+  STATE.planData.forEach((w)=>{
+    const week=document.createElement("div");week.className="week";
+    const h=document.createElement("h3");
+    h.innerHTML=`📅 Settimana ${w.settimana} – ${w.targetKm} km / +${w.targetAsc} m${w.isScarico?" — Scarico":""}`;
+    const btn=document.createElement("button");btn.textContent="Apri";btn.style.fontSize="13px";h.appendChild(btn);
+    week.appendChild(h);
+    const days=document.createElement("div");days.className="days";
+    w.allenamenti.forEach((a)=>{
+      const d=document.createElement("div");d.className="day";
+      const s=document.createElement("div");s.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
+      const det=document.createElement("div");det.className="detail";det.style.display="none";
+      if(a.type==="Corsa"&&a.details){
+        det.innerHTML=`<div><strong>${a.summary}</strong></div>
+          <div class='muted'>Obiettivo: ${a.details.distance} km +${a.details.ascent} m — ${formatTime(a.details.durationMin)}</div>
+          <div style='margin-top:8px;'><em>${a.details.detailText}</em></div>`;
+      }else if(a.type==="Palestra"){
+        det.innerHTML="<div>Allenamento forza e core</div>";
+      }else{det.innerHTML="<div>Recupero</div>";}
+      const fl=document.createElement("div");fl.className="fileline";
+      const u=document.createElement("button");u.textContent="Carica .fit/.gpx";u.style.fontSize="13px";
+      const st=document.createElement("div");st.className="meta";st.textContent=a.uploaded?`✅ ${a.uploaded.filename} — ${a.uploaded.km.toFixed(1)} km`:"📎 Nessun file";
+      fl.appendChild(u);fl.appendChild(st);
+      det.appendChild(fl);
+      u.addEventListener("click",()=>triggerUploadFor(a,w));
+      s.appendChild(document.createElement("br"));
+      const ob=document.createElement("button");ob.textContent="Dettagli";ob.style.fontSize="12px";
+      s.appendChild(ob);
+      ob.addEventListener("click",()=>{det.style.display=det.style.display==="none"?"block":"none";});
+      d.appendChild(s);d.appendChild(det);days.appendChild(d);
+    });
+    week.appendChild(days);
+    btn.addEventListener("click",()=>{days.style.display=days.style.display==="block"?"none":"block";btn.textContent=days.style.display==="block"?"Chiudi":"Apri";});
+    c.appendChild(week);
+  });
+}
+
+function renderHistory(){
+  const h=document.getElementById("historyList");h.innerHTML="";
+  if(!STATE.history.length){h.textContent="Nessun allenamento registrato.";return;}
+  STATE.history.slice().reverse().forEach(e=>{
+    const d=document.createElement("div");d.className="meta";
+    d.textContent=`${e.date} — ${e.filename} — ${e.km.toFixed(1)} km +${e.asc} m`;
+    h.appendChild(d);
+  });
+}
+
+function renderAll(){renderSettingsToUI();renderPiano();renderHistory();}
+
+// ---------------------- Upload FIT/GPX ----------------------
+function triggerUploadFor(a,week){
+  const inp=document.getElementById("hiddenFileInput");
+  inp.value="";
+  inp.onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const ext=file.name.split(".").pop().toLowerCase();
     const reader=new FileReader();
-    reader.onload=(ev)=>{
-      try{
-        const parser=new FitParser({force:true});
-        parser.parse(ev.target.result,(err,data)=>{
-          if(err){alert("Errore nel parsing del file FIT");return;}
-          const records=data.records||[];
-          const totalKm=records.reduce((sum,r,i,a)=>{
-            if(i===0)return 0;
-            const prev=a[i-1];
-            if(r.position_lat&&r.position_long&&prev.position_lat&&prev.position_long){
-              const dx=r.position_lat-prev.position_lat;
-              const dy=r.position_long-prev.position_long;
-              return sum+Math.sqrt(dx*dx+dy*dy)*110;
-            }
-            return sum;
-          },0);
-          const ascent=records.reduce((s,r,i,a)=>i>0?s+Math.max(0,r.altitude-a[i-1].altitude):0,0);
-          const date=(data.sessions&&data.sessions[0]?.start_time)||"";
-          activity.uploaded={filename:file.name,km:totalKm,asc:ascent,date};
-          STATE.history.unshift({name:file.name,km:+totalKm.toFixed(1),asc:+ascent.toFixed(0),date:new Date().toLocaleDateString()});
-          saveState(); renderPiano();
-        });
-      }catch(e){alert("Errore FitParser: "+e.message);}
+    reader.onload=function(){
+      if(ext==="fit")parseFit(file.name,reader.result,a,week);
+      else if(ext==="gpx")parseGpx(file.name,reader.result,a,week);
+      else alert("Formato non supportato");
     };
     reader.readAsArrayBuffer(file);
   };
-  input.click();
+  inp.click();
 }
 
-// ---------------------- Storico ----------------------
-function renderHistory(){
-  const c=document.getElementById("historyList"); if(!STATE.history.length){c.textContent="Nessun allenamento registrato.";return;}
-  c.innerHTML=STATE.history.map(h=>`📁 ${h.name} — ${h.km.toFixed(1)} km / +${h.asc} m (${h.date})`).join("<br>");
+function parseFit(filename,buffer,a,week){
+  try{
+    const parser=new FitParser({force:true});
+    parser.parse(buffer,(err,data)=>{
+      if(err){console.error(err);alert("Errore parsing .fit");return;}
+      let recs=data.records||[];
+      const km=recs.length?recs[recs.length-1].distance/1000:0;
+      const asc=recs.reduce((s,r)=>s+(r.altitude?-Math.min(0,r.altitude):0),0);
+      registerUpload(a,week,filename,km,asc);
+    });
+  }catch(e){console.error(e);alert("Errore FIT parser");}
+}
+
+function parseGpx(filename,buffer,a,week){
+  try{
+    const text=new TextDecoder().decode(buffer);
+    const matches=[...text.matchAll(/<trkpt[^>]*ele>([\d.]+)<\/ele>/g)];
+    const elev=matches.map(m=>parseFloat(m[1]));
+    let asc=0;for(let i=1;i<elev.length;i++){const diff=elev[i]-elev[i-1];if(diff>0)asc+=diff;}
+    const dist=matches.length/1000; // stima base
+    registerUpload(a,week,filename,dist,asc);
+  }catch(e){console.error(e);alert("Errore parsing GPX");}
+}
+
+function registerUpload(a,week,filename,km,asc){
+  a.uploaded={filename,km,asc,date:new Date().toLocaleDateString()};
+  STATE.history.push({filename,km,asc,date:new Date().toLocaleDateString()});
+  saveState();renderAll();
 }
 
 // ---------------------- Eventi ----------------------
-document.getElementById("settingsCard").addEventListener("click",(e)=>{
+document.getElementById("settingsCard").addEventListener("click",e=>{
   if(e.target.classList.contains("chk-btn")){
-    e.target.classList.toggle("active");
-    STATE.settings.giorniPalestra=[...document.querySelectorAll(".chk-btn.active")].map(b=>b.getAttribute("data-day"));
+    const b=e.target;b.classList.toggle("active");
+    STATE.settings.giorniPalestra=[...document.querySelectorAll(".chk-btn.active")].map(x=>x.getAttribute("data-day"));
     saveState();
   }
 });
 document.getElementById("genLocal").addEventListener("click",()=>{
-  const s={
-    livello:document.getElementById("livello").value,
-    obbKm:+document.getElementById("obbKm").value||20,
-    obbAsc:+document.getElementById("obbD+").value||1000,
-    settimane:+document.getElementById("settimane").value||8,
-    allenTot:+document.getElementById("allenTot").value||4,
-    giorniPalestra:STATE.settings.giorniPalestra||[]
-  };
+  const s={livello:document.getElementById("livello").value,
+    obbKm:+document.getElementById("obbKm").value,
+    obbAsc:+document.getElementById("obbAsc").value,
+    settimane:+document.getElementById("settimane").value,
+    allenTot:+document.getElementById("allenTot").value,
+    giorniPalestra:STATE.settings.giorniPalestra};
   generaPiano(s);
 });
-document.getElementById("resetData").addEventListener("click",()=>{localStorage.removeItem(STORAGE_KEY);STATE=JSON.parse(JSON.stringify(DEFAULT_STATE));renderPiano();});
+document.getElementById("resetData").addEventListener("click",()=>{if(confirm("Cancellare tutti i dati?")){localStorage.removeItem(STORAGE_KEY);location.reload();}});
 
 // ---------------------- Init ----------------------
-loadState(); renderPiano();
+loadState();renderAll();
 </script>
 </body>
 </html>
