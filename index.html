@@ -1,45 +1,45 @@
 <!doctype html>
 <html lang="it">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v9.4</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
+<title>TrailCoach AI v9.4.1</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="manifest.json">
 <style>
-  :root{--card-radius:12px;}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;}
-  h1{text-align:center;font-size:22px;margin:6px 0;}
-  .card{background:#fff;border-radius:var(--card-radius);padding:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.06);}
-  label{display:block;margin:8px 0 6px;font-weight:600;}
-  input[type="number"], select{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;}
-  button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:8px;}
-  button.reset{background:#ff3b30;margin-left:8px;}
-  .week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
-  .week h3{margin:0;cursor:pointer;font-size:17px;display:flex;justify-content:space-between;align-items:center;}
-  .days{margin-top:6px;padding-left:10px;display:none;}
-  .days .day{padding:6px 0;border-bottom:1px solid #eee;}
-  .small{font-size:13px;color:#666;margin-top:6px;}
-  .toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:6px 10px;font-size:13px;margin-top:-4px;}
-  .checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
-  .checkbox-grid-bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
-  .chk-btn{display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;background:#f2f2f2;cursor:pointer;border:1px solid transparent;font-weight:700;}
-  .chk-btn.active{background:#007aff;color:#fff;border-color:#0060d6;}
-  .detail{background:#fff;border-radius:8px;padding:10px;margin:6px 0 10px;border:1px solid #eee;font-size:14px;}
-  .muted{color:#666;font-size:13px;}
-  .fileline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
-  .meta{font-size:13px;color:#333;margin-top:6px;}
-  @media(max-width:420px){
-    .checkbox-grid{grid-template-columns:repeat(3,1fr);}
-    .checkbox-grid-bottom{grid-template-columns:repeat(4,1fr);}
-    .detail{font-size:13px;}
-  }
+:root{--card-radius:12px;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;}
+h1{text-align:center;font-size:22px;margin:6px 0;}
+.card{background:#fff;border-radius:var(--card-radius);padding:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.06);}
+label{display:block;margin:8px 0 6px;font-weight:600;}
+input[type="number"], select{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;}
+button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:8px;}
+button.reset{background:#ff3b30;margin-left:8px;}
+.week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
+.week h3{margin:0;cursor:pointer;font-size:17px;display:flex;justify-content:space-between;align-items:center;}
+.days{margin-top:6px;padding-left:10px;display:none;}
+.days .day{padding:6px 0;border-bottom:1px solid #eee;}
+.small{font-size:13px;color:#666;margin-top:6px;}
+.toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:6px 10px;font-size:13px;margin-top:-4px;}
+.checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
+.checkbox-grid-bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.chk-btn{display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;background:#f2f2f2;cursor:pointer;border:1px solid transparent;font-weight:700;}
+.chk-btn.active{background:#007aff;color:#fff;border-color:#0060d6;}
+.detail{background:#fff;border-radius:8px;padding:10px;margin:6px 0 10px;border:1px solid #eee;font-size:14px;}
+.muted{color:#666;font-size:13px;}
+.fileline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+.meta{font-size:13px;color:#333;margin-top:6px;}
+@media(max-width:420px){
+  .checkbox-grid{grid-template-columns:repeat(3,1fr);}
+  .checkbox-grid-bottom{grid-template-columns:repeat(4,1fr);}
+  .detail{font-size:13px;}
+}
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v9.4</h1>
+<h1>🏔️ TrailCoach AI v9.4.1</h1>
 
 <div class="card" id="topSummaryCard" style="display:none;">
   <div id="summaryText" class="muted"></div>
@@ -109,15 +109,190 @@
 </div>
 
 <!-- Hidden single file input reused for per-day uploads -->
-<input id="hiddenFileInput" type="file" accept=".fit" style="display:none" />
+<input id="hiddenFileInput" type="file" accept=".fit,.tcx,.gpx,application/xml" style="display:none" />
 
 <script>
-// ---------------------- Mock FitParser ----------------------
-// Se hai il parser reale includilo al posto di questo mock.
-!function(t){t.FitParser=function(){return{parse:(a,e)=>{try{const r=Math.random(); e(null,{sessions:[{total_distance:5 + r*15, total_ascent: Math.round(100 + r*800)}]});}catch(err){e(err)}}}}}(window);
+// ==================== FIT/TCX/GPX parsing utilities (v9.4.1) ====================
+// Strategy: try XML (TCX/GPX), else attempt FIT header detection and best-effort extraction.
+// We extract: distance (km), ascent (m), duration (min)
+// This parser is best-effort for FIT; if it fails user sees a clear message.
 
-// ---------------------- Stato e storage ----------------------
-const STORAGE_KEY = "trailcoach_v9_4_state_v1";
+function bytesToString(buffer, start=0, len=64){
+  try{
+    const dv = new Uint8Array(buffer, start, len);
+    return new TextDecoder('utf-8', {fatal:false}).decode(dv);
+  }catch(e){ return ""; }
+}
+
+// Try parse as XML TCX/GPX
+function parseXmlTextForMetrics(text){
+  try{
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, "application/xml");
+    // TCX: <Lap><DistanceMeters>..</DistanceMeters><TotalTimeSeconds>..</TotalTimeSeconds>
+    const distNode = xml.querySelector("DistanceMeters");
+    const timeNode = xml.querySelector("TotalTimeSeconds") || xml.querySelector("Time");
+    const ascNode = xml.querySelector("ElevationGain") || xml.querySelector("TotalAscent") || xml.querySelector("TotalElevationGain");
+    if(distNode || timeNode || ascNode){
+      const dist = distNode ? parseFloat(distNode.textContent) : null;
+      const time = timeNode ? parseFloat(timeNode.textContent) : null;
+      const asc = ascNode ? parseFloat(ascNode.textContent) : null;
+      return {
+        distance: dist !== null ? (dist/1000) : null,
+        ascent: asc !== null ? asc : null,
+        durationMin: time !== null ? Math.round(time/60) : null
+      };
+    }
+    // GPX fallback: sum <trkpt><ele> differences? skip: look for <metadata><time> hardly useful.
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+// Heuristic FIT reader (best-effort):
+// - Check header for '.FIT' magic
+// - If present, scan the data block for plausible numeric values:
+//    * distance (meters) likely stored as unsigned32 (or float) in some message -> we search for uint32 values between 100 and 10000000 suggesting meters (we choose candidates division by 1000 to get km)
+//    * ascent likely uint16/uint32 small value 0..20000
+//    * duration likely seconds uint32 small value 60..200000
+// This is heuristic: chooses the most plausible candidates.
+function parseFitBuffer(buffer){
+  const dv = new DataView(buffer);
+  // read header size (byte 0)
+  if(dv.byteLength < 12) return null;
+  const headerSize = dv.getUint8(0);
+  // data type at offset 4 (4 bytes)
+  let dataType = "";
+  try{
+    dataType = bytesToString(buffer, 4, 4);
+  }catch(e){ dataType=""; }
+  if(!dataType.includes("FIT")) {
+    // Not a standard FIT file header
+    // still attempt heuristic scanning on full buffer
+    return heuristicScan(buffer);
+  }
+  // data area follows headerSize and possibly CRC. Data length is at offset 2..5 (uint32 LE?) spec: bytes 2-5 is data size little endian
+  let dataSize = 0;
+  try{
+    dataSize = dv.getUint32(2, true);
+  }catch(e){ dataSize = dv.byteLength - headerSize; }
+  const dataStart = headerSize;
+  const dataEnd = Math.min(dv.byteLength, dataStart + dataSize);
+
+  // Scan for numeric candidates in data area
+  const candidates32 = {}; // value -> count
+  const candidates16 = {};
+  for(let i = dataStart; i + 4 <= dataEnd; i += 1){
+    const val32 = dv.getUint32(i, true);
+    if(val32>50 && val32 < 100000000){ // plausible raw uint32
+      candidates32[val32] = (candidates32[val32]||0) + 1;
+    }
+    // also check uint16
+    if(i + 2 <= dataEnd){
+      const val16 = dv.getUint16(i, true);
+      if(val16 >= 0 && val16 < 60000){
+        candidates16[val16] = (candidates16[val16]||0) + 1;
+      }
+    }
+  }
+
+  // choose plausible distance (meters)
+  // distances often are stored in meters as uint32 with values like 5000..50000 (for 5-50 km)
+  const sorted32 = Object.keys(candidates32).map(k=>({v:+k,c:candidates32[k]}))
+    .sort((a,b)=> (b.c - a.c) || b.v - a.v);
+  const sorted16 = Object.keys(candidates16).map(k=>({v:+k,c:candidates16[k]}))
+    .sort((a,b)=> (b.c - a.c) || b.v - a.v);
+
+  // heuristics: find nearest value that results in km within 0.5..300 km
+  let chosenDistance = null;
+  for(const c of sorted32.slice(0,80)){
+    const km1 = c.v / 1000; // if stored in meters
+    if(km1 >= 0.2 && km1 <= 500) { chosenDistance = km1; break; }
+    const km2 = c.v; // if already in kilometers (unlikely)
+    if(km2 >= 0.2 && km2 <= 500) { chosenDistance = km2; break; }
+  }
+  // altitude candidate
+  let chosenAscent = null;
+  for(const c of sorted16.slice(0,80)){
+    if(c.v >= 0 && c.v <= 20000){ chosenAscent = c.v; break; }
+  }
+  // duration candidate from 32-bit (seconds)
+  let chosenDurationMin = null;
+  for(const c of sorted32.slice(0,120)){
+    if(c.v >= 30 && c.v <= 86400*10){ // seconds plausible (>=30s <= 10 days)
+      chosenDurationMin = Math.round(c.v / 60);
+      break;
+    }
+  }
+
+  // fallback to heuristicScan if none found
+  if(chosenDistance === null && chosenAscent === null && chosenDurationMin === null){
+    return heuristicScan(buffer);
+  }
+
+  return {
+    distance: chosenDistance !== null ? +chosenDistance.toFixed(1) : null,
+    ascent: chosenAscent !== null ? Math.round(chosenAscent) : null,
+    durationMin: chosenDurationMin !== null ? Math.round(chosenDurationMin) : null
+  };
+}
+
+// very basic heuristic scanning (no FIT header)
+function heuristicScan(buffer){
+  const dv = new DataView(buffer);
+  const len = dv.byteLength;
+  const possibleDistances = [];
+  const possibleAscents = [];
+  const possibleDurations = [];
+
+  for(let i=0;i+4<len;i+=2){
+    const u32 = dv.getUint32(i,true);
+    if(u32 > 100 && u32 < 100000000){
+      const km = u32/1000;
+      if(km>=0.1 && km <= 500) possibleDistances.push(km);
+      if(u32>=30 && u32 <= 86400*10) possibleDurations.push(Math.round(u32/60));
+    }
+    const u16 = dv.getUint16(i,true);
+    if(u16>=0 && u16 <= 20000) possibleAscents.push(u16);
+  }
+  // pick medians
+  function pickMedian(arr){
+    if(!arr || arr.length===0) return null;
+    arr.sort((a,b)=>a-b);
+    return arr[Math.floor(arr.length/2)];
+  }
+  const dist = pickMedian(possibleDistances);
+  const asc = pickMedian(possibleAscents);
+  const dur = pickMedian(possibleDurations);
+  if(!dist && !asc && !dur) return null;
+  return {
+    distance: dist ? +dist.toFixed(1) : null,
+    ascent: asc ? Math.round(asc) : null,
+    durationMin: dur ? Math.round(dur) : null
+  };
+}
+
+// main parser that tries XML first, then FIT heuristics:
+async function parseFitOrXml(arrayBuffer){
+  // try decode as text and parse XML
+  try{
+    const text = new TextDecoder().decode(arrayBuffer);
+    if(text && (text.includes("<TrainingCenterDatabase") || text.includes("<Lap") || text.includes("<trk"))){
+      const res = parseXmlTextForMetrics(text);
+      if(res) return res;
+    }
+  }catch(e){}
+  // otherwise try FIT heuristic
+  const resFit = parseFitBuffer(arrayBuffer);
+  return resFit;
+}
+// ==================== End parser utilities ====================
+
+
+// --------------- The rest of the app (based on v9.4) ---------------
+
+const STORAGE_KEY = "trailcoach_v9_4_1_state_v1";
 const DEFAULT_STATE = {
   settings: {
     livello: "principiante",
@@ -136,7 +311,6 @@ let STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }
 function loadState(){ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return; try{ STATE = JSON.parse(raw); }catch(e){console.log("parse error",e);} }
 
-// ---------------------- Costanti & util ----------------------
 const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 
 function progressione(lvl){
@@ -151,7 +325,6 @@ function paceByLevel(lvl){ switch(lvl){ case "principiante": return 6.0; case "i
 function formatTime(mins){ const h=Math.floor(mins/60); const m=Math.round(mins%60); return h>0?`${h}h ${m}m`:`${m}m`; }
 function tipoAllenamentoForIndex(i){ const types=["Fondo facile","Ripetute collinari","Progressivo","Medio costante","Lungo trail","Fartlek","Fondo lento"]; return types[i % types.length]; }
 
-// ---------------------- Dettagli allenamento ----------------------
 function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun, livello, isScarico){
   const baseDistFractions = new Array(runsCount).fill(1);
   if(runsCount>0) baseDistFractions[runsCount-1] = 1.4;
@@ -185,7 +358,6 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun,
   };
 }
 
-// ---------------------- Selezione giorni corsa ----------------------
 function selectRunDays(allenTot, giorniPalestra){
   const runNeeded = Math.max(0, allenTot - giorniPalestra.length);
   const freeDays = GIORNI.filter(d => !giorniPalestra.includes(d));
@@ -207,7 +379,6 @@ function selectRunDays(allenTot, giorniPalestra){
   return uniq;
 }
 
-// ---------------------- Generazione piano ----------------------
 function generaPiano(settings){
   const prog = progressione(settings.livello);
   const plan = [];
@@ -266,7 +437,6 @@ function generaPiano(settings){
   renderAll();
 }
 
-// ---------------------- Adattamento locale (leggero) ----------------------
 function adattamentoLocale(){
   if(STATE.history.length < 2) return;
   const recent = STATE.history.slice(0,3);
@@ -303,7 +473,6 @@ function adattamentoLocale(){
   renderAll();
 }
 
-// ---------------------- Render UI ----------------------
 function renderSummary(){
   const top = document.getElementById("topSummaryCard");
   if(!STATE.planData || STATE.planData.length===0){ top.style.display="none"; return; }
@@ -319,7 +488,7 @@ function renderPiano(){
   container.innerHTML = "";
   if(!STATE.planData || STATE.planData.length===0){ container.textContent = "Nessun piano ancora generato."; return; }
 
-  for(const w of STATE.planData){
+  for(const [wi,w] of STATE.planData.map((v,i)=>[i,v])){
     const weekDiv = document.createElement("div"); weekDiv.className="week";
 
     const header = document.createElement("h3");
@@ -331,7 +500,7 @@ function renderPiano(){
     weekDiv.appendChild(header);
 
     const daysDiv = document.createElement("div"); daysDiv.className="days";
-    for(const a of w.allenamenti){
+    for(const [di,a] of w.allenamenti.map((v,i)=>[i,v])){
       const d = document.createElement("div"); d.className="day";
       const summary = document.createElement("div");
       summary.innerHTML = `<strong>${a.day}</strong> — ${a.summary}${a.completed ? " ✅" : ""}`;
@@ -341,10 +510,8 @@ function renderPiano(){
       summary.appendChild(openBtn);
       d.appendChild(summary);
 
-      // detail box
       const detailBox = document.createElement("div"); detailBox.className="detail"; detailBox.style.display="none";
 
-      // content: details + single upload button + uploaded info if exists
       if(a.type === "Corsa"){
         detailBox.innerHTML = `
           <div><strong>${a.summary.split("—")[0].trim()}</strong></div>
@@ -357,12 +524,11 @@ function renderPiano(){
         detailBox.innerHTML = `<div><strong>Riposo</strong></div><div class="muted">Recupero attivo consigliato</div>`;
       }
 
-      // file upload line: single visible "Carica .fit" button only
       const fileLine = document.createElement("div"); fileLine.className="fileline";
       const uploadBtn = document.createElement("button"); uploadBtn.textContent="Carica .fit"; uploadBtn.style.fontSize="13px";
       const statusSpan = document.createElement("div"); statusSpan.className="meta";
       if(a.uploaded){
-        statusSpan.innerHTML = `✅ ${a.uploaded.filename} — ${a.uploaded.km.toFixed(1)} km / +${a.uploaded.asc} m (${a.uploaded.date})`;
+        statusSpan.innerHTML = `✅ ${a.uploaded.filename} — ${a.uploaded.km.toFixed(1)} km / +${a.uploaded.asc} m — ${a.uploaded.durationMin} min (${a.uploaded.date})`;
       } else {
         statusSpan.innerHTML = `📎 Nessun file caricato per questo giorno.`;
       }
@@ -370,8 +536,7 @@ function renderPiano(){
       detailBox.appendChild(document.createElement("hr"));
       detailBox.appendChild(fileLine);
 
-      // when uploadBtn clicked => trigger hidden global file input and set context
-      uploadBtn.addEventListener("click", ()=> triggerUploadFor(a, w));
+      uploadBtn.addEventListener("click", ()=> triggerUploadFor(wi, di));
 
       d.appendChild(detailBox);
 
@@ -407,7 +572,7 @@ function renderProgress(){
 function renderHistory(){
   const h = document.getElementById("historyList");
   if(!STATE.history || STATE.history.length===0){ h.textContent = "Nessun allenamento registrato."; return; }
-  h.innerHTML = STATE.history.map(x=>`${x.date} — Settimana ${x.week} ${x.day} → ${x.km.toFixed(1)} km, +${x.asc.toFixed(0)} m (${x.filename})`).join("<br>");
+  h.innerHTML = STATE.history.map(x=>`${x.date} — Settimana ${x.week} ${x.day} → ${x.km.toFixed(1)} km, +${x.asc.toFixed(0)} m — ${x.durationMin} min (${x.filename})`).join("<br>");
 }
 
 function renderSettingsToUI(){
@@ -433,9 +598,8 @@ function renderAll(){
   renderHistory();
 }
 
-// ---------------------- Upload handling (single hidden input) ----------------------
-let uploadContext = null; // {weekIndex, dayIndex, weekObj, dayObj}
-
+// ---------------------- Upload handling with real parsing ----------------------
+let uploadContext = null; // {weekIndex, dayIndex}
 const hiddenInput = document.getElementById("hiddenFileInput");
 hiddenInput.addEventListener("change", async (ev)=>{
   const f = ev.target.files[0];
@@ -443,44 +607,45 @@ hiddenInput.addEventListener("change", async (ev)=>{
   const { weekIndex, dayIndex } = uploadContext;
   const week = STATE.planData[weekIndex];
   const dayObj = week.allenamenti[dayIndex];
-  const statusSpan = document.querySelectorAll(".week")[weekIndex].querySelectorAll(".days .day")[dayIndex].querySelector(".meta");
+  // UI feedback
+  const weekDiv = document.querySelectorAll(".week")[weekIndex];
+  const statusSpan = weekDiv.querySelectorAll(".days .day")[dayIndex].querySelector(".meta");
   statusSpan.textContent = "⏳ Lettura file...";
   try{
     const ab = await f.arrayBuffer();
-    const parser = new FitParser();
-    parser.parse(ab,(err,data)=>{
-      if(err){ statusSpan.textContent = "Errore lettura file"; return; }
-      const s = data.sessions && data.sessions[0];
-      if(!s){ statusSpan.textContent = "Formato non riconosciuto"; return; }
-      const dist = Number(s.total_distance) || 0;
-      const asc = Number(s.total_ascent) || 0;
-      const date = new Date().toLocaleString();
-      // save into day object
-      dayObj.uploaded = { filename: f.name, km: dist, asc: asc, date };
-      dayObj.completed = true;
-      // update global progress & history
-      STATE.progress.km = (STATE.progress.km || 0) + dist;
-      STATE.progress.ascent = (STATE.progress.ascent || 0) + asc;
-      STATE.history.unshift({ date, km: dist, asc: asc, filename: f.name, week: week.settimana, day: dayObj.day });
-      // mark weeks completed if cumulative >= target cumulative
-      let cum = 0;
-      for(const w of STATE.planData){ cum += (w.targetKm || 0); if(STATE.progress.km >= cum) w.completato = true; }
-      saveState();
-      adattamentoLocale();
-      renderAll();
-    });
+    const parsed = await parseFitOrXml(ab);
+    if(!parsed || (!parsed.distance && !parsed.ascent && !parsed.durationMin)){
+      statusSpan.textContent = "⚠️ Parsing non riuscito. Prova a esportare in TCX/GPX o JSON.";
+      ev.target.value="";
+      uploadContext = null;
+      return;
+    }
+    // use parsed values: distance (km), ascent (m), durationMin
+    const dist = parsed.distance ? Number(parsed.distance) : 0;
+    const asc = parsed.ascent ? Number(parsed.ascent) : 0;
+    const dur = parsed.durationMin ? Number(parsed.durationMin) : 0;
+    const date = new Date().toLocaleString();
+    // save into day object
+    dayObj.uploaded = { filename: f.name, km: dist, asc: asc, durationMin: dur, date };
+    dayObj.completed = true;
+    // update global progress & history
+    STATE.progress.km = (STATE.progress.km || 0) + dist;
+    STATE.progress.ascent = (STATE.progress.ascent || 0) + asc;
+    STATE.history.unshift({ date, km: dist, asc: asc, durationMin: dur, filename: f.name, week: week.settimana, day: dayObj.day });
+    // mark completed weeks cumulatively
+    let cum = 0;
+    for(const w of STATE.planData){ cum += (w.targetKm || 0); if(STATE.progress.km >= cum) w.completato = true; }
+    saveState();
+    adattamentoLocale();
+    renderAll();
   }catch(e){
     statusSpan.textContent = "Errore: " + (e.message || e);
-  } finally {
+  }finally{
     setTimeout(()=>{ ev.target.value = ""; uploadContext = null; }, 200);
   }
 });
 
-// triggers the hidden input and sets context
-function triggerUploadFor(dayObj, weekObj){
-  // find indices
-  const weekIndex = STATE.planData.indexOf(weekObj);
-  const dayIndex = weekObj.allenamenti.indexOf(dayObj);
+function triggerUploadFor(weekIndex, dayIndex){
   uploadContext = { weekIndex, dayIndex };
   hiddenInput.click();
 }
@@ -493,7 +658,6 @@ document.getElementById("toggleSettings").addEventListener("click", ()=>{
   else{ content.style.display="none"; btn.textContent="Mostra"; }
 });
 
-// toggle buttons for palestra (compact)
 document.querySelectorAll(".chk-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     const day = btn.getAttribute("data-day");
@@ -514,10 +678,8 @@ document.getElementById("genLocal").addEventListener("click", ()=>{
     giorniPalestra: [...document.querySelectorAll(".chk-btn.active")].map(b=>b.getAttribute("data-day"))
   };
   if(!s.obbKm || !s.obbAsc){ alert("Inserisci obiettivi gara (km e dislivello)."); return; }
-  // update settings but keep progress/history unless user resets
   STATE.settings = s;
   generaPiano(s);
-  // hide settings for clarity
   document.getElementById("settingsContent").style.display="none";
   document.getElementById("toggleSettings").textContent="Mostra";
 });
@@ -533,12 +695,12 @@ document.getElementById("resetData").addEventListener("click", ()=>{
 // ---------------------- Init ----------------------
 loadState();
 renderAll();
-// open settings if no plan
 if(!STATE.planData || STATE.planData.length===0){
   document.getElementById("settingsContent").style.display="block";
   document.getElementById("toggleSettings").textContent="Nascondi";
 }
 window.addEventListener("load", ()=> setTimeout(()=> window.scrollTo(0,1), 200));
+
 </script>
 </body>
 </html>
