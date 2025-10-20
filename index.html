@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v9.4.2</title>
+<title>TrailCoach AI v9.4.2.1</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
@@ -25,12 +25,13 @@ canvas{width:100%;max-width:400px;margin:10px auto;display:block;}
 .hidden{display:none;}
 .history-item{border-bottom:1px solid #eee;padding:4px 0;font-size:14px;}
 .toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:2px 8px;font-size:13px;margin-top:-4px;}
-.day-buttons{display:flex;flex-wrap:wrap;gap:4px;}
+.day-buttons{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
 .day-buttons button{flex:1 0 30px;padding:4px;font-size:12px;}
+.active{background:#34c759;color:#fff;}
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v9.4.2</h1>
+<h1>🏔️ TrailCoach AI v9.4.2.1</h1>
 
 <div class="card" id="settingsCard">
   <div>
@@ -90,26 +91,45 @@ canvas{width:100%;max-width:400px;margin:10px auto;display:block;}
   <label>Storico allenamenti</label>
   <div id="historyList" class="small">Nessun allenamento caricato.</div>
 </div>
-
 <script>
 // --- Dati globali ---
 let planData=[], progress={km:0,ascent:0,duration:0}, targetKm=0, targetAsc=0, history=[];
-const STORAGE_KEY="trailcoach_plan_v9_4_2";
+const STORAGE_KEY="trailcoach_plan_v9_4_2_1";
 let palestraSelected=[];
 
+// --- Selezione giorni palestra ---
+document.querySelectorAll("#palestraDays button").forEach(btn=>{
+  btn.onclick=()=>{
+    btn.classList.toggle("active");
+    palestraSelected = Array.from(document.querySelectorAll("#palestraDays button.active")).map(b=>b.dataset.day);
+  };
+});
+
 // --- Progressione ---
-function progressione(lvl){switch(lvl){case "principiante":return [0.5,0.6,0.7,0.8,0.9,1.0];case "intermedio":return [0.6,0.7,0.8,0.9,1.0];case "avanzato":return [0.7,0.8,0.9,1.0];default:return [0.6,0.8,1.0];}}
+function progressione(lvl){
+  switch(lvl){
+    case "principiante": return [0.5,0.6,0.7,0.8,0.9,1.0];
+    case "intermedio": return [0.6,0.7,0.8,0.9,1.0];
+    case "avanzato": return [0.7,0.8,0.9,1.0];
+    default: return [0.6,0.8,1.0];
+  }
+}
 
 // --- Genera piano ---
 function generaPiano(lvl, km, asc, weeks, numAllenamenti){
   const prog = progressione(lvl);
-  planData=[];
+  planData = [];
   for(let w=0; w<weeks; w++){
-    const p=prog[Math.min(w,prog.length-1)];
-    let days=[];
-    const totalDays = numAllenamenti;
-    for(let d=0; d<7; d++){
-      days.push({dayIdx:d,allenamento:(d<totalDays?"Corsa":"Riposo"),done:null});
+    const p = prog[Math.min(w,prog.length-1)];
+    let days = [];
+    const giorniSettimana = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
+    let giorniCorsa = [];
+    for(let i=0;i<7;i++) if(!palestraSelected.includes(giorniSettimana[i])) giorniCorsa.push(i);
+    giorniCorsa = giorniCorsa.slice(0,numAllenamenti);
+    for(let d=0;d<7;d++){
+      let allenamento = giorniCorsa.includes(d)?"Corsa":"Riposo";
+      if(palestraSelected.includes(giorniSettimana[d])) allenamento="Palestra";
+      days.push({dayIdx:d,allenamento,done:null});
     }
     planData.push({settimana:w+1,targetKm:(km*p).toFixed(1),targetAsc:Math.round(asc*p),days});
   }
@@ -118,15 +138,19 @@ function generaPiano(lvl, km, asc, weeks, numAllenamenti){
 
 // --- Render piano ---
 function renderPiano(){
-  const div=document.getElementById("planView");
+  const div = document.getElementById("planView");
   div.innerHTML="";
   planData.forEach((w,wi)=>{
-    const week=document.createElement("div"); week.className="week";
-    week.innerHTML=`<h3>📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc}m</h3>`;
-    const days=document.createElement("div"); days.className="days";
+    const week=document.createElement("div");
+    week.className="week";
+    week.innerHTML=`<h3>📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc} m</h3>`;
+    const days=document.createElement("div");
+    days.className="days";
     w.days.forEach((d,di)=>{
       const dayDiv=document.createElement("div");
-      dayDiv.innerHTML=`<strong>${["Lun","Mar","Mer","Gio","Ven","Sab","Dom"][di]}:</strong> ${d.allenamento} <input type="file" accept=".fit,.tcx,.gpx,application/octet-stream" id="fitInput-${wi}-${di}" /> <span id="fitInfo-${wi}-${di}" class="small"></span>`;
+      dayDiv.innerHTML=`<strong>${["Lun","Mar","Mer","Gio","Ven","Sab","Dom"][di]}:</strong> ${d.allenamento} 
+        <input type="file" accept=".fit" id="fitInput-${wi}-${di}" />
+        <span id="fitInfo-${wi}-${di}" class="small"></span>`;
       days.appendChild(dayDiv);
       document.getElementById(`fitInput-${wi}-${di}`).addEventListener("change",(ev)=>handleFitFileUpload(ev,wi,di));
     });
@@ -136,14 +160,14 @@ function renderPiano(){
   });
 }
 
-// --- Caricamento file FIT ---
+// --- Caricamento file ---
 async function handleFitFileUpload(ev, weekIdx, dayIdx){
   const file = ev.target.files[0]; if(!file) return;
   const infoEl = document.getElementById(`fitInfo-${weekIdx}-${dayIdx}`);
   infoEl.textContent="⏳ Lettura file...";
   try{
     const ab = await file.arrayBuffer();
-    const parsed = parseFitMock(ab);
+    const parsed = parseFitMock(ab); // qui puoi sostituire con vero parser
     progress.km += parsed.distance;
     progress.ascent += parsed.ascent;
     progress.duration += parsed.duration;
@@ -154,8 +178,8 @@ async function handleFitFileUpload(ev, weekIdx, dayIdx){
   ev.target.value="";
 }
 
-// --- Parser mock FIT ---
-function parseFitMock(ab){ 
+// --- Parser mock ---
+function parseFitMock(ab){
   return {distance: Math.random()*10+5, ascent:100+Math.random()*500, duration:Math.floor(Math.random()*60+20)};
 }
 
@@ -186,7 +210,7 @@ function renderHistory(){
   div.innerHTML = items.length ? items.map(h=>`<div class="history-item">${h.date} → ${h.distance.toFixed(1)} km, +${h.ascent.toFixed(0)} m, ${h.duration} min</div>`).join("") : "Nessun allenamento caricato.";
 }
 
-// --- Salvataggio ---
+// --- Salvataggio locale ---
 function salvaLocale(){ localStorage.setItem(STORAGE_KEY,JSON.stringify({planData,progress})); }
 function caricaLocale(){
   const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return;
@@ -197,25 +221,35 @@ function caricaLocale(){
   }catch(e){console.log("Errore load",e);}
 }
 
+// --- Toggle impostazioni ---
+function toggleSettings(){
+  const content=document.getElementById("settingsContent");
+  const btn=document.getElementById("toggleSettings");
+  if(content.classList.contains("hidden")){content.classList.remove("hidden");btn.textContent="Nascondi";}
+  else{content.classList.add("hidden");btn.textContent="Mostra";}
+}
+
 // --- Eventi ---
 document.getElementById("genLocal").onclick=()=>{
-  const lvl=livello.value;
+  const lvl=document.getElementById("livello").value;
   targetKm=+document.getElementById("obbKm").value;
   targetAsc=+document.getElementById("obbD+").value;
   const weeks=+document.getElementById("settimane").value;
-  const numA = +document.getElementById("numAllenamenti").value;
-  if(!targetKm||!targetAsc){alert("Inserisci obiettivi gara.");return;}
+  const numA=+document.getElementById("numAllenamenti").value;
+  if(!targetKm||!targetAsc){alert("Inserisci obiettivi gara."); return;}
   progress={km:0,ascent:0,duration:0}; planData=[];
   generaPiano(lvl,targetKm,targetAsc,weeks,numA);
 };
+
 document.getElementById("resetPlan").onclick=()=>{
   if(confirm("Vuoi cancellare il piano e tutti i dati salvati?")){
-    planData=[];progress={km:0,ascent:0,duration:0};
+    planData=[]; progress={km:0,ascent:0,duration:0};
     localStorage.removeItem(STORAGE_KEY);
     renderPiano(); drawChart(); renderHistory();
   }
 };
-document.getElementById("toggleSettings").onclick=()=>toggleSettings();
+
+document.getElementById("toggleSettings").onclick=toggleSettings;
 
 window.addEventListener("load",()=>{caricaLocale(); setTimeout(()=>window.scrollTo(0,1),500);});
 </script>
