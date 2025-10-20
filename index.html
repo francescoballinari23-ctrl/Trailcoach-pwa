@@ -247,7 +247,6 @@ function adattamentoLocale(){
   saveState();
   renderAll();
 }
-</script>
 <script>
 // ---------------------- Render UI ----------------------
 function renderSummary(){
@@ -315,8 +314,8 @@ function renderPiano(){
       uploadBtn.addEventListener("click",()=>triggerUploadFor(a,w,weekIndex,dayIndex));
       openBtn.addEventListener("click",()=>{ detailBox.style.display=(detailBox.style.display==="none"?"block":"none"); });
 
-      daysDiv.appendChild(d);
       d.appendChild(detailBox);
+      daysDiv.appendChild(d);
     });
 
     weekDiv.appendChild(daysDiv);
@@ -399,29 +398,36 @@ document.getElementById("toggleSettings").addEventListener("click",()=>{
   else{ content.style.display="none"; btn.textContent="Mostra"; }
 });
 
-document.querySelectorAll(".chk-btn").forEach(btn=>{
-  btn.addEventListener("click",()=>{
-    const day=btn.getAttribute("data-day");
+// Toggle giorni palestra
+document.querySelectorAll(".chk-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const day = btn.getAttribute("data-day");
     btn.classList.toggle("active");
-    const active=[...document.querySelectorAll(".chk-btn.active")].map(n=>n.getAttribute("data-day"));
-    STATE.settings.giorniPalestra=active;
+    STATE.settings.giorniPalestra = [...document.querySelectorAll(".chk-btn.active")]
+      .map(b => b.getAttribute("data-day"));
     saveState();
   });
 });
 
-document.getElementById("genLocal").addEventListener("click",()=>{
-  const s={
-    livello:document.getElementById("livello").value,
-    obbKm:+document.getElementById("obbKm").value,
-    obbAsc:+document.getElementById("obbD+").value,
-    settimane:+document.getElementById("settimane").value,
-    allenTot:+document.getElementById("allenTot").value,
-    giorniPalestra=[...document.querySelectorAll(".chk-btn.active")].map(b=>b.getAttribute("data-day"))
+// Genera piano
+document.getElementById("genLocal").addEventListener("click", () => {
+  const s = {
+    livello: document.getElementById("livello").value,
+    obbKm: Number(document.getElementById("obbKm").value),
+    obbAsc: Number(document.getElementById("obbD+").value),
+    settimane: Number(document.getElementById("settimane").value),
+    allenTot: Number(document.getElementById("allenTot").value),
+    giorniPalestra: [...document.querySelectorAll(".chk-btn.active")]
+      .map(b => b.getAttribute("data-day"))
   };
-  if(!s.obbKm || !s.obbAsc){ alert("Inserisci obiettivi gara (km e dislivello)."); return; }
-  STATE.settings=s; generaPiano(s);
-  document.getElementById("settingsContent").style.display="none";
-  document.getElementById("toggleSettings").textContent="Mostra";
+  if (!s.obbKm || !s.obbAsc) { 
+    alert("Inserisci obiettivi gara (km e dislivello)."); 
+    return; 
+  }
+  STATE.settings = s;
+  generaPiano(s);
+  document.getElementById("settingsContent").style.display = "none";
+  document.getElementById("toggleSettings").textContent = "Mostra";
 });
 
 document.getElementById("resetData").addEventListener("click",()=>{
