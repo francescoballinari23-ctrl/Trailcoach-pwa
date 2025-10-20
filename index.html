@@ -139,14 +139,16 @@ function loadState(){ const raw=localStorage.getItem(STORAGE_KEY); if(raw) STATE
 
 // ---------------------- Giorni corsa e palestra ----------------------
 function initGymButtons(){
-  document.querySelectorAll(".chk-btn").forEach(btn=>{
-    btn.addEventListener("click",()=>{
-      const day = btn.getAttribute("data-day");
+  // Event delegation
+  document.getElementById("settingsCard").addEventListener("click", function(e){
+    if(e.target.classList.contains("chk-btn")){
+      const btn = e.target;
       btn.classList.toggle("active");
+      // Aggiorna giorniPalestra nello stato
       STATE.settings.giorniPalestra = [...document.querySelectorAll(".chk-btn.active")]
-        .map(b=>b.getAttribute("data-day"));
+        .map(b => b.getAttribute("data-day"));
       saveState();
-    });
+    }
   });
 }
 
@@ -227,15 +229,16 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun,
 <script>
 // ---------------------- Render UI ----------------------
 function renderSettingsToUI(){
-  const s=STATE.settings;
-  document.getElementById("livello").value=s.livello||"principiante";
-  document.getElementById("obbKm").value=s.obbKm||"";
-  document.getElementById("obbD+").value=s.obbAsc||"";
-  document.getElementById("settimane").value=s.settimane||8;
-  document.getElementById("allenTot").value=s.allenTot||4;
+  const s = STATE.settings;
+  document.getElementById("livello").value = s.livello || "principiante";
+  document.getElementById("obbKm").value = s.obbKm || "";
+  document.getElementById("obbD+").value = s.obbAsc || "";
+  document.getElementById("settimane").value = s.settimane || 8;
+  document.getElementById("allenTot").value = s.allenTot || 4;
+
   document.querySelectorAll(".chk-btn").forEach(b=>{
-    const day=b.getAttribute("data-day");
-    b.classList.toggle("active", s.giorniPalestra.includes(day));
+    const day = b.getAttribute("data-day");
+    b.classList.toggle("active", s.giorniPalestra.includes(day)); // <- sincronizza correttamente
   });
 }
 
