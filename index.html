@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v9.4.2.1</title>
+<title>TrailCoach AI v9.4.2.2</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
@@ -31,7 +31,7 @@ canvas{width:100%;max-width:400px;margin:10px auto;display:block;}
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v9.4.2.1</h1>
+<h1>🏔️ TrailCoach AI v9.4.2.2</h1>
 
 <div class="card" id="settingsCard">
   <div>
@@ -91,11 +91,12 @@ canvas{width:100%;max-width:400px;margin:10px auto;display:block;}
   <label>Storico allenamenti</label>
   <div id="historyList" class="small">Nessun allenamento caricato.</div>
 </div>
+
 <script>
 // --- Dati globali ---
-let planData=[], progress={km:0,ascent:0,duration:0}, targetKm=0, targetAsc=0, history=[];
-const STORAGE_KEY="trailcoach_plan_v9_4_2_1";
-let palestraSelected=[];
+let planData=[], progress={km:0,ascent:0,duration:0};
+let palestraSelected = [];
+const STORAGE_KEY="trailcoach_plan_v9_4_2_2";
 
 // --- Selezione giorni palestra ---
 document.querySelectorAll("#palestraDays button").forEach(btn=>{
@@ -118,15 +119,17 @@ function progressione(lvl){
 // --- Genera piano ---
 function generaPiano(lvl, km, asc, weeks, numAllenamenti){
   const prog = progressione(lvl);
-  planData = [];
+  planData=[];
+  const giorniSettimana=["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
   for(let w=0; w<weeks; w++){
     const p = prog[Math.min(w,prog.length-1)];
-    let days = [];
-    const giorniSettimana = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
-    let giorniCorsa = [];
-    for(let i=0;i<7;i++) if(!palestraSelected.includes(giorniSettimana[i])) giorniCorsa.push(i);
+    let days=[];
+    let giorniCorsa=[];
+    for(let i=0;i<7;i++){
+      if(!palestraSelected.includes(giorniSettimana[i])) giorniCorsa.push(i);
+    }
     giorniCorsa = giorniCorsa.slice(0,numAllenamenti);
-    for(let d=0;d<7;d++){
+    for(let d=0; d<7; d++){
       let allenamento = giorniCorsa.includes(d)?"Corsa":"Riposo";
       if(palestraSelected.includes(giorniSettimana[d])) allenamento="Palestra";
       days.push({dayIdx:d,allenamento,done:null});
@@ -138,14 +141,11 @@ function generaPiano(lvl, km, asc, weeks, numAllenamenti){
 
 // --- Render piano ---
 function renderPiano(){
-  const div = document.getElementById("planView");
-  div.innerHTML="";
+  const div=document.getElementById("planView"); div.innerHTML="";
   planData.forEach((w,wi)=>{
-    const week=document.createElement("div");
-    week.className="week";
+    const week=document.createElement("div"); week.className="week";
     week.innerHTML=`<h3>📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc} m</h3>`;
-    const days=document.createElement("div");
-    days.className="days";
+    const days=document.createElement("div"); days.className="days";
     w.days.forEach((d,di)=>{
       const dayDiv=document.createElement("div");
       dayDiv.innerHTML=`<strong>${["Lun","Mar","Mer","Gio","Ven","Sab","Dom"][di]}:</strong> ${d.allenamento} 
@@ -162,26 +162,24 @@ function renderPiano(){
 
 // --- Caricamento file ---
 async function handleFitFileUpload(ev, weekIdx, dayIdx){
-  const file = ev.target.files[0]; if(!file) return;
-  const infoEl = document.getElementById(`fitInfo-${weekIdx}-${dayIdx}`);
+  const file=ev.target.files[0]; if(!file) return;
+  const infoEl=document.getElementById(`fitInfo-${weekIdx}-${dayIdx}`);
   infoEl.textContent="⏳ Lettura file...";
   try{
-    const ab = await file.arrayBuffer();
-    const parsed = parseFitMock(ab); // qui puoi sostituire con vero parser
-    progress.km += parsed.distance;
-    progress.ascent += parsed.ascent;
-    progress.duration += parsed.duration;
-    planData[weekIdx].days[dayIdx].done = parsed;
+    const ab=await file.arrayBuffer();
+    const parsed=parseFitMock(ab); 
+    progress.km+=parsed.distance;
+    progress.ascent+=parsed.ascent;
+    progress.duration+=parsed.duration;
+    planData[weekIdx].days[dayIdx].done=parsed;
     infoEl.textContent=`🏁 ${parsed.distance.toFixed(1)} km / +${parsed.ascent.toFixed(0)} m / ${parsed.duration} min`;
     salvaLocale(); drawChart(); renderHistory();
-  }catch(e){ infoEl.textContent="⚠️ Errore: "+e; }
+  }catch(e){infoEl.textContent="⚠️ Errore: "+e;}
   ev.target.value="";
 }
 
 // --- Parser mock ---
-function parseFitMock(ab){
-  return {distance: Math.random()*10+5, ascent:100+Math.random()*500, duration:Math.floor(Math.random()*60+20)};
-}
+function parseFitMock(ab){ return {distance:Math.random()*10+5, ascent:100+Math.random()*500, duration:Math.floor(Math.random()*60+20)}; }
 
 // --- Grafico ---
 function drawChart(){
@@ -189,19 +187,17 @@ function drawChart(){
   ctx.clearRect(0,0,c.width,c.height);
   const percKm=Math.min(progress.km/targetKm,1);
   const percAsc=Math.min(progress.ascent/targetAsc,1);
-  ctx.fillStyle="#007aff";ctx.fillRect(40,80,280*percKm,25);
-  ctx.fillStyle="#ccc";ctx.fillRect(40+280*percKm,80,280*(1-percKm),25);
-  ctx.fillStyle="#ff9500";ctx.fillRect(40,120,280*percAsc,25);
-  ctx.fillStyle="#ccc";ctx.fillRect(40+280*percAsc,120,280*(1-percAsc),25);
-  ctx.fillStyle="#000";ctx.fillText("Km",10,98);ctx.fillText("D+",10,138);
-  document.getElementById("chartText").textContent=
-    `${progress.km.toFixed(1)} km / ${targetKm} km — +${progress.ascent.toFixed(0)} m / +${targetAsc} m — ${progress.duration} min`;
+  ctx.fillStyle="#007aff"; ctx.fillRect(40,80,280*percKm,25);
+  ctx.fillStyle="#ccc"; ctx.fillRect(40+280*percKm,80,280*(1-percKm),25);
+  ctx.fillStyle="#ff9500"; ctx.fillRect(40,120,280*percAsc,25);
+  ctx.fillStyle="#ccc"; ctx.fillRect(40+280*percAsc,120,280*(1-percAsc),25);
+  ctx.fillStyle="#000"; ctx.fillText("Km",10,98); ctx.fillText("D+",10,138);
+  document.getElementById("chartText").textContent=`${progress.km.toFixed(1)} km / ${targetKm} km — +${progress.ascent.toFixed(0)} m / +${targetAsc} m — ${progress.duration} min`;
 }
 
 // --- Storico ---
 function renderHistory(){
-  const div=document.getElementById("historyList");
-  let items=[];
+  const div=document.getElementById("historyList"); let items=[];
   planData.forEach(w=>{
     w.days.forEach(d=>{
       if(d.done) items.push({date:`Set ${w.settimana} - Giorno ${d.dayIdx+1}`,...d.done});
@@ -213,7 +209,7 @@ function renderHistory(){
 // --- Salvataggio locale ---
 function salvaLocale(){ localStorage.setItem(STORAGE_KEY,JSON.stringify({planData,progress})); }
 function caricaLocale(){
-  const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return;
+  const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return;
   try{
     const data=JSON.parse(raw);
     planData=data.planData||[]; progress=data.progress||{km:0,ascent:0,duration:0};
@@ -232,13 +228,13 @@ function toggleSettings(){
 // --- Eventi ---
 document.getElementById("genLocal").onclick=()=>{
   const lvl=document.getElementById("livello").value;
-  targetKm=+document.getElementById("obbKm").value;
-  targetAsc=+document.getElementById("obbD+").value;
+  const km=+document.getElementById("obbKm").value;
+  const asc=+document.getElementById("obbD+").value;
   const weeks=+document.getElementById("settimane").value;
   const numA=+document.getElementById("numAllenamenti").value;
-  if(!targetKm||!targetAsc){alert("Inserisci obiettivi gara."); return;}
+  if(!km||!asc){ alert("Inserisci obiettivi gara."); return; }
   progress={km:0,ascent:0,duration:0}; planData=[];
-  generaPiano(lvl,targetKm,targetAsc,weeks,numA);
+  generaPiano(lvl, km, asc, weeks, numA);
 };
 
 document.getElementById("resetPlan").onclick=()=>{
@@ -246,12 +242,16 @@ document.getElementById("resetPlan").onclick=()=>{
     planData=[]; progress={km:0,ascent:0,duration:0};
     localStorage.removeItem(STORAGE_KEY);
     renderPiano(); drawChart(); renderHistory();
+    
+    toggleSettings(false);
   }
 };
 
 document.getElementById("toggleSettings").onclick=toggleSettings;
 
-window.addEventListener("load",()=>{caricaLocale(); setTimeout(()=>window.scrollTo(0,1),500);});
+// --- Avvio ---
+caricaLocale();
+window.addEventListener("load",()=>{setTimeout(()=>window.scrollTo(0,1),500);});
 </script>
 </body>
 </html>
