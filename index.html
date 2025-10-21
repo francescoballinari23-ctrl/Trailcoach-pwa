@@ -194,6 +194,7 @@ function generaPiano(settings){
     const targetKm=+(totaleKm*progFactor*scaricoFactor).toFixed(1);
     const targetAsc=Math.round(totaleAsc*progFactor*scaricoFactor);
 
+    // selezione giorni corsa considerando mezzi allenamenti
     const runDays=selectRunDays(settings.allenTot,settings.giorniPalestra,w);
     const runsCount=runDays.length||1;
     const settimanaArr=[];
@@ -221,27 +222,69 @@ function generaPiano(settings){
   renderAll();
 }
 
-// ------------------- Rendering piano -------------------
-function renderPlan(){
+// ------------------- Render piano settimanale -------------------
+function renderPiano(){
   const container=document.getElementById("planView");
-  if(!STATE.planData.length){ container.innerHTML="Nessun piano ancora generato."; return; }
   container.innerHTML="";
-  STATE.planData.forEach(week=>{
+  if(!STATE.planData || STATE.planData.length===0){
+    container.textContent="Nessun piano ancora generato.";
+    return;
+  }
+
+  STATE.planData.forEach((week, weekIndex)=>{
     const weekDiv=document.createElement("div");
     weekDiv.className="week";
-    const h3=document.createElement("h3");
-    h3.innerText=`Settimana ${week.settimana} — ${week.targetKm} km, ${week.targetAsc} m D+`;
-    h3.onclick=()=>daysDiv.style.display=daysDiv.style.display==="none"?"block":"none";
-    weekDiv.appendChild(h3);
+
+    const header=document.createElement("h3");
+    header.textContent=`📅 Settimana ${week.settimana} – Target: ${week.targetKm} km / +${week.targetAsc} m ${week.isScarico ? "— Scarico" : ""}`;
+    header.style.cursor="pointer";
 
     const daysDiv=document.createElement("div");
     daysDiv.className="days";
-    week.allenamenti.forEach(day=>{
+    daysDiv.style.display="none";
+
+    header.onclick=()=>{ daysDiv.style.display=daysDiv.style.display==="none"?"block":"none"; };
+
+    week.allenamenti.forEach((a,dayIndex)=>{
       const dayDiv=document.createElement("div");
       dayDiv.className="day";
-      dayDiv.innerHTML=`<strong>${day.day}:</strong> ${day.summary} <div class="small">${day.details.note||day.details.detailText||""}</div>`;
+
+      const summaryDiv=document.createElement("div");
+      summaryDiv.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
+      summaryDiv.style.display="flex";
+      summaryDiv.style.justifyContent="space-between";
+      summaryDiv.style.alignItems="center";
+
+      const openBtn=document.createElement("button");
+      openBtn.textContent="Dettagli";
+      openBtn.style.fontSize="13px";
+      summaryDiv.appendChild(openBtn);
+
+      dayDiv.appendChild(summaryDiv);
+
+      const detailBox=document.createElement("div");
+      detailBox.className="detail";
+      detailBox.style.display="none";
+
+      if(a.type==="Corsa" && a.details){
+        detailBox.innerHTML=`
+          <div><strong>${a.summary.split("—")[0].trim()}</strong></div>
+          <div class="muted">Obiettivo: ${a.details.distance} km — +${a.details.ascent} m — ${formatTime(a.details.durationMin)}</div>
+          <div style="margin-top:8px;"><em>${a.details.detailText}</em></div>
+        `;
+      } else if(a.type==="Palestra"){
+        detailBox.innerHTML=`<div><strong>Palestra</strong></div><div class="muted">Forza & Core — esercizi consigliati</div>`;
+      } else {
+        detailBox.innerHTML=`<div><strong>Riposo</strong></div><div class="muted">Recupero attivo consigliato</div>`;
+      }
+
+      openBtn.onclick=()=>{ detailBox.style.display=detailBox.style.display==="none"?"block":"none"; };
+
+      dayDiv.appendChild(detailBox);
       daysDiv.appendChild(dayDiv);
     });
+
+    weekDiv.appendChild(header);
     weekDiv.appendChild(daysDiv);
     container.appendChild(weekDiv);
   });
