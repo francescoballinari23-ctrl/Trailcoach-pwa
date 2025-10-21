@@ -182,34 +182,39 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun,
   return { distance: +dist.toFixed(1), ascent: Math.round(asc), durationMin: Math.round(durationMin), detailText: details };
 }
 
-// ---------------------- Generazione piano aggiornata ----------------------
+// ---------------------- Generazione piano realistico ----------------------
 function generaPiano(settings){
   const plan = [];
+  
   for(let w=1; w<=settings.settimane; w++){
-    const isScarico = (w === settings.settimane); // ultima settimana = scarico
+    const isScarico = (w === settings.settimane); // ultima settimana gara = scarico
     const scaricoFactor = isScarico ? 0.7 : 1;
 
     const targetKm = +(settings.obbKm * scaricoFactor).toFixed(1);
     const targetAsc = Math.round(settings.obbAsc * scaricoFactor);
 
-    // selezione giorni corsa
+    // selezione giorni di corsa rimanenti
     const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra);
     const runsCount = runDays.length || 1;
     let runIndex = 0;
 
     const settimana = [];
+
     for(const day of GIORNI){
       if(settings.giorniPalestra.includes(day)){
-        settimana.push({ 
-          day, type:"Palestra", summary:"🏋️ Palestra", 
-          details:{ note:"Forza & Core" }, uploaded:null, completed:false 
+        settimana.push({
+          day,
+          type:"Palestra",
+          summary:"🏋️ Palestra",
+          details:{ note:"Forza & Core" },
+          uploaded:null,
+          completed:false
         });
       } else if(runDays.includes(day)){
-        // tipologia allenamento
-        let type;
-        if(day === "Sabato" || day === "Domenica") type = "Lungo trail"; // lungo sempre nel weekend
-        else type = (runIndex % 2 === 0 ? "Medio costante" : "Fartlek"); // alternanza
+        // selezione tipo allenamento
+        const type = tipoAllenamentoForIndex(runIndex, runsCount, day);
         const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runIndex, settings.livello, isScarico);
+
         settimana.push({
           day,
           type: "Corsa",
@@ -220,9 +225,13 @@ function generaPiano(settings){
         });
         runIndex++;
       } else {
-        settimana.push({ 
-          day, type:"Riposo", summary:"Riposo", 
-          details:{ note:"Recupero" }, uploaded:null, completed:false 
+        settimana.push({
+          day,
+          type:"Riposo",
+          summary:"Riposo",
+          details:{ note:"Recupero" },
+          uploaded:null,
+          completed:false
         });
       }
     }
@@ -241,6 +250,51 @@ function generaPiano(settings){
   STATE.planData = plan;
   saveState();
   renderAll();
+}
+
+// ---------------------- Logica tipo allenamento più dinamica ----------------------
+function tipoAllenamentoForIndex(i, runsCount, day){
+  if(runsCount === 1) return "Lungo trail"; // un solo allenamento = lungo
+  if(day === "Sabato" || day === "Domenica") return "Lungo trail"; // weekend lungo
+  // alternanza intensità su giorni liberi
+  const types = ["Ripetute", "Progressivo", "Medio costante", "Fartlek", "Fondo lento"];
+  return types[i % types.length];
+}
+
+// ---------------------- Dettagli allenamento realistici ----------------------
+function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun, livello, isScarico){
+  let dist, asc;
+  const basePace = paceByLevel(livello);
+
+  // distribuzione km e dislivello
+  if(type === "Lungo trail"){
+    dist = weeklyKm * 0.55;  // lungo ~55% del totale settimanale
+    asc  = weeklyAsc * 0.55;
+  } else if(type === "Medio costante" || type === "Fartlek" || type === "Progressivo" || type === "Ripetute"){
+    const remainingKm = weeklyKm * 0.45;
+    const remainingAsc = weeklyAsc * 0.45;
+    const runsOther = runsCount - 1;
+    const fraction = runsOther > 0 ? 1/runsOther : 1;
+    dist = remainingKm * fraction;
+    asc  = remainingAsc * fraction;
+  } else { // Fondo lento / recupero
+    dist = weeklyKm * 0.3 / runsCount;
+    asc  = weeklyAsc * 0.3 / runsCount;
+  }
+
+  if(isScarico){ dist *= 0.7; asc *= 0.7; }
+
+  const durationMin = dist * basePace;
+
+  let details = "";
+  if(type === "Fartlek") details = `Alternare 2–3' veloce / 2' lento`;
+  else if(type === "Medio costante") details = `Medio: ritmo sostenuto per la maggior parte della distanza`;
+  else if(type === "Lungo trail") details = `Lungo: ritmo lento, endurance, salita costante`;
+  else if(type === "Ripetute") details = `${Math.min(12, Math.max(4, Math.round(dist)))}×400 m in salita, recupero 90–120s`;
+  else if(type === "Progressivo") details = `Progressivo: aumenta ritmo negli ultimi km`;
+  else details = `Ritmo facile, tecnica e recupero`;
+
+  return { distance: +dist.toFixed(1), ascent: Math.round(asc), durationMin: Math.round(durationMin), detailText: details };
 }
 
 // ---------------------- Selezione giorni corsa ----------------------
