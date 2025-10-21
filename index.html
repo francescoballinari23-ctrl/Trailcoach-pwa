@@ -185,73 +185,40 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun,
 // ---------------------- Generazione piano realistico ----------------------
 function generaPiano(settings){
   const plan = [];
+  const settimane = settings.settimane;
+  const totaleKm = settings.obbKm;
+  const totaleAsc = settings.obbAsc;
 
-  for(let w=1; w<=settings.settimane; w++){
-    const isScarico = (w === settings.settimane); // ultima settimana = scarico
+  for(let w=1; w<=settimane; w++){
+    const isScarico = (w === settimane); // ultima settimana = scarico
     const scaricoFactor = isScarico ? 0.7 : 1;
 
-    const targetKm = +(settings.obbKm * scaricoFactor).toFixed(1);
-    const targetAsc = Math.round(settings.obbAsc * scaricoFactor);
+    // Progressione lineare dei km: dalla settimana 1 alla gara
+    const progFactor = 0.4 + 0.6 * ((w-1)/(settimane-1)); // 40% primo w, 100% ultimo w (scarico escluso)
+    const targetKm = +(totaleKm * progFactor * scaricoFactor).toFixed(1);
+    const targetAsc = Math.round(totaleAsc * progFactor * scaricoFactor);
 
-    // selezione giorni di corsa rimanenti
-    const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra);
+    // Giorni corsa della settimana
+    const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra, w);
     const runsCount = runDays.length || 1;
-    let runIndex = 0;
 
     const settimana = [];
+    let runIndex = 0;
 
     for(const day of GIORNI){
       if(settings.giorniPalestra.includes(day)){
-        settimana.push({
-          day,
-          type:"Palestra",
-          summary:"🏋️ Palestra",
-          details:{ note:"Forza & Core" },
-          uploaded:null,
-          completed:false
-        });
+        settimana.push({ day, type:"Palestra", summary:"🏋️ Palestra", details:{ note:"Forza & Core" }, uploaded:null, completed:false });
       } else if(runDays.includes(day)){
-        // selezione tipo allenamento
         const type = tipoAllenamentoForIndex(runIndex, runsCount, day);
-
-        // calcolo fractionalFactor per mezzo allenamento (.5)
-        let fractionalFactor = 1;
-        const totalRuns = settings.allenTot - settings.giorniPalestra.length;
-        if(runIndex === runDays.length - 1 && totalRuns % 1 === 0.5){
-          fractionalFactor = 0.5;
-        }
-
-        const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runIndex, settings.livello, isScarico, fractionalFactor);
-
-        settimana.push({
-          day,
-          type: "Corsa",
-          summary: `🏃 ${type} — ${det.distance} km`,
-          details: det,
-          uploaded: null,
-          completed: false
-        });
+        const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runIndex, settings.livello, isScarico);
+        settimana.push({ day, type:"Corsa", summary:`🏃 ${type} — ${det.distance} km`, details:det, uploaded:null, completed:false });
         runIndex++;
       } else {
-        settimana.push({
-          day,
-          type:"Riposo",
-          summary:"Riposo",
-          details:{ note:"Recupero" },
-          uploaded:null,
-          completed:false
-        });
+        settimana.push({ day, type:"Riposo", summary:"Riposo", details:{ note:"Recupero" }, uploaded:null, completed:false });
       }
     }
 
-    plan.push({
-      settimana: w,
-      targetKm,
-      targetAsc,
-      isScarico,
-      allenamenti: settimana,
-      completato: false
-    });
+    plan.push({ settimana:w, targetKm, targetAsc, isScarico, allenamenti:settimana, completato:false });
   }
 
   STATE.settings = settings;
@@ -269,10 +236,39 @@ function tipoAllenamentoForIndex(i, runsCount, day){
   return types[i % types.length];
 }
 
-// ---------------------- Dettagli allenamento realistici (supporta mezzo allenamento) ----------------------
-function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun, livello, isScarico, fractionalFactor = 1){
+function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun, livello, isScarico){
   let dist, asc;
   const basePace = paceByLevel(livello);
+
+  if(type === "Lungo trail"){
+    dist = weeklyKm * 0.55;
+    asc  = weeklyAsc * 0.55;
+  } else if(["Medio costante","Fartlek","Progressivo","Ripetute"].includes(type)){
+    const remainingKm = weeklyKm * 0.45;
+    const remainingAsc = weeklyAsc * 0.45;
+    const runsOther = runsCount - 1;
+    const fraction = runsOther > 0 ? 1/runsOther : 1;
+    dist = remainingKm * fraction;
+    asc  = remainingAsc * fraction;
+  } else { // Fondo lento / recupero
+    dist = weeklyKm * 0.3 / runsCount;
+    asc  = weeklyAsc * 0.3 / runsCount;
+  }
+
+  if(isScarico){ dist *= 0.7; asc *= 0.7; }
+
+  const durationMin = dist * basePace;
+
+  let details = "";
+  if(type.includes("Ripetute")) details = `${Math.min(12, Math.max(4, Math.round(dist)))}×400 m in salita, recupero 90–120s`;
+  else if(type.includes("Progressivo")) details = `Progressivo: aumenta ritmo negli ultimi km`;
+  else if(type.includes("Medio")) details = `Medio: ${Math.max(4,Math.round(dist*0.6))} km a ritmo sostenuto`;
+  else if(type.includes("Lungo")) details = `Lungo: ritmo lento, endurance`;
+  else if(type.includes("Fartlek")) details = `Fartlek: alternare 2–3' veloce / 2' lento`;
+  else details = `Ritmo facile, tecnica e recupero`;
+
+  return { distance: +dist.toFixed(1), ascent: Math.round(asc), durationMin: Math.round(durationMin), detailText: details };
+}
 
   // definisci percentuali indicative per ogni tipo di allenamento
   const typePercent = {
@@ -309,25 +305,26 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun,
   return { distance: +dist.toFixed(1), ascent: Math.round(asc), durationMin: Math.round(durationMin), detailText: details };
 }
 
-function selectRunDays(allenTot, giorniPalestra){
-  const totalRuns = Math.max(0, allenTot - giorniPalestra.length);
-  const fullRuns = Math.floor(totalRuns);
-  const halfRun = totalRuns - fullRuns; // 0 o 0.5
-
+function selectRunDays(allenTot, giorniPalestra, weekNumber){
   const freeDays = GIORNI.filter(d => !giorniPalestra.includes(d));
-  const selected = [];
+  const baseRuns = Math.floor(allenTot - giorniPalestra.length);
+  const halfRun = (allenTot - giorniPalestra.length) - baseRuns;
+  const extraRun = (halfRun > 0 && weekNumber % 2 === 1) ? 1 : 0; // aggiunge un giorno extra ogni seconda settimana
+  const totalRunsThisWeek = baseRuns + extraRun;
 
-  if(fullRuns > 0){
-    if(fullRuns >= freeDays.length){
-      selected.push(...freeDays);
-    } else {
-      const step = freeDays.length / fullRuns;
-      for(let i=0;i<fullRuns;i++){
-        const idx = Math.floor(i*step + step/2);
-        selected.push(freeDays[idx]);
-      }
+  const selected = [];
+  if(totalRunsThisWeek >= freeDays.length){
+    selected.push(...freeDays);
+  } else {
+    const step = freeDays.length / totalRunsThisWeek;
+    for(let i=0;i<totalRunsThisWeek;i++){
+      const idx = Math.floor(i*step + step/2);
+      selected.push(freeDays[idx]);
     }
   }
+
+  return selected;
+}
 
   // aggiungi il mezzo allenamento come giorno extra opzionale (scelto a metà settimana)
   if(halfRun > 0 && freeDays.length > selected.length){
