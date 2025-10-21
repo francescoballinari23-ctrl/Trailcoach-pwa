@@ -185,9 +185,9 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun,
 // ---------------------- Generazione piano realistico ----------------------
 function generaPiano(settings){
   const plan = [];
-  
+
   for(let w=1; w<=settings.settimane; w++){
-    const isScarico = (w === settings.settimane); // ultima settimana gara = scarico
+    const isScarico = (w === settings.settimane); // ultima settimana = scarico
     const scaricoFactor = isScarico ? 0.7 : 1;
 
     const targetKm = +(settings.obbKm * scaricoFactor).toFixed(1);
@@ -213,7 +213,15 @@ function generaPiano(settings){
       } else if(runDays.includes(day)){
         // selezione tipo allenamento
         const type = tipoAllenamentoForIndex(runIndex, runsCount, day);
-        const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runIndex, settings.livello, isScarico);
+
+        // calcolo fractionalFactor per mezzo allenamento (.5)
+        let fractionalFactor = 1;
+        const totalRuns = settings.allenTot - settings.giorniPalestra.length;
+        if(runIndex === runDays.length - 1 && totalRuns % 1 === 0.5){
+          fractionalFactor = 0.5;
+        }
+
+        const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runIndex, settings.livello, isScarico, fractionalFactor);
 
         settimana.push({
           day,
@@ -266,32 +274,36 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun,
   let dist, asc;
   const basePace = paceByLevel(livello);
 
-  // proporzioni settimanali standard
-  if(type === "Lungo trail"){
-    dist = weeklyKm * 0.55 * fractionalFactor;  // lungo ~55% del totale settimanale
-    asc  = weeklyAsc * 0.55 * fractionalFactor;
-  } else if(["Medio costante","Fartlek","Progressivo","Ripetute"].includes(type)){
-    const remainingKm = weeklyKm * 0.45;
-    const remainingAsc = weeklyAsc * 0.45;
-    const runsOther = runsCount - 1;
-    const fraction = runsOther > 0 ? 1/runsOther : 1;
-    dist = remainingKm * fraction * fractionalFactor;
-    asc  = remainingAsc * fraction * fractionalFactor;
-  } else { // Fondo lento / recupero
-    dist = weeklyKm * 0.3 / runsCount * fractionalFactor;
-    asc  = weeklyAsc * 0.3 / runsCount * fractionalFactor;
-  }
+  // definisci percentuali indicative per ogni tipo di allenamento
+  const typePercent = {
+    "Lungo trail": 0.55,
+    "Medio costante": 0.15,
+    "Fartlek": 0.15,
+    "Progressivo": 0.15,
+    "Ripetute": 0.12,
+    "Fondo lento": 0.3
+  };
 
+  // assegna percentuale per il tipo corrente
+  let pct = typePercent[type] || 0.2; // default 20% se non definito
+
+  // se ci sono più allenamenti dello stesso tipo, dividiamo la percentuale tra essi
+  dist = weeklyKm * pct * fractionalFactor;
+  asc  = weeklyAsc * pct * fractionalFactor;
+
+  // riduzione per settimana di scarico
   if(isScarico){ dist *= 0.7; asc *= 0.7; }
 
   const durationMin = dist * basePace;
 
+  // dettagli descrittivi
   let details = "";
   if(type === "Fartlek") details = `Alternare 2–3' veloce / 2' lento`;
   else if(type === "Medio costante") details = `Medio: ritmo sostenuto per la maggior parte della distanza`;
   else if(type === "Lungo trail") details = `Lungo: ritmo lento, endurance, salita costante`;
   else if(type === "Ripetute") details = `${Math.min(12, Math.max(4, Math.round(dist)))}×400 m in salita, recupero 90–120s`;
   else if(type === "Progressivo") details = `Progressivo: aumenta ritmo negli ultimi km`;
+  else if(type === "Fondo lento") details = `Ritmo facile, tecnica e recupero`;
   else details = `Ritmo facile, tecnica e recupero`;
 
   return { distance: +dist.toFixed(1), ascent: Math.round(asc), durationMin: Math.round(durationMin), detailText: details };
