@@ -1,573 +1,259 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v13 — Offline FIT→GPX + Piano</title>
-<meta name="theme-color" content="#000000">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrailCoach v13</title>
+<link rel="manifest" href="manifest.json">
+<script src="fit-parser.min.js"></script> <!-- ✅ Parser locale -->
 <style>
-  :root{--card-radius:12px;}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;}
-  h1{text-align:center;font-size:22px;margin:6px 0;}
-  .card{background:#fff;border-radius:var(--card-radius);padding:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.06);}
-  label{display:block;margin:8px 0 6px;font-weight:600;}
-  input[type="number"], select{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;}
-  button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:8px;cursor:pointer;}
-  button.reset{background:#ff3b30;margin-left:8px;}
-  .week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
-  .week h3{margin:0;cursor:pointer;font-size:17px;display:flex;justify-content:space-between;align-items:center;}
-  .days{margin-top:6px;padding-left:10px;display:none;}
-  .days .day{padding:6px 0;border-bottom:1px solid #eee;}
-  .small{font-size:13px;color:#666;margin-top:6px;}
-  .toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:6px 10px;font-size:13px;margin-top:-4px;}
-  .checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
-  .checkbox-grid-bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
-  .chk-btn{display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;background:#f2f2f2;cursor:pointer;border:1px solid transparent;font-weight:700;}
-  .chk-btn.active{background:#007aff;color:#fff;border-color:#0060d6;}
-  .detail{background:#fff;border-radius:8px;padding:10px;margin:6px 0 10px;border:1px solid #eee;font-size:14px;}
-  .muted{color:#666;font-size:13px;}
-  .fileline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
-  .meta{font-size:13px;color:#333;margin-top:6px;}
-  .alert{background:#fff3cd;border:1px solid #ffeeba;padding:8px;border-radius:8px;margin-top:8px;color:#856404;}
-  pre.log{background:#111;color:#fff;padding:8px;border-radius:6px;max-height:220px;overflow:auto;font-size:12px;}
+body {
+  font-family: Arial, sans-serif;
+  background: #f9f9f9;
+  color: #333;
+  padding: 20px;
+}
+h1 {
+  text-align: center;
+}
+button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 5px;
+}
+button:hover { background: #0056b3; }
+#output {
+  background: #fff;
+  border-radius: 6px;
+  padding: 15px;
+  margin-top: 15px;
+}
+.giorno-btn.active {
+  background: #28a745;
+}
+.file-upload {
+  background: #eee;
+  padding: 12px;
+  border-radius: 8px;
+}
 </style>
 </head>
 <body>
-<script>
-// quick mobile-friendly onerror
-window.onerror = function(msg, url, line, col, err){
-  try{ alert("Errore JS: " + msg + "\nLinea:" + line + " Col:" + col); }catch(e){}
-  console.error("window.onerror:", msg, url, line, col, err);
-  return false;
-};
-</script>
 
-<h1>🏔️ TrailCoach AI v13 (offline)</h1>
+<h1>🏔️ TrailCoach v13</h1>
 
-<div class="card" id="topSummaryCard" style="display:none;">
-  <div id="summaryText" class="muted"></div>
+<div class="file-upload">
+  <h3>📂 Carica file attività (.FIT o .GPX)</h3>
+  <input type="file" id="fileInput" accept=".fit,.gpx" />
 </div>
 
-<div class="card" id="settingsCard">
-  <div>
-    <span style="font-weight:600;">⚙️ Impostazioni</span>
-    <button id="toggleSettings" class="toggle-btn" aria-expanded="true">Nascondi</button>
-  </div>
-  <div id="settingsContent">
-    <label>Livello atleta</label>
-    <select id="livello">
-      <option value="principiante">Principiante</option>
-      <option value="intermedio">Intermedio</option>
-      <option value="avanzato">Avanzato</option>
-    </select>
-
-    <label>Obiettivo distanza gara (km)</label>
-    <input id="obbKm" type="number" placeholder="es. 20" />
-
-    <label>Obiettivo dislivello gara (m)</label>
-    <input id="obbAsc" type="number" placeholder="es. 1000" />
-
-    <label>Durata piano (settimane)</label>
-    <input id="settimane" type="number" value="8" min="1" max="52" />
-
-    <label>Allenamenti totali a settimana</label>
-    <input id="allenTot" type="number" value="4" min="2" max="7" />
-
-    <label>Giorni palestra (toggle)</label>
-    <div>
-      <div class="checkbox-grid" id="palestraTop">
-        <div class="chk-btn" data-day="Lunedì">Lun</div>
-        <div class="chk-btn" data-day="Martedì">Mar</div>
-        <div class="chk-btn" data-day="Mercoledì">Mer</div>
-      </div>
-      <div class="checkbox-grid-bottom" id="palestraBottom">
-        <div class="chk-btn" data-day="Giovedì">Gio</div>
-        <div class="chk-btn" data-day="Venerdì">Ven</div>
-        <div class="chk-btn" data-day="Sabato">Sab</div>
-        <div class="chk-btn" data-day="Domenica">Dom</div>
-      </div>
-    </div>
-
-    <div style="margin-top:8px;">
-      <button id="genLocal" class="save">⚙️ Genera piano</button>
-      <button id="resetData" class="reset">🗑️ Reset dati</button>
-    </div>
-
-    <div id="parserStatus" style="margin-top:10px;"></div>
-    <div id="fitHint" class="alert" style="display:none;">Se FIT non viene letto, prova a esportare GPX dall'app Zepp o usa un convertitore online.</div>
-  </div>
+<div>
+  <h3>💪 Giorni di palestra</h3>
+  <div id="giorniPalestra"></div>
 </div>
 
-<div class="card">
-  <label>Avanzamento</label>
-  <canvas id="progressChart" width="360" height="140"></canvas>
-  <div id="chartText" class="small"></div>
+<div>
+  <h3>📅 Imposta durata piano</h3>
+  <input type="number" id="settimane" value="4" min="1" max="12"> settimane
 </div>
 
-<div class="card">
-  <label>Piano settimanale</label>
-  <div id="planView" class="small">Nessun piano ancora generato.</div>
-</div>
+<button id="generaPiano">Genera Piano</button>
 
-<div class="card">
-  <label>Storico allenamenti</label>
-  <div id="historyList" class="small">Nessun allenamento registrato.</div>
-</div>
-
-<!-- hidden input -->
-<input id="hiddenFileInput" type="file" accept=".fit,.gpx" style="display:none" />
-
-<!-- local parser file - deve trovarsi nella stessa cartella del sito -->
-<script src="fit-file-parser.min.js"></script>
+<div id="output"></div>
 
 <script>
-// ---------------------- Stato e storage ----------------------
-const STORAGE_KEY = "trailcoach_v13_state";
-const DEFAULT_STATE = {
-  settings: { livello:"principiante", obbKm:20, obbAsc:1000, settimane:8, allenTot:4, giorniPalestra:[] },
-  planData: [],
-  progress: { km:0, ascent:0 },
-  history: []
+// ============ VARIABILI GLOBALI ============
+let STATE = {
+  fitData: null,
+  gpxData: null,
+  giorniPalestra: [],
+  settimane: 4,
 };
-let STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }
-function loadState(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ try{ STATE = JSON.parse(raw); }catch(e){ console.warn("loadState parse error", e); } } }
 
-// ---------------------- Utils ----------------------
-const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
-function paceByLevel(lvl){ return lvl==="principiante"?6 : lvl==="intermedio"?5.5 : 5; }
-function formatTime(mins){ const h=Math.floor(mins/60); const m=Math.round(mins%60); return h>0?`${h}h ${m}m`:`${m}m`; }
-function tipoAllenamentoForIndex(i){ const types=["Fondo facile","Ripetute collinari","Progressivo","Medio costante","Lungo trail","Fartlek","Fondo lento"]; return types[i%types.length]; }
-function creaDettagliAllenamento(type,weeklyKm,weeklyAsc,runsCount,indexRun,livello,isScarico){
-  const baseDistFractions = new Array(runsCount||1).fill(1);
-  if(runsCount>0) baseDistFractions[runsCount-1] = 1.4;
-  const sum = baseDistFractions.reduce((a,b)=>a+b,0);
-  const fraction = runsCount>0 ? baseDistFractions[indexRun]/sum : 0;
-  let dist = weeklyKm * fraction;
-  let asc = weeklyAsc * fraction;
-  if(isScarico){ dist *= 0.7; asc *= 0.7; }
-  const pace = paceByLevel(livello);
-  const durationMin = dist * pace;
-  let details = "";
-  if(type.includes("Ripetute")) details = `${Math.min(12, Math.max(4, Math.round(dist)))}×400 m in salita, recupero 90–120s`;
-  else if(type.includes("Progressivo")) details = `Progressivo: aumenta ritmo negli ultimi km`;
-  else if(type.includes("Medio")) details = `Medio: ${Math.max(4,Math.round(dist*0.6))} km a ritmo sostenuto`;
-  else if(type.includes("Lungo")) details = `Lungo: ritmo lento, endurance`;
-  else if(type.includes("Fartlek")) details = `Fartlek: alternare 2–3' veloce / 2' lento`;
-  else details = `Ritmo facile, tecnica e recupero`;
-  return { distance:+dist.toFixed(1), ascent:Math.round(asc), durationMin:Math.round(durationMin), detailText:details };
-}
+// ============ INIZIALIZZAZIONE ============
+document.addEventListener("DOMContentLoaded", () => {
+  initPalestra();
+  document.getElementById("generaPiano").addEventListener("click", generaPiano);
+  document.getElementById("fileInput").addEventListener("change", handleFileUpload);
+});
 
-// ---------------------- Pianificazione ----------------------
-function selectRunDays(allenTot, giorniPalestra){
-  const runNeeded = Math.max(0, allenTot - giorniPalestra.length);
-  const freeDays = GIORNI.filter(d => !giorniPalestra.includes(d));
-  if(runNeeded <= 0) return [];
-  if(runNeeded >= freeDays.length) return freeDays.slice(0, runNeeded);
-  const step = freeDays.length / runNeeded;
-  const selected = [];
-  for(let i=0;i<runNeeded;i++){
-    const idx = Math.floor(i*step + step/2);
-    selected.push(freeDays[idx]);
-  }
-  return [...new Set(selected)];
-}
-
-function generaPiano(settings){
-  const prog = settings.livello==="principiante"?[0.5,0.6,0.7,0.8,0.9,1.0] : settings.livello==="intermedio"?[0.6,0.7,0.8,0.9,1.0] : [0.7,0.8,0.9,1.0];
-  const plan = [];
-  for(let w=1; w<=settings.settimane; w++){
-    const coeff = prog[Math.min(w-1, prog.length-1)];
-    const isScarico = (settings.settimane>6 && w%4===0);
-    const scaricoFactor = isScarico ? 0.7 : 1;
-    const targetKm = +(settings.obbKm * coeff * scaricoFactor).toFixed(1);
-    const targetAsc = Math.round(settings.obbAsc * coeff * scaricoFactor);
-
-    const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra);
-    const runsCount = runDays.length || 1;
-    let runIndex = 0;
-
-    const settimana = [];
-    for(const day of GIORNI){
-      if(settings.giorniPalestra.includes(day)){
-        settimana.push({ day, type:"Palestra", summary:"🏋️ Palestra", details:{ note:"Forza & Core" }, uploaded:null, completed:false });
-      } else if(runDays.includes(day)){
-        const type = tipoAllenamentoForIndex(runIndex);
-        const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runIndex, settings.livello, isScarico);
-        settimana.push({
-          day,
-          type: "Corsa",
-          summary: `🏃 ${type} — ${det.distance} km`,
-          details: det,
-          uploaded: null,
-          completed: false
-        });
-        runIndex++;
-      } else {
-        settimana.push({ day, type:"Riposo", summary:"Riposo", details:{ note:"Recupero" }, uploaded:null, completed:false });
-      }
-    }
-
-    plan.push({
-      settimana: w,
-      targetKm,
-      targetAsc,
-      isScarico,
-      allenamenti: settimana,
-      completato: false
-    });
-  }
-
-  STATE.settings = settings;
-  STATE.planData = plan;
-  saveState();
-  renderAll();
-}
-
-// ---------------------- Render UI ----------------------
-function renderSettingsToUI(){
-  const s = STATE.settings;
-  document.getElementById("livello").value = s.livello || "principiante";
-  document.getElementById("obbKm").value = s.obbKm || "";
-  document.getElementById("obbAsc").value = s.obbAsc || "";
-  document.getElementById("settimane").value = s.settimane || 8;
-  document.getElementById("allenTot").value = s.allenTot || 4;
-  document.querySelectorAll(".chk-btn").forEach(b=>{
-    const day = b.getAttribute("data-day");
-    b.classList.toggle("active", s.giorniPalestra.includes(day));
+// ============ SELEZIONE GIORNI PALESTRA ============
+function initPalestra() {
+  const giorni = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+  const container = document.getElementById("giorniPalestra");
+  giorni.forEach((giorno, i) => {
+    const btn = document.createElement("button");
+    btn.textContent = giorno;
+    btn.className = "giorno-btn";
+    btn.onclick = () => {
+      btn.classList.toggle("active");
+      updateGiorniPalestra();
+    };
+    container.appendChild(btn);
   });
 }
 
-function renderSummary(){
-  const top = document.getElementById("topSummaryCard");
-  if(!STATE.planData || STATE.planData.length===0){ top.style.display="none"; return; }
-  top.style.display = "block";
-  const s = STATE.settings;
-  const gym = s.giorniPalestra.length;
-  const run = Math.max(0, s.allenTot - gym);
-  document.getElementById("summaryText").textContent = `Allenamenti/settimana: ${s.allenTot} — Palestra: ${gym} — Corsa: ${run} — Durata: ${s.settimane} settimane`;
+function updateGiorniPalestra() {
+  STATE.giorniPalestra = Array.from(document.querySelectorAll(".giorno-btn.active")).map(
+    btn => btn.textContent
+  );
 }
 
-function renderPiano(){
-  const container = document.getElementById("planView");
-  container.innerHTML = "";
-  if(!STATE.planData || STATE.planData.length===0){ container.textContent = "Nessun piano ancora generato."; return; }
+// ============ CARICAMENTO FILE FIT o GPX ============
+async function handleFileUpload(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
 
-  STATE.planData.forEach((w, weekIndex)=>{
-    const weekDiv = document.createElement("div"); weekDiv.className="week";
+  const ext = file.name.split(".").pop().toLowerCase();
+  const arrayBuffer = await file.arrayBuffer();
 
-    const header = document.createElement("h3");
-    const left = document.createElement("span");
-    left.innerText = `📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc} m ${w.completato ? "✅" : ""}${w.isScarico ? " — Scarico" : ""}`;
-    header.appendChild(left);
-    const btnToggle = document.createElement("button"); btnToggle.textContent = "Apri"; btnToggle.style.fontSize="13px";
-    header.appendChild(btnToggle);
-    weekDiv.appendChild(header);
+  if (ext === "fit") {
+    parseFIT(arrayBuffer);
+  } else if (ext === "gpx") {
+    parseGPX(arrayBuffer);
+  } else {
+    alert("Formato non supportato. Usa .FIT o .GPX");
+  }
+}
 
-    const daysDiv = document.createElement("div"); daysDiv.className="days";
-    w.allenamenti.forEach((a, dayIndex)=>{
-      const d = document.createElement("div"); d.className="day";
-      const summary = document.createElement("div");
-      summary.innerHTML = `<strong>${a.day}</strong> — ${a.summary}${a.completed ? " ✅" : ""}`;
-      summary.style.display="flex"; summary.style.justifyContent="space-between"; summary.style.alignItems="center";
-
-      const openBtn = document.createElement("button"); openBtn.textContent = "Dettagli"; openBtn.style.fontSize="13px";
-      summary.appendChild(openBtn);
-      d.appendChild(summary);
-
-      const detailBox = document.createElement("div"); detailBox.className="detail"; detailBox.style.display="none";
-      if(a.type === "Corsa" && a.details){
-        detailBox.innerHTML = `
-          <div><strong>${a.summary.split("—")[0].trim()}</strong></div>
-          <div class="muted">Obiettivo: ${a.details.distance} km — +${a.details.ascent} m — ${formatTime(a.details.durationMin)}</div>
-          <div style="margin-top:8px;"><em>${a.details.detailText}</em></div>
-        `;
-      } else if(a.type === "Palestra"){
-        detailBox.innerHTML = `<div><strong>Palestra</strong></div><div class="muted">Forza & Core — esercizi consigliati</div>`;
-      } else {
-        detailBox.innerHTML = `<div><strong>Riposo</strong></div><div class="muted">Recupero attivo consigliato</div>`;
-      }
-
-      // file upload line
-      const fileLine = document.createElement("div"); fileLine.className="fileline";
-      const uploadBtn = document.createElement("button"); uploadBtn.textContent = "Carica .fit/.gpx"; uploadBtn.style.fontSize="13px";
-      const statusSpan = document.createElement("div"); statusSpan.className="meta";
-      if(a.uploaded) statusSpan.innerHTML = `✅ ${a.uploaded.filename} — ${a.uploaded.km.toFixed(1)} km / +${a.uploaded.asc} m (${a.uploaded.date})`;
-      else statusSpan.innerHTML = `📎 Nessun file caricato per questo giorno.`;
-      fileLine.appendChild(uploadBtn); fileLine.appendChild(statusSpan);
-      detailBox.appendChild(document.createElement("hr")); detailBox.appendChild(fileLine);
-
-      uploadBtn.addEventListener("click", ()=> triggerUploadFor(weekIndex, dayIndex));
-
-      openBtn.addEventListener("click", ()=> {
-        detailBox.style.display = detailBox.style.display === "none" ? "block" : "none";
-      });
-
-      d.appendChild(detailBox);
-      daysDiv.appendChild(d);
+// ============ PARSING FIT ============
+function parseFIT(arrayBuffer) {
+  try {
+    const fitParser = new FitParser({
+      force: true,
+      speedUnit: "km/h",
+      lengthUnit: "km",
+      temperatureUnit: "celsius",
+      elapsedRecordField: true,
     });
 
-    weekDiv.appendChild(daysDiv);
-    btnToggle.addEventListener("click", ()=> {
-      daysDiv.style.display = daysDiv.style.display === "block" ? "none" : "block";
-      btnToggle.textContent = daysDiv.style.display === "block" ? "Chiudi" : "Apri";
-    });
-
-    container.appendChild(weekDiv);
-  });
-}
-
-function renderProgress(){
-  const c=document.getElementById("progressChart"), ctx=c.getContext("2d");
-  ctx.clearRect(0,0,c.width,c.height);
-  const totalTargetKm = STATE.planData.reduce((a,b)=>a + (b.targetKm||0), 0) || STATE.settings.obbKm;
-  const perc = Math.min((STATE.progress.km || 0) / totalTargetKm, 1);
-  ctx.fillStyle="#007aff"; ctx.fillRect(20,50,(c.width-40)*perc,18);
-  ctx.fillStyle="#eee"; ctx.fillRect(20+(c.width-40)*perc,50,(c.width-40)*(1-perc),18);
-  ctx.fillStyle="#000"; ctx.fillText(`Km: ${(STATE.progress.km||0).toFixed(1)} / ${totalTargetKm} km`,20,45);
-  ctx.fillText(`D+: ${(STATE.progress.ascent||0).toFixed(0)} m`,20,85);
-  document.getElementById("chartText").textContent = `Storico: ${STATE.history.length} allenamenti.`;
-}
-
-function renderHistory(){
-  const h = document.getElementById("historyList");
-  if(!STATE.history || STATE.history.length===0){ h.textContent = "Nessun allenamento registrato."; return; }
-  h.innerHTML = STATE.history.map(x=>`${x.date} — Settimana ${x.week||"-"} ${x.day||"-"} → ${x.km.toFixed(1)} km, +${x.asc.toFixed(0)} m (${x.filename})`).join("<br>");
-}
-
-function renderAll(){ renderSettingsToUI(); renderSummary(); renderPiano(); renderProgress(); renderHistory(); }
-
-// ---------------------- FIT/GPX parsing & upload ----------------------
-let uploadContext = null; // { weekIndex, dayIndex }
-const hiddenInput = document.getElementById("hiddenFileInput");
-
-hiddenInput.addEventListener("change", async (ev)=>{
-  const f = ev.target.files[0];
-  if(!f || !uploadContext){ ev.target.value=""; return; }
-  const { weekIndex, dayIndex } = uploadContext;
-  const week = STATE.planData[weekIndex];
-  const dayObj = week.allenamenti[dayIndex];
-  const statusSpan = document.querySelectorAll(".week")[weekIndex].querySelectorAll(".days .day")[dayIndex].querySelector(".meta");
-  if(statusSpan) statusSpan.textContent = "⏳ Lettura file...";
-
-  const ext = (f.name.split(".").pop()||"").toLowerCase();
-  try{
-    if(ext === "gpx"){
-      const txt = await f.text();
-      const res = parseGpxTextAndAnalyze(txt);
-      if(res.error){ if(statusSpan) statusSpan.textContent = "Errore GPX"; document.getElementById("fitHint").style.display="block"; }
-      else saveUploadResult(f.name, res.distance_km, res.ascent_m, weekIndex, dayIndex);
-    } else if(ext === "fit"){
-      if(typeof FitParser === 'undefined'){
-        if(statusSpan) statusSpan.textContent = "❗ Parser FIT non presente";
-        document.getElementById("parserStatus").innerHTML = `<div class="alert">fit-file-parser non trovato localmente. Scarica <code>fit-file-parser.min.js</code> e mettilo nella stessa cartella di index.html</div>`;
+    fitParser.parse(arrayBuffer, function (error, data) {
+      if (error) {
+        alert("Errore nel parsing FIT: " + error);
+        console.error(error);
         return;
       }
-      const ab = await f.arrayBuffer();
-      try{
-        const gpx = await convertFitArrayBufferToGpx(ab);
-        const res = parseGpxTextAndAnalyze(gpx);
-        if(res.error){ if(statusSpan) statusSpan.textContent = "Errore analisi GPX"; document.getElementById("fitHint").style.display="block"; }
-        else saveUploadResult(f.name, res.distance_km, res.ascent_m, weekIndex, dayIndex);
-      }catch(convErr){
-        console.error("conversion fit->gpx failed", convErr);
-        if(statusSpan) statusSpan.textContent = "❗ Errore parsing FIT";
-        document.getElementById("fitHint").style.display = "block";
-      }
-    } else {
-      if(statusSpan) statusSpan.textContent = "Formato non supportato";
-    }
-  }catch(e){
-    console.error(e);
-    if(statusSpan) statusSpan.textContent = "Errore lettura file";
-  } finally {
-    setTimeout(()=>{ ev.target.value = ""; uploadContext = null; }, 300);
-  }
-});
 
-function parseGpxTextAndAnalyze(gpxText){
-  try{
-    // extract trkpt elements
-    const trkptRe = /<trkpt[^>]*lat="([^"]+)"[^>]*lon="([^"]+)"[^>]*>([\\s\\S]*?)<\/trkpt>/g;
-    const eleRe = /<ele>([\d\.\-]+)<\/ele>/;
-    const timeRe = /<time>([^<]+)<\/time>/;
-    const points = [];
-    let m;
-    while((m = trkptRe.exec(gpxText)) !== null){
-      const lat = parseFloat(m[1]);
-      const lon = parseFloat(m[2]);
-      const inner = m[3];
-      const eleMatch = inner.match(eleRe);
-      const timeMatch = inner.match(timeRe);
-      const ele = eleMatch ? parseFloat(eleMatch[1]) : null;
-      const time = timeMatch ? new Date(timeMatch[1]) : null;
-      points.push({lat, lon, ele, time});
-    }
-    return analyzePoints(points);
-  }catch(e){
-    console.error("parseGpxTextAndAnalyze error", e);
-    return { error: "Errore parsing GPX" };
+      STATE.fitData = data;
+      console.log("Dati FIT:", data);
+
+      // Convertiamo in un formato GPX-like per analisi locale
+      STATE.gpxData = convertFITtoGPXLike(data);
+      mostraInfoAttività(STATE.gpxData);
+    });
+  } catch (err) {
+    alert("Errore FIT parser non caricato correttamente.");
+    console.error(err);
   }
 }
 
-function analyzePoints(points){
-  if(!points || points.length < 2) return { error: "Pochi punti GPS" };
-  let totalKm = 0;
+// ============ CONVERSIONE FIT → GPX-LIKE ============
+function convertFITtoGPXLike(fit) {
+  const records = fit.records || [];
+  let totalDistance = 0;
   let totalAscent = 0;
-  let startTime = points[0].time || null;
-  let endTime = points[points.length-1].time || null;
-  for(let i=1;i<points.length;i++){
-    const a = points[i-1];
-    const b = points[i];
-    if(a.lat != null && a.lon != null && b.lat != null && b.lon != null){
-      totalKm += haversineKm(a.lat, a.lon, b.lat, b.lon);
+  let totalDescent = 0;
+
+  for (let i = 1; i < records.length; i++) {
+    const prev = records[i - 1];
+    const curr = records[i];
+    if (curr.distance && prev.distance) {
+      totalDistance = curr.distance;
     }
-    if(typeof a.ele === 'number' && typeof b.ele === 'number'){
-      const d = b.ele - a.ele;
-      if(d > 0) totalAscent += d;
+    if (curr.altitude && prev.altitude) {
+      const diff = curr.altitude - prev.altitude;
+      if (diff > 0) totalAscent += diff;
+      else totalDescent += Math.abs(diff);
     }
-    if(!startTime && a.time) startTime = a.time;
-    if(!endTime && b.time) endTime = b.time;
   }
-  let durationSec = 0;
-  if(startTime && endTime) durationSec = Math.max(0, (endTime - startTime) / 1000);
+
   return {
-    pointsCount: points.length,
-    distance_km: +totalKm.toFixed(3),
-    ascent_m: Math.round(totalAscent),
-    duration_s: Math.round(durationSec),
-    start_time: startTime ? startTime.toString() : null,
-    end_time: endTime ? end_time : null
+    distanza: (totalDistance / 1000).toFixed(2), // km
+    salita: Math.round(totalAscent),
+    discesa: Math.round(totalDescent),
+    durata: fit.activity?.timestamp ? fit.activity.timestamp : "ND",
   };
 }
 
-function haversineKm(lat1, lon1, lat2, lon2){
-  const R = 6371;
-  const toRad = v => v * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);
+// ============ PARSING GPX ============
+function parseGPX(arrayBuffer) {
+  const text = new TextDecoder().decode(arrayBuffer);
+  const xml = new DOMParser().parseFromString(text, "text/xml");
+  const trkpts = xml.getElementsByTagName("trkpt");
+
+  let totalDist = 0, totalUp = 0, totalDown = 0;
+  let lastLat = null, lastLon = null, lastEle = null;
+
+  for (let i = 0; i < trkpts.length; i++) {
+    const el = trkpts[i];
+    const lat = parseFloat(el.getAttribute("lat"));
+    const lon = parseFloat(el.getAttribute("lon"));
+    const ele = parseFloat(el.getElementsByTagName("ele")[0]?.textContent || 0);
+
+    if (lastLat != null) {
+      const d = haversine(lastLat, lastLon, lat, lon);
+      totalDist += d;
+      const diff = ele - lastEle;
+      if (diff > 0) totalUp += diff;
+      else totalDown += Math.abs(diff);
+    }
+
+    lastLat = lat; lastLon = lon; lastEle = ele;
+  }
+
+  STATE.gpxData = {
+    distanza: (totalDist / 1000).toFixed(2),
+    salita: Math.round(totalUp),
+    discesa: Math.round(totalDown),
+    durata: "ND"
+  };
+  mostraInfoAttività(STATE.gpxData);
+}
+
+// ============ FUNZIONI DI SUPPORTO ============
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const φ1 = lat1 * Math.PI/180;
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2 - lat1) * Math.PI/180;
+  const Δλ = (lon2 - lon1) * Math.PI/180;
+
+  const a = Math.sin(Δφ/2)**2 +
+            Math.cos(φ1)*Math.cos(φ2)*
+            Math.sin(Δλ/2)**2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+
+  return R * c; // metri
 }
 
-// convert FIT (ArrayBuffer) -> GPX string using local FitParser
-function convertFitArrayBufferToGpx(arrayBuffer){
-  return new Promise((resolve, reject)=>{
-    try{
-      if(typeof FitParser === 'undefined'){ reject(new Error("FitParser undefined")); return; }
-      const parser = new FitParser({ force: true, speedUnit: 'km/h', lengthUnit: 'm' });
-      parser.parse(arrayBuffer, (err, data)=>{
-        if(err){ reject(err); return; }
-        // find records
-        let records = [];
-        if(Array.isArray(data.records) && data.records.length) records = data.records;
-        else if(data.sessions && data.sessions[0] && data.sessions[0].records) records = data.sessions[0].records;
-        else if(Array.isArray(data.activity) && data.activity[0] && Array.isArray(data.activity[0].records)) records = data.activity[0].records;
-
-        if(!records || !records.length){ reject(new Error("Nessun record GPS presente")); return; }
-
-        const toDeg = v => {
-          if(typeof v !== 'number') return null;
-          if(Math.abs(v) > 1000) return v * (180.0 / Math.pow(2,31));
-          return v;
-        };
-        let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="TrailCoach AI v13" xmlns="http://www.topografix.com/GPX/1/1">\n<trk>\n<trkseg>\n`;
-        for(const r of records){
-          let lat = null, lon = null, ele = null, time = null;
-          if(r.position_lat !== undefined && r.position_long !== undefined){ lat = toDeg(Number(r.position_lat)); lon = toDeg(Number(r.position_long)); }
-          else if(r.latitude !== undefined && r.longitude !== undefined){ lat = Number(r.latitude); lon = Number(r.longitude); }
-          else if(r.lat !== undefined && r.lon !== undefined){ lat = Number(r.lat); lon = Number(r.lon); }
-          if(r.altitude !== undefined) ele = Number(r.altitude);
-          if(r.timestamp) time = new Date(r.timestamp);
-          else if(r.timestamp_ms) time = new Date(r.timestamp_ms);
-          if(lat !== null && lon !== null){
-            gpx += `<trkpt lat="${lat.toFixed(7)}" lon="${lon.toFixed(7)}">`;
-            if(ele !== null && !isNaN(ele)) gpx += `<ele>${(+ele.toFixed(1))}</ele>`;
-            if(time) gpx += `<time>${time.toISOString()}</time>`;
-            gpx += `</trkpt>\n`;
-          }
-        }
-        gpx += `</trkseg>\n</trk>\n</gpx>\n`;
-        resolve(gpx);
-      });
-    }catch(e){ reject(e); }
-  });
+// ============ MOSTRA DATI ATTIVITÀ ============
+function mostraInfoAttività(data) {
+  const out = document.getElementById("output");
+  out.innerHTML = `
+    <h3>📊 Dati Attività</h3>
+    <p><b>Distanza:</b> ${data.distanza} km</p>
+    <p><b>Salita:</b> ${data.salita} m</p>
+    <p><b>Discesa:</b> ${data.discesa} m</p>
+  `;
 }
 
-function saveUploadResult(filename, km, asc, weekIndex, dayIndex){
-  const week = STATE.planData[weekIndex];
-  const dayObj = week.allenamenti[dayIndex];
-  const date = new Date().toLocaleDateString();
-  dayObj.uploaded = { filename, km: +km, asc: +asc, date };
-  dayObj.completed = true;
-  STATE.progress.km = (STATE.progress.km || 0) + Number(km);
-  STATE.progress.ascent = (STATE.progress.ascent || 0) + Number(asc);
-  STATE.history.unshift({ date, km: Number(km), asc: Number(asc), filename, week: week.settimana, day: dayObj.day });
-  // mark weeks completed if cumulative >= target cumulative
-  let cum = 0;
-  for(const w of STATE.planData){ cum += (w.targetKm || 0); if((STATE.progress.km || 0) >= cum) w.completato = true; }
-  saveState();
-  renderAll();
-}
+// ============ GENERA PIANO ============
+function generaPiano() {
+  const settimane = parseInt(document.getElementById("settimane").value) || 4;
+  const giorni = STATE.giorniPalestra.length > 0 ? STATE.giorniPalestra : ["Lun", "Mer", "Ven"];
 
-function triggerUploadFor(weekIndex, dayIndex){
-  uploadContext = { weekIndex, dayIndex };
-  hiddenInput.click();
-}
-
-// ---------------------- Events ----------------------
-document.getElementById("toggleSettings").addEventListener("click", ()=>{
-  const content = document.getElementById("settingsContent");
-  const btn = document.getElementById("toggleSettings");
-  if(content.style.display === "none"){ content.style.display="block"; btn.textContent="Nascondi"; }
-  else{ content.style.display="none"; btn.textContent="Mostra"; }
-});
-
-// event delegation for gym buttons
-document.getElementById("settingsCard").addEventListener("click",(e)=>{
-  if(e.target.classList && e.target.classList.contains("chk-btn")){
-    const btn = e.target; btn.classList.toggle("active");
-    STATE.settings.giorniPalestra = [...document.querySelectorAll(".chk-btn.active")].map(n=>n.getAttribute("data-day"));
-    saveState();
+  let piano = `<h3>🏋️ Piano ${settimane} settimane</h3><ul>`;
+  for (let s = 1; s <= settimane; s++) {
+    piano += `<li><b>Settimana ${s}</b>: ${giorni.join(", ")}</li>`;
   }
-});
+  piano += "</ul>";
 
-document.getElementById("genLocal").addEventListener("click", ()=>{
-  const s = {
-    livello: document.getElementById("livello").value,
-    obbKm: Number(document.getElementById("obbKm").value) || 20,
-    obbAsc: Number(document.getElementById("obbAsc").value) || 1000,
-    settimane: Number(document.getElementById("settimane").value) || 8,
-    allenTot: Number(document.getElementById("allenTot").value) || 4,
-    giorniPalestra: STATE.settings.giorniPalestra || []
-  };
-  if(!s.obbKm || !s.obbAsc){ alert("Inserisci obiettivi gara (km e dislivello)."); return; }
-  generaPiano(s);
-  document.getElementById("settingsContent").style.display = "none";
-  document.getElementById("toggleSettings").textContent = "Mostra";
-});
-
-document.getElementById("resetData").addEventListener("click", ()=>{
-  if(!confirm("Sei sicuro? Questo cancellerà il piano, lo storico e i progressi salvati.")) return;
-  localStorage.removeItem(STORAGE_KEY);
-  STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  saveState();
-  renderAll();
-});
-
-// ---------------------- Init ----------------------
-loadState();
-renderAll();
-
-(function checkParser(){
-  const status = document.getElementById("parserStatus");
-  if(typeof FitParser === 'undefined'){
-    status.innerHTML = `<div class="alert">Attenzione: <strong>fit-file-parser</strong> non è stato caricato localmente. Scarica <code>fit-file-parser.min.js</code> nella stessa cartella di index.html. Se non puoi, carica GPX invece.</div>`;
-  } else {
-    status.textContent = "Parser FIT disponibile (offline).";
-  }
-})();
+  document.getElementById("output").innerHTML = piano;
+}
 </script>
 </body>
 </html>
