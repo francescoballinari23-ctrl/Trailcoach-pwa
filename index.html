@@ -148,9 +148,9 @@ function creaDettagliAllenamento(type,weeklyKm,weeklyAsc,runsCount,indexRun,live
   return { distance:+dist.toFixed(1), ascent:Math.round(asc), durationMin:Math.round(durationMin), detailText:details };
 }
 
-// ---------------------- Dettagli allenamento realistici ----------------------
+/// ---------------------- Dettagli allenamento realistici ----------------------
 function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun, livello, isScarico){
-  let dist, asc, pace;
+  let dist, asc;
   const basePace = paceByLevel(livello);
 
   // proporzioni standard settimanali
@@ -186,24 +186,29 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun,
 function generaPiano(settings){
   const plan = [];
   for(let w=1; w<=settings.settimane; w++){
-    const isScarico = (w === settings.settimane); // settimana gara = scarico
+    const isScarico = (w === settings.settimane); // ultima settimana = scarico
     const scaricoFactor = isScarico ? 0.7 : 1;
 
     const targetKm = +(settings.obbKm * scaricoFactor).toFixed(1);
     const targetAsc = Math.round(settings.obbAsc * scaricoFactor);
 
     // selezione giorni corsa
-const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra);
+    const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra);
     const runsCount = runDays.length || 1;
     let runIndex = 0;
 
     const settimana = [];
     for(const day of GIORNI){
       if(settings.giorniPalestra.includes(day)){
-        settimana.push({ day, type:"Palestra", summary:"🏋️ Palestra", details:{ note:"Forza & Core" }, uploaded:null, completed:false });
+        settimana.push({ 
+          day, type:"Palestra", summary:"🏋️ Palestra", 
+          details:{ note:"Forza & Core" }, uploaded:null, completed:false 
+        });
       } else if(runDays.includes(day)){
         // tipologia allenamento
-        const type = (day === "Sabato" || day === "Domenica") ? "Lungo trail" : (runIndex % 2 === 0 ? "Medio costante" : "Fartlek");
+        let type;
+        if(day === "Sabato" || day === "Domenica") type = "Lungo trail"; // lungo sempre nel weekend
+        else type = (runIndex % 2 === 0 ? "Medio costante" : "Fartlek"); // alternanza
         const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runIndex, settings.livello, isScarico);
         settimana.push({
           day,
@@ -215,7 +220,10 @@ const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra);
         });
         runIndex++;
       } else {
-        settimana.push({ day, type:"Riposo", summary:"Riposo", details:{ note:"Recupero" }, uploaded:null, completed:false });
+        settimana.push({ 
+          day, type:"Riposo", summary:"Riposo", 
+          details:{ note:"Recupero" }, uploaded:null, completed:false 
+        });
       }
     }
 
@@ -233,6 +241,21 @@ const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra);
   STATE.planData = plan;
   saveState();
   renderAll();
+}
+
+// ---------------------- Selezione giorni corsa ----------------------
+function selectRunDays(allenTot, giorniPalestra){
+  const runNeeded = Math.max(0, allenTot - giorniPalestra.length);
+  const freeDays = GIORNI.filter(d => !giorniPalestra.includes(d));
+  if(runNeeded <= 0) return [];
+  if(runNeeded >= freeDays.length) return freeDays.slice(0, runNeeded);
+  const step = freeDays.length / runNeeded;
+  const selected = [];
+  for(let i=0;i<runNeeded;i++){
+    const idx = Math.floor(i*step + step/2);
+    selected.push(freeDays[idx]);
+  }
+  return [...new Set(selected)];
 }
 
 // ---------------------- Render UI ----------------------
