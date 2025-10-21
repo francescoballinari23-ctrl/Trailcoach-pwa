@@ -193,7 +193,7 @@ function generaPiano(settings){
     const targetAsc = Math.round(settings.obbAsc * scaricoFactor);
 
     // selezione giorni corsa
-    const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra, settings.settimane, w-1);
+const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra);
     const runsCount = runDays.length || 1;
     let runIndex = 0;
 
