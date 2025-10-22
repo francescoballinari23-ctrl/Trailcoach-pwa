@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v14.2 (Mod)</title>
+<title>TrailCoach AI v14.2 (Visuale Ripristinata)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -25,6 +25,7 @@
   button:hover { background:#005fd6; }
   button.reset { background:#ff3b30; margin-left:6px; }
   .week { background:#f7f9ff; border-radius:8px; margin:8px 0; padding:8px 10px; }
+  .week h3 { margin: 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; } /* Stile per rendere l'intestazione cliccabile */
   .days { margin-top:6px; padding-left:10px; display:none; }
   .day { padding:6px 0; border-bottom:1px solid #eee; }
   .detail { background:#fff; border-radius:8px; padding:10px; margin-top:6px; border:1px solid #eee; }
@@ -37,11 +38,11 @@
   .meta { font-size:13px; color:#333; }
   .muted { color:#666; font-size:13px; }
   .small { font-size:13px; color:#555; margin-top:6px; }
-  button.small-btn { background:#eee; color:#007aff; border:1px solid #007aff; padding:4px 8px; font-size:13px; border-radius:6px; }
+  button.small-btn { background:#eee; color:#007aff; border:1px solid #007aff; padding:4px 8px; font-size:13px; border-radius:6px; margin-left: 8px; }
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v14.2 (Mod)</h1>
+<h1>🏔️ TrailCoach AI v14.2 (Visuale Ripristinata)</h1>
 
 <div class="card" id="settingsCard">
   <label>Livello atleta</label>
@@ -134,57 +135,34 @@ function selectRunDays(allenTot, giorniPalestra, settimane, weekIndex){
 }
 
 // === GENERA DETTAGLI REALISTICI con correzione del volume ===
-function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, livello, factor=1, isExtraDay=false){
+function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCountStandard, livello, factor=1, isExtraDay=false){
   const pctLungo=0.55, pctQuality=0.20, pctFondo=0.25;
-  runsCount=Math.max(1, runsCount); // runsCount è il numero di corse TOTALI (standard + extra)
-
-  // *** MODIFICA FONDAMENTALE PER LA SOMMA ***
-  // Se è un giorno extra, il volume di base (weeklyKm/Asc) rappresenta il 100%
-  // che deve essere distribuito sugli allenamenti STANDARD.
-  // L'allenamento extra (factor=0.5) contribuisce al volume totale.
-
-  // Volume BASE (da dividere tra Lungo, Qualità, Fondo)
-  let baseKm = weeklyKm;
-  let baseAsc = weeklyAsc;
-  
-  // Se c'è un allenamento extra in questa settimana, sottraiamo il volume
-  // che l'allenamento extra "mangia" dal totale BASE.
-  // Ipotizziamo che l'allenamento extra sia Fondo Lento (pctFondo).
-  if(runsCount > 1 && isExtraDay) {
-      // In realtà, questo calcolo deve essere fatto nel generatore,
-      // qui dobbiamo solo distribuire il volume che ci viene dato.
-
-      // Se NON è l'allenamento extra, il volume da distribuire è base.
-      // Se È l'allenamento extra, il volume viene gestito direttamente da factor=0.5.
-  }
-
+  
+  // Volume BASE (da dividere tra Lungo, Qualità, Fondo)
+  const baseKm = weeklyKm;
+  const baseAsc = weeklyAsc;
+  
   const longKm=baseKm*pctLungo, longAsc=baseAsc*pctLungo;
   const qualKm=baseKm*pctQuality, qualAsc=baseAsc*pctQuality;
   
-  // Distribuzione Fondo solo sul volume residuo diviso per il numero di allenamenti di Fondo standard
-  const numStandardFondo=Math.max(0,Math.round((runsCount - (isExtraDay?1:0)) * pctFondo) || 1); 
+  // Distribuzione Fondo solo sul volume residuo diviso per il numero di allenamenti di Fondo standard
+  // runsCountStandard è il numero di allenamenti standard. Il Lungo e Qualità sono sempre 1
+  const numStandardFondo = Math.max(1, runsCountStandard - 2); 
   const fondoKm=baseKm*pctFondo/(numStandardFondo), fondoAsc=baseAsc*pctFondo/(numStandardFondo);
-  
   
   let dist=0,asc=0;
   if(/Lungo/i.test(type)){ dist=longKm; asc=longAsc; }
   else if(/Ripetute|Progressivo|Fartlek/.test(type)){ dist=qualKm; asc=qualAsc; }
   else { dist=fondoKm; asc=fondoAsc; }
 
-  // Applica il fattore di riduzione (per l'allenamento extra)
-  if (isExtraDay) {
-      // Il volume dell'extra è fisso, diciamo il 10% del totale BASE, moltiplicato per 0.5 di riduzione.
-      // Semplifichiamo prendendo il volume Fondo e moltiplicandolo per il fattore di riduzione
-      // Questo rende l'extra un allenamento corto.
-      dist = baseKm * pctFondo * 0.5;
-      asc = baseAsc * pctFondo * 0.5;
-  } else {
-      // Per gli allenamenti standard, applichiamo il volume calcolato sopra.
-      // Aggiungiamo un toFixed per evitare numeri troppo piccoli se runsCount è alto
-      dist = +dist.toFixed(2);
-      asc = +asc.toFixed(2);
-  }
-
+  if (isExtraDay) {
+      // Il volume dell'extra è fisso, 50% del volume Fondo standard.
+      dist = fondoKm * 0.5;
+      asc = fondoAsc * 0.5;
+  } else {
+      dist = +dist.toFixed(2);
+      asc = +asc.toFixed(2);
+  }
 
   const dur=dist*paceByLevel(livello);
   let det="";
@@ -212,33 +190,15 @@ function generaPiano(){
     const coeff=progressioni[Math.min(progressioni.length-1,Math.floor((w-1)/Math.max(1,settimane/progressioni.length)))];
     const isScarico = (w===settimane-1);
     
-    // Calcola i giorni di corsa e il giorno extra
-    const { runDays, extraRunDay, isExtraWeek } = selectRunDays(allenTot, giorniPalestra, settimane, w-1);
+    const { runDays, extraRunDay } = selectRunDays(allenTot, giorniPalestra, settimane, w-1);
     const runsCountStandard = runDays.length - (extraRunDay ? 1 : 0);
 
-    // Calcola il coefficiente di volume extra
-    let extraVolumeFactor = 0;
-    if (extraRunDay) {
-        // Se c'è un giorno extra, aggiunge 0.5 al fattore di volume totale della settimana
-        // 0.5 è il fattore che usiamo per la corsa extra
-        extraVolumeFactor = 0.5;
-    }
-
-    // Il volume BASE è il coefficiente di progressione
+    // Volume BASE (da distribuire tra gli allenamenti standard)
     const baseKm = obbKm * coeff * (isScarico?0.7:1);
     const baseAsc = obbAsc * coeff * (isScarico?0.7:1);
     
-    // Volume Totale Settimanale = Volume Base * (1 + (Extra Volume Factor / Allenamenti Standard))
-    // Per semplificare, usiamo il volume BASE per gli allenamenti standard e aggiungiamo l'extra.
-    // Il target visualizzato deve includere l'extra.
-
-    // Nel rendering, usiamo il target teorico (progressione)
-    const weekKm = +baseKm.toFixed(1);
-    const weekAsc = Math.round(baseAsc);
-
-
     const settimana=[];
-    let totalWeeklyKm = 0; // Inizializza il totale effettivo
+    let totalWeeklyKm = 0; 
     let totalWeeklyAsc = 0;
 
     for(const day of GIORNI){
@@ -246,16 +206,11 @@ function generaPiano(){
         settimana.push({day,type:"Palestra",summary:"🏋️ Palestra",completed:false});
       } else if(runDays.includes(day)){
         let type="";
-        let factor = 1;
         const isCurrentDayExtra = day === extraRunDay;
 
-        // Gestione Allenamento Extra (Fondo Lento a volume ridotto)
         if (isCurrentDayExtra) {
             type = "Fondo lento";
-            // L'allenamento extra è un fondo lento a 0.5 del volume Fondo standard
-            factor = 0.5; 
         } 
-        // Logica Allenamenti Standard
         else if(day==="Sabato"||day==="Domenica") {
             type="Lungo trail";
         } else if(settimana.filter(x=>/Ripetute|Progressivo|Fartlek/.test(x.type)).length===0) {
@@ -264,12 +219,10 @@ function generaPiano(){
             type="Fondo lento";
         }
 
-        // Passiamo a creaDettagliAllenamento il volume BASE e gli indichiamo se è l'extra
-        const det=creaDettagliAllenamento(type, baseKm, baseAsc, runsCountStandard, livello, factor, isCurrentDayExtra);
+        const det=creaDettagliAllenamento(type, baseKm, baseAsc, runsCountStandard, livello, 1, isCurrentDayExtra);
         let summaryText = `🏃 ${type} — ${det.distance} km`;
         if (isCurrentDayExtra) summaryText += " (Extra)";
 
-        // Aggiorna il totale settimanale EFFETTIVO
         totalWeeklyKm += det.distance;
         totalWeeklyAsc += det.ascent;
 
@@ -279,7 +232,6 @@ function generaPiano(){
       }
     }
     
-    // Nel piano, mostriamo il totale EFFETTIVO calcolato
     plan.push({settimana:w,targetKm:+totalWeeklyKm.toFixed(1),targetAsc:Math.round(totalWeeklyAsc),allenamenti:settimana,isScarico});
   }
   STATE={settings:{livello,obbKm,obbAsc,settimane,allenTot,giorniPalestra},planData:plan};
@@ -287,37 +239,59 @@ function generaPiano(){
   renderPiano();
 }
 
-// === RENDERING PIANO (senza modifiche) ===
+// === RENDERING PIANO (RIPRISTINATO) ===
 function renderPiano(){
   const c=document.getElementById("planView");
   if(!STATE.planData?.length){ c.textContent="Nessun piano ancora generato."; return; }
   c.innerHTML="";
   STATE.planData.forEach(w=>{
     const wd=document.createElement("div"); wd.className="week";
+    
+    // 1. Intestazione cliccabile
     const h=document.createElement("h3");
     h.textContent=`📅 Settimana ${w.settimana} — ${w.targetKm} km / +${w.targetAsc} m ${w.isScarico?"(Scarico)":""}`;
     wd.appendChild(h);
+    
+    // 2. Contenitore giorni (nascosto di default)
     const days=document.createElement("div"); days.className="days";
+    days.style.display = "none"; // Inizialmente nascosto
 
     w.allenamenti.forEach(a=>{
       const d=document.createElement("div"); d.className="day";
       const s=document.createElement("div");
       s.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
+      
+      // Aggiunta pulsanti
       const detBtn=document.createElement("button"); detBtn.className="small-btn"; detBtn.textContent="Dettagli";
       const fileBtn=document.createElement("button"); fileBtn.className="small-btn"; fileBtn.textContent="Carica GPX";
-      s.appendChild(detBtn); s.appendChild(fileBtn);
+      
+      s.appendChild(detBtn); 
+      if (a.type === "Corsa") s.appendChild(fileBtn); // Mostra GPX solo per Corsa
       d.appendChild(s);
+      
+      // 3. Dettagli (nascosto di default)
       const det=document.createElement("div"); det.className="detail"; det.style.display="none";
       if(a.details){
-        det.innerHTML=`<div><em>${a.details.detailText}</em></div>
-          <div class="muted">Obiettivo: ${a.details.distance} km • +${a.details.ascent} m • ${a.details.durationMin} min</div>`;
+          let detailContent = `<div><em>${a.details.detailText}</em></div>`;
+          if (a.type === "Corsa") {
+             detailContent += `<div class="muted">Obiettivo: ${a.details.distance} km • +${a.details.ascent} m • ${a.details.durationMin} min</div>`;
+          } else if (a.type === "Palestra") {
+             detailContent += `<div class="muted">Focus: Forza & Core</div>`;
+          }
+        det.innerHTML = detailContent;
       }
+      
+      // Toggle dettagli
       detBtn.onclick=()=>{det.style.display=det.style.display==="none"?"block":"none";};
+      // Gestione upload
       fileBtn.onclick=()=>{uploadGPX(a);};
+      
       d.appendChild(det);
       days.appendChild(d);
     });
     wd.appendChild(days);
+    
+    // Toggle giorni
     h.onclick=()=>{days.style.display=days.style.display==="block"?"none":"block";};
     c.appendChild(wd);
   });
