@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v15.3</title>
+<title>TrailCoach AI v15.4</title>
 <meta name="theme-color" content="#000000">
 <style>
 :root{--card-radius:12px;}
@@ -33,7 +33,7 @@ a.guide{color:#0060d6;text-decoration:underline;}
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v15.3</h1>
+<h1>🏔️ TrailCoach AI v15.4</h1>
 
 <div class="card" id="topSummaryCard" style="display:none;">
   <div id="summaryText" class="muted"></div>
@@ -106,7 +106,7 @@ a.guide{color:#0060d6;text-decoration:underline;}
 
 <script>
 // ---------------------- Stato & storage ----------------------
-const STORAGE_KEY = "trailcoach_v15_state";
+const STORAGE_KEY = "trailcoach_v15_4_state";
 const DEFAULT_STATE = {
   settings: { livello:"principiante", obbKm:20, obbAsc:1000, settimane:8, allenTot:4, giorniPalestra:[] },
   planData: [],
@@ -119,38 +119,34 @@ function loadState(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ tr
 
 // ---------------------- Utility ----------------------
 function formatTime(mins){ const h=Math.floor(mins/60); const m=Math.round(mins%60); return h>0?`${h}h ${m}m`:`${m}m`; }
+
+// ---------------------- Core logica ----------------------
 const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 function paceByLevel(lvl){ return lvl==="principiante"?6 : lvl==="intermedio"?5.5 : 5; }
 
-// ---------------------- Dettagli allenamento ----------------------
 function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, livello, isScarico, fractionFactor=1){
-    let dist=0, asc=0;
+    let dist=0, asc=0; 
     const pace=paceByLevel(livello);
     if(type==="Lungo trail"){ dist=weeklyKm*0.6*fractionFactor; asc=weeklyAsc*0.6*fractionFactor; }
     else if(type==="Fondo lento"){ dist=weeklyKm*0.05*fractionFactor; asc=weeklyAsc*0.05*fractionFactor; }
     else { dist=weeklyKm*0.35*fractionFactor; asc=weeklyAsc*0.35*fractionFactor; }
     if(isScarico){ dist*=0.7; asc*=0.7; }
     let detailsText="";
-    switch(type){
-        case "Lungo trail": detailsText="Lungo: ritmo lento, endurance, salita costante"; break;
-        case "Fartlek": detailsText="Fartlek: alternare 2–3' veloce / 2' lento"; break;
-        case "Medio costante": detailsText="Medio: ritmo sostenuto per la maggior parte della distanza"; break;
-        case "Progressivo": detailsText="Progressivo: aumenta ritmo negli ultimi km"; break;
-        case "Ripetute": detailsText=`${Math.min(12, Math.max(4, Math.round(dist)))}×400 m in salita, recupero 90–120s`; break;
-        default: detailsText="Ritmo facile, tecnica e recupero"; break;
-    }
+    if(type==="Lungo trail") detailsText="Lungo: ritmo lento, endurance, salita costante";
+    else if(type==="Fartlek") detailsText="Fartlek: alternare 2–3' veloce / 2' lento";
+    else if(type==="Medio costante") detailsText="Medio: ritmo sostenuto per la maggior parte della distanza";
+    else if(type==="Progressivo") detailsText="Progressivo: aumenta ritmo negli ultimi km";
+    else if(type==="Ripetute") detailsText=`${Math.min(12, Math.max(4, Math.round(dist)))}×400 m in salita, recupero 90–120s`;
+    else detailsText="Ritmo facile, tecnica e recupero";
     return { distance:+dist.toFixed(1), ascent:Math.round(asc), durationMin:Math.round(dist*pace), detailText };
 }
 
-// ---------------------- Tipo allenamento ----------------------
-function tipoAllenamentoForIndex(i,totalRuns,day){
+function tipoAllenamentoForDay(day, runIndex, totalRuns){
     if(day==="Sabato"||day==="Domenica") return "Lungo trail";
-    if(totalRuns===1) return "Lungo trail";
-    if(i===0) return "Fartlek";
+    if(runIndex===0) return "Fartlek";
     return "Fondo lento";
 }
 
-// ---------------------- Generazione piano ----------------------
 function generaPiano(settings){
     const plan=[];
     const totaleSettimane=settings.settimane;
@@ -165,8 +161,9 @@ function generaPiano(settings){
         if(isProvaGara){ targetKm=settings.obbKm; targetAsc=settings.obbAsc; }
         if(isScarico){ targetKm*=0.7; targetAsc*=0.7; }
 
+        // Giorni liberi dalla palestra
         const freeDays=GIORNI.filter(d=>!settings.giorniPalestra.includes(d));
-        const totalRuns=Math.min(settings.allenTot - settings.giorniPalestra.length, freeDays.length);
+        const totalRuns=Math.min(settings.allenTot-settings.giorniPalestra.length, freeDays.length);
         const runDays=[];
         for(let i=0;i<totalRuns;i++){
             runDays.push(freeDays[Math.floor(i*freeDays.length/totalRuns)]);
@@ -178,7 +175,7 @@ function generaPiano(settings){
             if(settings.giorniPalestra.includes(day)){
                 settimana.push({ day,type:"Palestra",summary:"🏋️ Palestra",details:{ note:"Forza & Core" },uploaded:null,completed:false });
             } else if(runDays.includes(day)){
-                const type=tipoAllenamentoForIndex(runIndex,runDays.length,day);
+                const type=tipoAllenamentoForDay(day,runIndex,totalRuns);
                 const det=creaDettagliAllenamento(type,targetKm,targetAsc,settings.livello,isScarico);
                 settimana.push({ day,type:"Corsa",summary:`🏃 ${type} — ${det.distance} km`,details:det,uploaded:null,completed:false });
                 runIndex++;
@@ -186,7 +183,6 @@ function generaPiano(settings){
                 settimana.push({ day,type:"Riposo",summary:"Riposo",details:{ note:"Recupero" },uploaded:null,completed:false });
             }
         }
-
         plan.push({ settimana:w,targetKm:+targetKm.toFixed(1),targetAsc:Math.round(targetAsc),isScarico,allenamenti:settimana,completato:false });
     }
 
@@ -205,10 +201,9 @@ function renderAll(){
         const wDiv=document.createElement("div"); wDiv.className="week";
         const h=document.createElement("h3");
         h.innerHTML=`Settimana ${s.settimana} — ${s.targetKm} km`;
-        const d=document.createElement("div"); d.className="days";
         h.addEventListener("click",()=>{ d.style.display=d.style.display==="none"?"block":"none"; });
         wDiv.appendChild(h);
-
+        const d=document.createElement("div"); d.className="days";
         s.allenamenti.forEach(a=>{
             const dayDiv=document.createElement("div"); dayDiv.className="day";
             dayDiv.innerHTML=`${a.day}: ${a.summary}`;
@@ -220,7 +215,6 @@ function renderAll(){
             }
             d.appendChild(dayDiv);
         });
-
         wDiv.appendChild(d);
         planView.appendChild(wDiv);
     });
@@ -277,4 +271,3 @@ renderAll();
 </script>
 </body>
 </html>
-
