@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v15.4</title>
+<title>TrailCoach AI v15.5 - Stabile</title>
 <meta name="theme-color" content="#000000">
 <style>
 :root{--card-radius:12px;}
@@ -33,7 +33,7 @@ a.guide{color:#0060d6;text-decoration:underline;}
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v15.4</h1>
+<h1>🏔️ TrailCoach AI v15.5</h1>
 
 <div class="card" id="topSummaryCard" style="display:none;">
   <div id="summaryText" class="muted"></div>
@@ -107,7 +107,8 @@ a.guide{color:#0060d6;text-decoration:underline;}
 
 <script>
 // ---------------------- Stato & storage ----------------------
-const STORAGE_KEY = "trailcoach_v15_4_state";
+const VERSION = "v15.5";
+const STORAGE_KEY = `trailcoach_${VERSION}_state`;
 const DEFAULT_STATE = {
   settings: { livello:"principiante", obbKm:20, obbAsc:1000, settimane:8, allenTot:4, giorniPalestra:[] },
   planData: [],
@@ -115,8 +116,35 @@ const DEFAULT_STATE = {
   history: []
 };
 let STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }
-function loadState(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ try{ STATE = JSON.parse(raw); }catch(e){ console.warn("loadState parse error", e); } } }
+function loadState(){ 
+    const raw = localStorage.getItem(STORAGE_KEY); 
+    if(raw){ 
+        try{ 
+            STATE = JSON.parse(raw); 
+            // Controllo della versione (Pulizia Forzata)
+            if(!localStorage.getItem("app_version") || localStorage.getItem("app_version") !== VERSION) {
+                 resetData(false); // Resetta i dati se la versione non è corretta o non è impostata
+                 localStorage.setItem("app_version", VERSION);
+            }
+        }catch(e){ 
+            console.warn("loadState parse error, resetting...", e); 
+            resetData(false);
+        } 
+    }
+}
+
+function resetData(showConfirm = true){
+    if(!showConfirm || confirm("Vuoi resettare tutti i dati (impostazioni, piano e storico)?")){ 
+        STATE=JSON.parse(JSON.stringify(DEFAULT_STATE)); 
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem("app_version", VERSION); // Imposta la versione
+        initSettings();
+        renderAll(); 
+    }
+}
+
 
 // ---------------------- Utility ----------------------
 function formatTime(mins){ const h=Math.floor(mins/60); const m=Math.round(mins%60); return h>0?`${h}h ${m}m`:`${m}m`; }
@@ -132,13 +160,13 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, livello, isScarico, 
     // Distribuzione approssimativa del carico settimanale
     if(type==="Lungo trail"){ dist=weeklyKm*0.6*fractionFactor; asc=weeklyAsc*0.6*fractionFactor; }
     else if(type==="Fondo lento"){ dist=weeklyKm*0.1*fractionFactor; asc=weeklyAsc*0.1*fractionFactor; }
-    else { dist=weeklyKm*0.3*fractionFactor; asc=weeklyAsc*0.3*fractionFactor; } // Altri tipi
+    else { dist=weeklyKm*0.3*fractionFactor; asc=weeklyAsc*0.3*fractionFactor; }
 
     if(isScarico){ dist*=0.7; asc*=0.7; }
     
-    // Assicura che i valori siano numeri validi prima di toFixed
-    dist = dist > 0 ? dist : 0;
-    asc = asc > 0 ? asc : 0;
+    // Assicura che i valori siano numeri validi e non negativi
+    dist = Math.max(0, dist);
+    asc = Math.max(0, asc);
     
     let detailsText="";
     if(type==="Lungo trail") detailsText="Lungo: ritmo lento, endurance, salita costante";
@@ -154,11 +182,10 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, livello, isScarico, 
 function tipoAllenamentoForDay(day, runIndex, totalRuns){
     const runTypes = ["Fartlek", "Ripetute", "Progressivo", "Medio costante", "Fondo lento"];
     
-    // 1. Assegna il Lungo trail/Medio nel weekend
     if(day==="Domenica" && totalRuns > 1) return "Lungo trail";
     if(totalRuns >= 3 && day === "Sabato") return "Medio costante";
 
-    // 2. Assegna gli allenamenti rimanenti
+    // Usa l'indice modulo la lunghezza dell'array per ciclare i tipi
     const type = runTypes[runIndex % runTypes.length];
     
     return type;
@@ -182,7 +209,7 @@ function generaPiano(settings){
             targetKm=settings.obbKm*(w/totaleSettimane);
             targetAsc=settings.obbAsc*(w/totaleSettimane);
         }
-        if(w === totaleSettimane) { targetKm=0; targetAsc=0; } // Giorno gara (solo riposo/gara)
+        if(w === totaleSettimane) { targetKm=0; targetAsc=0; }
 
         // Giorni liberi dalla palestra
         const freeDays=GIORNI.filter(d=>!settings.giorniPalestra.includes(d));
@@ -195,36 +222,28 @@ function generaPiano(settings){
         let isExtraRunWeek = false;
         let extraRunDay = null; 
         
-        // Se settimana è pari, NON è la settimana di gara, e ci sono giorni liberi non ancora coperti
-        if (w % 2 === 0 && w < totaleSettimane && totalRuns < freeDays.length) {
+        if (w % 2 === 0 && w < totaleSettimane && totalRuns < freeDays.length && totalRuns < settings.allenTot) {
             isExtraRunWeek = true;
-            totalRuns++; // Aumenta il numero di corse
-
-            // Assegna il giorno extra al primo giorno libero non ancora assegnato alla corsa
-            const assignedRunDays = freeDays.slice(0, totalRuns - 1); // Corri fino al giorno prima dell'extra
+            
+            // Trova il primo giorno libero non ancora assegnato
+            const assignedRunDays = freeDays.slice(0, totalRuns);
             extraRunDay = freeDays.find(day => !assignedRunDays.includes(day));
-            if(extraRunDay) {
-                // Aggiungiamo il giorno extra all'array dei giorni di corsa
-                // Questo è il modo più pulito per gestire l'assegnazione
+            
+            if (extraRunDay) {
+                totalRuns++; // Aumenta il numero di corse solo se c'è un giorno libero
+            } else {
+                isExtraRunWeek = false; // Annulla l'extra se non c'è un posto
             }
         }
         
         // Determina i giorni di corsa
-        const runDays=[];
-        for(let i=0;i<requestedRunSlots;i++){ // Usa slot richiesti (più robusto)
-            if (i < freeDays.length) {
-                runDays.push(freeDays[i]);
-            }
-        }
+        const runDays = freeDays.slice(0, totalRuns);
         
-        if (isExtraRunWeek && extraRunDay && !runDays.includes(extraRunDay)) {
-             runDays.push(extraRunDay); // Aggiunge il giorno extra se non era già uno slot standard
-        }
-        // Il numero di corse effettive è la lunghezza dell'array runDays
+        // Ricalcola il numero di corse effettive (la lunghezza dell'array è la verità)
         totalRuns = runDays.length;
 
         const settimana=[];
-        let runIndex=0;
+        let runIndex=0; // Indice per ciclare i tipi di allenamento
         for(const day of GIORNI){
             if(settings.giorniPalestra.includes(day)){
                 settimana.push({ day,type:"Palestra",summary:"🏋️ Palestra",details:{ note:"Forza & Core" },uploaded:null,completed:false });
@@ -232,14 +251,16 @@ function generaPiano(settings){
                 let type;
                 let factor = 1;
                 
-                // Se questo giorno è il giorno extra (se è stato calcolato)
+                // Se questo giorno è il giorno extra
                 const isCurrentDayExtra = isExtraRunWeek && day === extraRunDay;
                 
                 if (isCurrentDayExtra) {
                     type = "Fondo lento"; 
-                    factor = 0.5;
+                    factor = 0.5; // Mezzo volume per recupero attivo
                 } else {
+                    // Assegna il tipo (Lunghe/Medie/Ripetute, ecc.)
                     type = tipoAllenamentoForDay(day, runIndex, totalRuns);
+                    runIndex++; // Incrementa l'indice solo per gli allenamenti standard
                 }
                 
                 const det=creaDettagliAllenamento(type,targetKm,targetAsc,settings.livello,isScarico, factor);
@@ -249,14 +270,6 @@ function generaPiano(settings){
                 if(isCurrentDayExtra) summaryText += " (Extra Volume)";
 
                 settimana.push({ day,type:"Corsa",summary:summaryText,details:det,uploaded:null,completed:false });
-                // Solo gli allenamenti non extra contribuiscono all'indice ciclico
-                if (!isCurrentDayExtra) {
-                    runIndex++; 
-                } else if (runIndex === 0) {
-                    // Controlla un caso limite, per assicurarsi che non si salti il primo allenamento
-                    // In pratica, l'indice è sempre incrementato, ma non usato per la tipizzazione se è un giorno extra
-                }
-
             } else {
                 settimana.push({ day,type:"Riposo",summary:"Riposo",details:{ note:"Recupero" },uploaded:null,completed:false });
             }
@@ -341,8 +354,9 @@ function handleUpload(allenamento){
 function initSettings(){
     if(!STATE.settings) STATE.settings = DEFAULT_STATE.settings;
     document.getElementById("livello").value = STATE.settings.livello;
-    document.getElementById("obbKm").value = STATE.settings.obbKm || "";
-    document.getElementById("obbAsc").value = STATE.settings.obbAsc || "";
+    // Forza 0 se il valore non è presente, per evitare stringhe vuote
+    document.getElementById("obbKm").value = STATE.settings.obbKm > 0 ? STATE.settings.obbKm : 20;
+    document.getElementById("obbAsc").value = STATE.settings.obbAsc > 0 ? STATE.settings.obbAsc : 1000;
     document.getElementById("settimane").value = STATE.settings.settimane;
     document.getElementById("allenTot").value = STATE.settings.allenTot;
 
@@ -379,14 +393,7 @@ document.getElementById("genLocal").addEventListener("click",()=>{
     generaPiano({ livello:lvl, obbKm:km, obbAsc:asc, settimane:settimane, allenTot, giorniPalestra:palestra });
 });
 
-document.getElementById("resetData").addEventListener("click",()=>{
-    if(confirm("Vuoi resettare tutti i dati (impostazioni, piano e storico)?")){ 
-        STATE=JSON.parse(JSON.stringify(DEFAULT_STATE)); 
-        localStorage.removeItem(STORAGE_KEY);
-        initSettings();
-        renderAll(); 
-    }
-});
+document.getElementById("resetData").addEventListener("click",()=> resetData(true) );
 
 document.querySelectorAll(".chk-btn").forEach(btn=>{
     btn.addEventListener("click",()=>{ 
