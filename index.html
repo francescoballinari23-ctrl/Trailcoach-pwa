@@ -143,49 +143,61 @@ function creaDettagliAllenamento(type, km, asc, livello){
 // ---------------------- Generazione piano ----------------------
 function generaPiano(settings){
   const plan = [];
-  const totaleSettimane = settings.settimane;
-  const provaGaraSettimana = totaleSettimane - 3; // prova gara 3 settimane prima
-  const scaricoSettimana = totaleSettimane - 1;   // penultima settimana scarico
-  let baseKm = 0;
+  
+  for(let w=1; w<=settings.settimane; w++){
+    // Scarico penultima settimana
+    const isScarico = (w === settings.settimane - 1);
+    const isUltimaGara = (w === settings.settimane);
 
-  for(let w=1; w<=totaleSettimane; w++){
-    const isScarico = (w===scaricoSettimana);
-    const isProvaGara = (w===provaGaraSettimana);
-    let weekTargetKm = settings.obbKm * (w/totaleSettimane); // progressione km
-    if(isProvaGara) weekTargetKm = settings.obbKm * 0.8; // prova gara 80% km
-    if(isScarico) weekTargetKm *= 0.6; // riduzione scarico
-    if(w===totaleSettimane) weekTargetKm = settings.obbKm; // ultima settimana lungo gara
+    // Target settimanale: progressione lineare fino alla gara
+    let progressFactor = w / settings.settimane;
+    let targetKm = isUltimaGara ? settings.obbKm : +(settings.obbKm * progressFactor).toFixed(1);
+    let targetAsc = Math.round(settings.obbAsc * progressFactor);
 
-    const targetAsc = Math.round(settings.obbAsc * (weekTargetKm/settings.obbKm));
+    const freeRunDays = GIORNI.filter(d => !settings.giorniPalestra.includes(d));
 
-    // Giorni corsa
-    const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra, w);
+    // Seleziona 1 lungo nel weekend
+    const weekend = freeRunDays.filter(d => d === "Sabato" || d === "Domenica");
+    const longDay = weekend[0] || freeRunDays[0];
+
+    const runsCount = Math.floor(settings.allenTot - settings.giorniPalestra.length);
+    const runDays = [];
+
+    // Lungo
+    runDays.push(longDay);
+
+    // Aggiungi altri allenamenti (forza/velocità)
+    const remainingRuns = runsCount - 1;
+    const restDays = freeRunDays.filter(d => d !== longDay);
+    for(let i=0;i<remainingRuns;i++){
+      runDays.push(restDays[i % restDays.length]);
+    }
+
     const settimana = [];
-
     for(const day of GIORNI){
       if(settings.giorniPalestra.includes(day)){
         settimana.push({ day, type:"Palestra", summary:"🏋️ Palestra", details:{ note:"Forza & Core" }, uploaded:null, completed:false });
       } else if(runDays.includes(day)){
-        let type = "Fondo lento";
-        if(day==="Sabato" || day==="Domenica") type="Lungo trail";
-        else if(runDays.length>1) type = ["Ripetute","Fartlek","Progressivo"][0]; // uno solo qualità/velocità
-        const kmAllen = (type==="Lungo trail")? weekTargetKm*0.55 : (weekTargetKm*0.45)/(runDays.length-1);
-        const ascAllen = (type==="Lungo trail")? targetAsc*0.55 : (targetAsc*0.45)/(runDays.length-1);
-        const det = creaDettagliAllenamento(type, kmAllen, ascAllen, settings.livello);
+        let type = "Fondo lento"; // default
+        if(day === longDay) type = isUltimaGara ? "Lungo gara" : "Lungo trail";
+        else if(day !== longDay && runsCount > 1) type = "Medio costante"; // esercizio di velocità/forza
+
+        const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runDays.indexOf(day), settings.livello, isScarico);
         settimana.push({ day, type:"Corsa", summary:`🏃 ${type} — ${det.distance} km`, details:det, uploaded:null, completed:false });
       } else {
         settimana.push({ day, type:"Riposo", summary:"Riposo", details:{ note:"Recupero" }, uploaded:null, completed:false });
       }
     }
 
-    plan.push({ settimana:w, targetKm:weekTargetKm, targetAsc, isScarico, allenamenti:settimana, completato:false });
+    plan.push({ settimana:w, targetKm, targetAsc, isScarico, allenamenti:settimana, completato:false });
   }
 
-  STATE.settings=settings;
-  STATE.planData=plan;
+  STATE.settings = settings;
+  STATE.planData = plan;
   saveState();
   renderAll();
 }
+
 
 // ---------------------- Selezione giorni corsa ----------------------
 function selectRunDays(allenTot, giorniPalestra, weekNum){
