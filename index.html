@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v14.3 (Visuale Perfetta)</title>
+<title>TrailCoach AI v14.4 (Visuale Perfetta + Logica Corretta)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -41,7 +41,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v14.3 (Visuale Perfetta)</h1>
+<h1>🏔️ TrailCoach AI v14.4 (Visuale Perfetta)</h1>
 
 <div class="card" id="settingsCard">
   <label>Livello atleta</label>
@@ -91,7 +91,7 @@
 
 <script>
 // === CORE FUNZIONI ===
-const STORAGE_KEY = "trailcoach_v14_3_state"; // Aggiornato chiave di storage
+const STORAGE_KEY = "trailcoach_v14_4_state"; // Aggiornata chiave di storage
 let STATE = { settings:{}, planData:[] };
 
 function paceByLevel(l){ return l==="principiante"?6.2:l==="intermedio"?5.8:5.4; }
@@ -100,13 +100,16 @@ function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); 
 function loadState(){ const r=localStorage.getItem(STORAGE_KEY); if(r) STATE=JSON.parse(r); }
 
 // === GESTIONE SELEZIONE GIORNI PALESTRA ===
+// Questo gestisce i bottoni della palestra e non è cambiato rispetto al tuo codice.
 document.getElementById("settingsCard").addEventListener("click",e=>{
   if(e.target.classList.contains("chk-btn")){
     e.target.classList.toggle("active");
   }
 });
 
-// === SELEZIONE GIORNI CORSA MODIFICATA PER EXTRA SETTIMANALE ===
+// =========================================================================
+// === LOGICA DI SELEZIONE DEI GIORNI DI CORSA (FIXED) ===
+// =========================================================================
 function selectRunDays(allenTot, giorniPalestra, settimane, weekIndex){
   const full = Math.floor(allenTot);
   const runNeededStandard = Math.max(0, full - giorniPalestra.length);
@@ -115,12 +118,14 @@ function selectRunDays(allenTot, giorniPalestra, settimane, weekIndex){
   const runSlots = Math.min(runNeededStandard, free.length);
   const selected = [];
   
+  // Seleziona gli slot standard uniformemente
   if(runSlots > 0){
     const step = free.length / runSlots;
     for(let i=0;i<runSlots;i++){ selected.push(free[Math.floor(i*step)]); }
   }
   
   let extraRunDay = null;
+  // Attiva la corsa extra a settimane alterne se allenTot è X.5
   const isExtraWeek = allenTot % 1 >= 0.4 && (weekIndex + 1) % 2 === 0;
   
   if (isExtraWeek && runSlots < free.length) {
@@ -133,7 +138,10 @@ function selectRunDays(allenTot, giorniPalestra, settimane, weekIndex){
   return { runDays: selected, extraRunDay: extraRunDay, isExtraWeek };
 }
 
-// === GENERA DETTAGLI REALISTICI con correzione del volume ===
+// =========================================================================
+// === GENERA DETTAGLI REALISTICI (FIXED) ===
+// Aggiusta la distribuzione del volume sul numero corretto di allenamenti
+// =========================================================================
 function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCountStandard, livello, isExtraDay=false){
   const pctLungo=0.55, pctQuality=0.20, pctFondo=0.25;
   
@@ -170,7 +178,10 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCountStandard, l
   return {distance:+dist.toFixed(1), ascent:Math.round(asc), durationMin:Math.round(dur), detailText:det};
 }
 
-// === GENERAZIONE PIANO ===
+// =========================================================================
+// === GENERAZIONE PIANO (FIXED) ===
+// Usa la logica corretta per calcolare il target settimanale totale sommando i giorni
+// =========================================================================
 function generaPiano(){
   const livello=document.getElementById("livello").value;
   const obbKm=+document.getElementById("obbKm").value;
@@ -228,6 +239,7 @@ function generaPiano(){
       }
     }
     
+    // Calcola il target finale dalla somma (FIXED)
     plan.push({settimana:w,targetKm:+totalWeeklyKm.toFixed(1),targetAsc:Math.round(totalWeeklyAsc),allenamenti:settimana,isScarico});
   }
   STATE={settings:{livello,obbKm,obbAsc,settimane,allenTot,giorniPalestra},planData:plan};
@@ -235,7 +247,10 @@ function generaPiano(){
   renderPiano();
 }
 
+// =========================================================================
 // === RENDERING PIANO (RIPRISTINATO ALL'ORIGINALE) ===
+// Usiamo la vostra funzione di rendering per mantenere la visualizzazione
+// =========================================================================
 function renderPiano(){
   const c=document.getElementById("planView");
   if(!STATE.planData?.length){ c.textContent="Nessun piano ancora generato."; return; }
@@ -243,6 +258,7 @@ function renderPiano(){
   STATE.planData.forEach(w=>{
     const wd=document.createElement("div"); wd.className="week";
     const h=document.createElement("h3");
+    // Usa i valori totalWeeklyKm/Asc calcolati correttamente in generaPiano
     h.textContent=`📅 Settimana ${w.settimana} — ${w.targetKm} km / +${w.targetAsc} m ${w.isScarico?"(Scarico)":""}`;
     wd.appendChild(h);
     const days=document.createElement("div"); days.className="days";
@@ -252,41 +268,41 @@ function renderPiano(){
       const s=document.createElement("div");
       s.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
       
-      // Creazione e aggiunta dei pulsanti al riepilogo (s)
-      if(a.type !== 'Riposo'){
-          const detBtn=document.createElement("button"); detBtn.className="small-btn"; detBtn.textContent="Dettagli";
-          s.appendChild(detBtn); 
+      // Creazione pulsanti: Dettagli e GPX affiancati
+      const detBtn=document.createElement("button"); detBtn.className="small-btn"; detBtn.textContent="Dettagli";
+      const fileBtn=document.createElement("button"); fileBtn.className="small-btn"; fileBtn.textContent="Carica GPX";
 
-          if(a.type.includes('trail') || a.type.includes('Fondo lento') || a.type.includes('Ripetute') || a.type.includes('Progressivo') || a.type.includes('Fartlek')){
-              const fileBtn=document.createElement("button"); fileBtn.className="small-btn"; fileBtn.textContent="Carica GPX";
-              s.appendChild(fileBtn);
-              fileBtn.onclick=()=>{uploadGPX(a);}; 
+      // Aggiunge i pulsanti SOLO se non è Riposo
+      if (a.type !== 'Riposo') {
+        s.appendChild(detBtn); 
+        // Aggiunge Carica GPX solo se è un allenamento di corsa
+        if(a.details?.distance > 0){
+            s.appendChild(fileBtn);
+            fileBtn.onclick=()=>{uploadGPX(a);};
+        }
+      }
+      
+      d.appendChild(s);
+      
+      const det=document.createElement("div"); det.className="detail"; det.style.display="none";
+      if(a.details){
+          if(a.details.distance){
+          det.innerHTML=`<div><em>${a.details.detailText}</em></div>
+              <div class="muted">Obiettivo: ${a.details.distance} km • +${a.details.ascent} m • ${a.details.durationMin} min</div>`;
+          } else { // Caso Palestra
+              det.innerHTML=`<div><em>${a.details.detailText}</em></div>`;
           }
-          
-          const det=document.createElement("div"); det.className="detail"; det.style.display="none";
-          if(a.details){
-              det.innerHTML=`<div><em>${a.details.detailText}</em></div>`;
-              if (a.details.distance) {
-                  det.innerHTML+=`<div class="muted">Obiettivo: ${a.details.distance} km • +${a.details.ascent} m • ${a.details.durationMin} min</div>`;
-              } else if (a.type === 'Palestra') {
-                   det.innerHTML+=`<div class="muted">Focus: Forza & Core</div>`;
-              }
-          }
-          detBtn.onclick=()=>{det.style.display=det.style.display==="none"?"block":"none";}; 
-          d.appendChild(det);
-
       }
-        
-      d.prepend(s); 
+      detBtn.onclick=()=>{det.style.display=det.style.display==="none"?"block":"none";};
+      d.appendChild(det);
       days.appendChild(d);
     });
     wd.appendChild(days);
-    
-    // Toggle giorni
     h.onclick=()=>{days.style.display=days.style.display==="block"?"none":"block";};
     c.appendChild(wd);
   });
 }
+
 
 // === GPX UPLOAD (senza modifiche) ===
 function uploadGPX(activity){
