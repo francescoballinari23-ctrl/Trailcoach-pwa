@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v14.2 (Visuale Perfetta)</title>
+<title>TrailCoach AI v14.3 (Visuale Perfetta)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -37,11 +37,11 @@
   .meta { font-size:13px; color:#333; }
   .muted { color:#666; font-size:13px; }
   .small { font-size:13px; color:#555; margin-top:6px; }
-  button.small-btn { background:#eee; color:#007aff; border:1px solid #007aff; padding:4px 8px; font-size:13px; border-radius:6px; }
+  button.small-btn { background:#eee; color:#007aff; border:1px solid #007aff; padding:4px 8px; font-size:13px; border-radius:6px; margin-left: 8px; }
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v14.2 (Visuale Perfetta)</h1>
+<h1>🏔️ TrailCoach AI v14.3 (Visuale Perfetta)</h1>
 
 <div class="card" id="settingsCard">
   <label>Livello atleta</label>
@@ -91,7 +91,7 @@
 
 <script>
 // === CORE FUNZIONI ===
-const STORAGE_KEY = "trailcoach_v14_2_state";
+const STORAGE_KEY = "trailcoach_v14_3_state"; // Aggiornato chiave di storage
 let STATE = { settings:{}, planData:[] };
 
 function paceByLevel(l){ return l==="principiante"?6.2:l==="intermedio"?5.8:5.4; }
