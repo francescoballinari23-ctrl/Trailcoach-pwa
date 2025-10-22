@@ -236,48 +236,80 @@ function renderSummary(){
 }
 
 function renderPiano(){
-  const container=document.getElementById("planView");
-  container.innerHTML="";
-  if(!STATE.planData||STATE.planData.length===0){ container.textContent="Nessun piano ancora generato."; return; }
+  const container = document.getElementById("planView");
+  container.innerHTML = "";
+  if(!STATE.planData || STATE.planData.length===0){ 
+    container.textContent = "Nessun piano ancora generato."; 
+    return; 
+  }
 
   STATE.planData.forEach((w, weekIndex)=>{
-    const weekDiv=document.createElement("div"); weekDiv.className="week";
-    const header=document.createElement("h3");
-    header.innerHTML=`📅 Settimana ${w.settimana} – Target: ${w.targetKm.toFixed(1)} km / +${w.targetAsc} m ${w.completato?"✅":""}${w.isScarico?" — Scarico":""}`;
+    const weekDiv = document.createElement("div"); 
+    weekDiv.className="week";
+
+    const header = document.createElement("h3");
+    const left = document.createElement("span");
+    left.innerText = `📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc} m ${w.completato ? "✅" : ""}${w.isScarico ? " — Scarico" : ""}`;
+    header.appendChild(left);
+
+    const btnToggle = document.createElement("button");
+    btnToggle.textContent = "Apri";
+    btnToggle.style.fontSize="13px";
+
+    const daysDiv = document.createElement("div");
+    daysDiv.className="days";
+    daysDiv.style.display="none"; // nascosto di default
+
+    // Listener per aprire/chiudere la settimana
+    btnToggle.addEventListener("click", ()=>{
+        if(daysDiv.style.display==="block"){
+            daysDiv.style.display="none";
+            btnToggle.textContent="Apri";
+        } else {
+            daysDiv.style.display="block";
+            btnToggle.textContent="Chiudi";
+        }
+    });
+
+    header.appendChild(btnToggle);
     weekDiv.appendChild(header);
 
-    const daysDiv=document.createElement("div"); daysDiv.className="days";
+    // Ciclo giorni
     w.allenamenti.forEach((a, dayIndex)=>{
-      const d=document.createElement("div"); d.className="day";
-      const summary=document.createElement("div");
-      summary.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
-      summary.style.display="flex"; summary.style.justifyContent="space-between"; summary.style.alignItems="center";
-      const openBtn=document.createElement("button"); openBtn.textContent="Dettagli"; openBtn.style.fontSize="13px";
+      const d = document.createElement("div"); 
+      d.className="day";
+      const summary = document.createElement("div");
+      summary.innerHTML = `<strong>${a.day}</strong> — ${a.summary}${a.completed ? " ✅" : ""}`;
+      summary.style.display="flex"; 
+      summary.style.justifyContent="space-between"; 
+      summary.style.alignItems="center";
+
+      const openBtn = document.createElement("button");
+      openBtn.textContent = "Dettagli";
+      openBtn.style.fontSize="13px";
       summary.appendChild(openBtn);
       d.appendChild(summary);
 
-      const detailBox=document.createElement("div"); detailBox.className="detail"; detailBox.style.display="none";
-      if(a.type==="Corsa" && a.details){
-        detailBox.innerHTML=`
+      const detailBox = document.createElement("div");
+      detailBox.className="detail";
+      detailBox.style.display="none";
+
+      if(a.type === "Corsa" && a.details){
+        detailBox.innerHTML = `
           <div><strong>${a.summary.split("—")[0].trim()}</strong></div>
           <div class="muted">Obiettivo: ${a.details.distance} km — +${a.details.ascent} m — ${formatTime(a.details.durationMin)}</div>
           <div style="margin-top:8px;"><em>${a.details.detailText}</em></div>
         `;
-      } else if(a.type==="Palestra"){
-        detailBox.innerHTML=`<div><strong>Palestra</strong></div><div class="muted">Forza & Core — esercizi consigliati</div>`;
+      } else if(a.type === "Palestra"){
+        detailBox.innerHTML = `<div><strong>Palestra</strong></div><div class="muted">Forza & Core — esercizi consigliati</div>`;
       } else {
-        detailBox.innerHTML=`<div><strong>Riposo</strong></div><div class="muted">Recupero attivo consigliato</div>`;
+        detailBox.innerHTML = `<div><strong>Riposo</strong></div><div class="muted">Recupero attivo consigliato</div>`;
       }
 
-      const fileLine=document.createElement("div"); fileLine.className="fileline";
-      const uploadBtn=document.createElement("button"); uploadBtn.textContent="Carica .gpx"; uploadBtn.style.fontSize="13px";
-      const statusSpan=document.createElement("div"); statusSpan.className="meta";
-      statusSpan.innerHTML=a.uploaded?`✅ ${a.uploaded.filename} — ${a.uploaded.km.toFixed(1)} km / +${a.uploaded.asc} m (${a.uploaded.date})`:`📎 Nessun file caricato per questo giorno.`;
-      fileLine.appendChild(uploadBtn); fileLine.appendChild(statusSpan);
-      detailBox.appendChild(document.createElement("hr")); detailBox.appendChild(fileLine);
+      openBtn.addEventListener("click", ()=>{
+        detailBox.style.display = detailBox.style.display === "none" ? "block" : "none";
+      });
 
-      uploadBtn.addEventListener("click", ()=> triggerUploadFor(weekIndex, dayIndex));
-      openBtn.addEventListener("click", ()=>{ detailBox.style.display=(detailBox.style.display==="none"?"block":"none"); });
       d.appendChild(detailBox);
       daysDiv.appendChild(d);
     });
@@ -286,6 +318,7 @@ function renderPiano(){
     container.appendChild(weekDiv);
   });
 }
+
 
 // ---------------------- Upload GPX ----------------------
 let uploadContext=null;
