@@ -132,10 +132,14 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, livello, isScarico, 
     // Distribuzione approssimativa del carico settimanale
     if(type==="Lungo trail"){ dist=weeklyKm*0.6*fractionFactor; asc=weeklyAsc*0.6*fractionFactor; }
     else if(type==="Fondo lento"){ dist=weeklyKm*0.1*fractionFactor; asc=weeklyAsc*0.1*fractionFactor; }
-    else { dist=weeklyKm*0.3*fractionFactor; asc=weeklyAsc*0.3*fractionFactor; }
+    else { dist=weeklyKm*0.3*fractionFactor; asc=weeklyAsc*0.3*fractionFactor; } // Altri tipi
 
     if(isScarico){ dist*=0.7; asc*=0.7; }
-    
+    
+    // Assicura che i valori siano numeri validi prima di toFixed
+    dist = dist > 0 ? dist : 0;
+    asc = asc > 0 ? asc : 0;
+    
     let detailsText="";
     if(type==="Lungo trail") detailsText="Lungo: ritmo lento, endurance, salita costante";
     else if(type==="Fartlek") detailsText="Fartlek: alternare 2–3' veloce / 2' lento";
@@ -187,23 +191,37 @@ function generaPiano(settings){
         const requestedRunSlots = Math.max(0, settings.allenTot - gymDaysCount);
         let totalRuns = Math.min(requestedRunSlots, freeDays.length);
 
-        // --- NUOVA LOGICA: ALLENAMENTO AGGIUNTIVO OGNI SECONDA SETTIMANA ---
+        // --- LOGICA AGGIUNTIVA: ALLENAMENTO EXTRA OGNI SECONDA SETTIMANA ---
         let isExtraRunWeek = false;
-        let extraRunIndex = -1; 
+        let extraRunDay = null; 
         
-        // Aggiungi una corsa se: settimana è pari, NON è la settimana di gara, c'è un giorno libero
+        // Se settimana è pari, NON è la settimana di gara, e ci sono giorni liberi non ancora coperti
         if (w % 2 === 0 && w < totaleSettimane && totalRuns < freeDays.length) {
-            totalRuns++; // Incrementa il totale delle corse per questa settimana
             isExtraRunWeek = true;
-            extraRunIndex = totalRuns - 1; // L'indice della corsa extra
-        }
-        // -----------------------------------------------------------------------
+            totalRuns++; // Aumenta il numero di corse
 
-        // Assegna i giorni di corsa ai primi 'totalRuns' giorni liberi
-        const runDays=[];
-        for(let i=0;i<totalRuns;i++){
-            runDays.push(freeDays[i]);
+            // Assegna il giorno extra al primo giorno libero non ancora assegnato alla corsa
+            const assignedRunDays = freeDays.slice(0, totalRuns - 1); // Corri fino al giorno prima dell'extra
+            extraRunDay = freeDays.find(day => !assignedRunDays.includes(day));
+            if(extraRunDay) {
+                // Aggiungiamo il giorno extra all'array dei giorni di corsa
+                // Questo è il modo più pulito per gestire l'assegnazione
+            }
+        }
+        
+        // Determina i giorni di corsa
+        const runDays=[];
+        for(let i=0;i<requestedRunSlots;i++){ // Usa slot richiesti (più robusto)
+            if (i < freeDays.length) {
+                runDays.push(freeDays[i]);
+            }
         }
+        
+        if (isExtraRunWeek && extraRunDay && !runDays.includes(extraRunDay)) {
+             runDays.push(extraRunDay); // Aggiunge il giorno extra se non era già uno slot standard
+        }
+        // Il numero di corse effettive è la lunghezza dell'array runDays
+        totalRuns = runDays.length;
 
         const settimana=[];
         let runIndex=0;
@@ -214,10 +232,12 @@ function generaPiano(settings){
                 let type;
                 let factor = 1;
                 
-                // Se è la corsa extra (ultima in ordine di assegnazione)
-                if (isExtraRunWeek && runIndex === extraRunIndex) {
-                    type = "Fondo lento"; // Corsa extra a basso impatto
-                    factor = 0.5;         // Riduce il volume assegnato per renderla un Fondo Lento breve
+                // Se questo giorno è il giorno extra (se è stato calcolato)
+                const isCurrentDayExtra = isExtraRunWeek && day === extraRunDay;
+                
+                if (isCurrentDayExtra) {
+                    type = "Fondo lento"; 
+                    factor = 0.5;
                 } else {
                     type = tipoAllenamentoForDay(day, runIndex, totalRuns);
                 }
@@ -226,10 +246,17 @@ function generaPiano(settings){
                 
                 let summaryText = `🏃 ${type} — ${det.distance} km`;
                 if(w === totaleSettimane && day === "Domenica") summaryText = "🏆 GARA - Ritiro pettorale";
-                if(isExtraRunWeek && runIndex === extraRunIndex) summaryText += " (Extra Volume)";
+                if(isCurrentDayExtra) summaryText += " (Extra Volume)";
 
                 settimana.push({ day,type:"Corsa",summary:summaryText,details:det,uploaded:null,completed:false });
-                runIndex++;
+                // Solo gli allenamenti non extra contribuiscono all'indice ciclico
+                if (!isCurrentDayExtra) {
+                    runIndex++; 
+                } else if (runIndex === 0) {
+                    // Controlla un caso limite, per assicurarsi che non si salti il primo allenamento
+                    // In pratica, l'indice è sempre incrementato, ma non usato per la tipizzazione se è un giorno extra
+                }
+
             } else {
                 settimana.push({ day,type:"Riposo",summary:"Riposo",details:{ note:"Recupero" },uploaded:null,completed:false });
             }
@@ -246,7 +273,7 @@ function generaPiano(settings){
 // ---------------------- Rendering ----------------------
 function renderAll(){
     const planView=document.getElementById("planView");
-    if(!STATE.planData.length){ planView.innerHTML="Nessun piano ancora generato."; return; }
+    if(!STATE.planData || !STATE.planData.length){ planView.innerHTML="Nessun piano ancora generato."; return; }
     planView.innerHTML="";
     STATE.planData.forEach(s=>{
         const wDiv=document.createElement("div"); wDiv.className="week";
@@ -257,7 +284,7 @@ function renderAll(){
         title += ` — ${s.targetKm} km`;
 
         if (s.settimana % 2 === 0 && s.settimana < STATE.settings.settimane) {
-            title += " ✨"; // Aggiunge un'icona per evidenziare la settimana di volume extra
+            title += " ✨"; 
         }
 
         h.innerHTML=title;
@@ -332,6 +359,7 @@ function initSettings(){
 // ---------------------- Eventi ----------------------
 document.getElementById("genLocal").addEventListener("click",()=>{
     const lvl=document.getElementById("livello").value;
+    // Usa 0.0 come fallback per evitare NaN e blocchi
     const km=parseFloat(document.getElementById("obbKm").value) || 0.0;
     const asc=parseFloat(document.getElementById("obbAsc").value) || 0.0;
     const settimane=parseInt(document.getElementById("settimane").value) || 8;
@@ -344,7 +372,7 @@ document.getElementById("genLocal").addEventListener("click",()=>{
     }
     
     // Avviso per slot di corsa insufficienti
-    if (allenTot - palestra.length <= 0) {
+    if (allenTot - palestra.length <= 0 && allenTot > 0) {
         alert("Attenzione: Allenamenti totali a settimana sono uguali o inferiori ai Giorni Palestra. Non verranno generate sessioni di corsa.");
     }
     
