@@ -25,7 +25,6 @@
   button:hover { background:#005fd6; }
   button.reset { background:#ff3b30; margin-left:6px; }
   .week { background:#f7f9ff; border-radius:8px; margin:8px 0; padding:8px 10px; }
-  .week h3 { margin: 0; cursor: pointer; } /* Intestazione cliccabile */
   .days { margin-top:6px; padding-left:10px; display:none; }
   .day { padding:6px 0; border-bottom:1px solid #eee; }
   .detail { background:#fff; border-radius:8px; padding:10px; margin-top:6px; border:1px solid #eee; }
@@ -38,7 +37,7 @@
   .meta { font-size:13px; color:#333; }
   .muted { color:#666; font-size:13px; }
   .small { font-size:13px; color:#555; margin-top:6px; }
-  button.small-btn { background:#eee; color:#007aff; border:1px solid #007aff; padding:4px 8px; font-size:13px; border-radius:6px; margin-left: 8px; }
+  button.small-btn { background:#eee; color:#007aff; border:1px solid #007aff; padding:4px 8px; font-size:13px; border-radius:6px; }
 </style>
 </head>
 <body>
@@ -144,7 +143,7 @@ function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCountStandard, l
   const longKm=baseKm*pctLungo, longAsc=baseAsc*pctLungo;
   const qualKm=baseKm*pctQuality, qualAsc=baseAsc*pctQuality;
   
-  // runsCountStandard - 2 perché Lungo e Qualità sono unici
+  // runsCountStandard - 2 perché Lungo e Qualità sono unici (1 Lungo, 1 Qualità)
   const numStandardFondo = Math.max(1, runsCountStandard - 2); 
   const fondoKm=baseKm*pctFondo/(numStandardFondo), fondoAsc=baseAsc*pctFondo/(numStandardFondo);
   
@@ -189,7 +188,6 @@ function generaPiano(){
     const isScarico = (w===settimane-1);
     
     const { runDays, extraRunDay } = selectRunDays(allenTot, giorniPalestra, settimane, w-1);
-    // runsCountStandard: per la distribuzione del volume base
     const runsCountStandard = runDays.length - (extraRunDay ? 1 : 0); 
 
     const baseKm = obbKm * coeff * (isScarico?0.7:1);
@@ -254,15 +252,15 @@ function renderPiano(){
       const s=document.createElement("div");
       s.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
       
-      // Creazione e aggiunta dei pulsanti come nel codice originale
+      // Creazione e aggiunta dei pulsanti al riepilogo (s)
       if(a.type !== 'Riposo'){
           const detBtn=document.createElement("button"); detBtn.className="small-btn"; detBtn.textContent="Dettagli";
           s.appendChild(detBtn); 
 
-          if(a.type.includes('trail') || a.type.includes('Fondo lento') || a.type.includes('Ripetute')){
+          if(a.type.includes('trail') || a.type.includes('Fondo lento') || a.type.includes('Ripetute') || a.type.includes('Progressivo') || a.type.includes('Fartlek')){
               const fileBtn=document.createElement("button"); fileBtn.className="small-btn"; fileBtn.textContent="Carica GPX";
               s.appendChild(fileBtn);
-              fileBtn.onclick=()=>{uploadGPX(a);}; // Handler per GPX
+              fileBtn.onclick=()=>{uploadGPX(a);}; 
           }
           
           const det=document.createElement("div"); det.className="detail"; det.style.display="none";
@@ -270,14 +268,16 @@ function renderPiano(){
               det.innerHTML=`<div><em>${a.details.detailText}</em></div>`;
               if (a.details.distance) {
                   det.innerHTML+=`<div class="muted">Obiettivo: ${a.details.distance} km • +${a.details.ascent} m • ${a.details.durationMin} min</div>`;
+              } else if (a.type === 'Palestra') {
+                   det.innerHTML+=`<div class="muted">Focus: Forza & Core</div>`;
               }
           }
-          detBtn.onclick=()=>{det.style.display=det.style.display==="none"?"block":"none";}; // Handler per Dettagli
+          detBtn.onclick=()=>{det.style.display=det.style.display==="none"?"block":"none";}; 
           d.appendChild(det);
 
       }
         
-      d.prepend(s); // Metti il riepilogo all'inizio
+      d.prepend(s); 
       days.appendChild(d);
     });
     wd.appendChild(days);
