@@ -3,629 +3,290 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>TrailCoach AI v14 — Piano Trail</title>
+<title>🏔️ TrailCoach AI v14.1</title>
 <meta name="theme-color" content="#000000">
 <style>
-  :root{--card-radius:12px;}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:#fafafa;color:#111;margin:12px;}
   h1{text-align:center;font-size:22px;margin:6px 0;}
-  .card{background:#fff;border-radius:var(--card-radius);padding:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.06);}
+  .card{background:#fff;border-radius:12px;padding:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.06);}
   label{display:block;margin:8px 0 6px;font-weight:600;}
   input[type="number"], select{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;}
-  button{background:#007aff;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:600;margin-top:8px;cursor:pointer;}
-  button.small{padding:6px 8px;font-size:13px;}
+  button{background:#007aff;color:#fff;border:none;padding:8px 12px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
+  button:hover{opacity:0.9;}
   button.reset{background:#ff3b30;margin-left:8px;}
   .week{background:#f7f9ff;border-radius:8px;margin:8px 0;padding:8px 10px;}
   .week h3{margin:0;cursor:pointer;font-size:17px;display:flex;justify-content:space-between;align-items:center;}
   .days{margin-top:6px;padding-left:10px;display:none;}
   .days .day{padding:6px 0;border-bottom:1px solid #eee;}
-  .small{font-size:13px;color:#666;margin-top:6px;}
-  .toggle-btn{float:right;background:#eee;color:#111;font-weight:500;border-radius:6px;padding:6px 10px;font-size:13px;margin-top:-4px;}
-  .checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
-  .checkbox-grid-bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
-  .chk-btn{display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;background:#f2f2f2;cursor:pointer;border:1px solid transparent;font-weight:700;}
-  .chk-btn.active{background:#007aff;color:#fff;border-color:#0060d6;}
   .detail{background:#fff;border-radius:8px;padding:10px;margin:6px 0 10px;border:1px solid #eee;font-size:14px;}
   .muted{color:#666;font-size:13px;}
   .fileline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
   .meta{font-size:13px;color:#333;margin-top:6px;}
-  .alert{background:#fff3cd;border:1px solid #ffeeba;padding:8px;border-radius:8px;margin-top:8px;color:#856404;}
-  a.guide{color:#0060d6;text-decoration:underline;}
-  .badge{background:#e6f0ff;padding:4px 8px;border-radius:12px;font-size:12px;color:#044;display:inline-block;}
-  @media(max-width:420px){ canvas{width:100%!important;height:auto!important;} }
+  .chk-btn{display:flex;align-items:center;justify-content:center;padding:8px;border-radius:8px;background:#f2f2f2;cursor:pointer;border:1px solid transparent;font-weight:700;}
+  .chk-btn.active{background:#007aff;color:#fff;border-color:#0060d6;}
+  .checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
+  .checkbox-grid-bottom{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v14</h1>
-
-<div class="card" id="topSummaryCard" style="display:none;">
-  <div id="summaryText" class="muted"></div>
-</div>
+<h1>🏔️ TrailCoach AI v14.1</h1>
 
 <div class="card" id="settingsCard">
-  <div>
-    <span style="font-weight:600;">⚙️ Impostazioni</span>
-    <button id="toggleSettings" class="toggle-btn" aria-expanded="true">Nascondi</button>
+  <label>Livello atleta</label>
+  <select id="livello">
+    <option value="principiante">Principiante</option>
+    <option value="intermedio">Intermedio</option>
+    <option value="avanzato">Avanzato</option>
+  </select>
+
+  <label>Obiettivo distanza gara (km)</label>
+  <input id="obbKm" type="number" placeholder="es. 30" />
+
+  <label>Obiettivo dislivello gara (m)</label>
+  <input id="obbAsc" type="number" placeholder="es. 1500" />
+
+  <label>Durata piano (settimane)</label>
+  <input id="settimane" type="number" value="8" min="1" max="52" />
+
+  <label>Allenamenti totali a settimana</label>
+  <input id="allenTot" type="number" value="4" min="2" max="7" step="0.5" />
+
+  <label>Giorni palestra</label>
+  <div class="checkbox-grid" id="palestraTop">
+    <div class="chk-btn" data-day="Lunedì">Lun</div>
+    <div class="chk-btn" data-day="Martedì">Mar</div>
+    <div class="chk-btn" data-day="Mercoledì">Mer</div>
   </div>
-  <div id="settingsContent">
-    <label>Livello atleta</label>
-    <select id="livello">
-      <option value="principiante">Principiante</option>
-      <option value="intermedio">Intermedio</option>
-      <option value="avanzato">Avanzato</option>
-    </select>
-
-    <label>Obiettivo distanza gara (km)</label>
-    <input id="obbKm" type="number" placeholder="es. 25" />
-
-    <label>Obiettivo dislivello gara (m)</label>
-    <input id="obbAsc" type="number" placeholder="es. 2000" />
-
-    <label>Durata piano (settimane)</label>
-    <input id="settimane" type="number" value="12" min="1" max="52" />
-
-    <label>Allenamenti totali a settimana (puoi usare .5)</label>
-    <input id="allenTot" type="number" value="4" min="2" max="7" step="0.5" />
-
-    <label>Giorni palestra (toggle)</label>
-    <div>
-      <div class="checkbox-grid" id="palestraTop">
-        <div class="chk-btn" data-day="Lunedì">Lun</div>
-        <div class="chk-btn" data-day="Martedì">Mar</div>
-        <div class="chk-btn" data-day="Mercoledì">Mer</div>
-      </div>
-      <div class="checkbox-grid-bottom" id="palestraBottom">
-        <div class="chk-btn" data-day="Giovedì">Gio</div>
-        <div class="chk-btn" data-day="Venerdì">Ven</div>
-        <div class="chk-btn" data-day="Sabato">Sab</div>
-        <div class="chk-btn" data-day="Domenica">Dom</div>
-      </div>
-    </div>
-
-    <div style="margin-top:8px;">
-      <button id="genLocal" class="save">⚙️ Genera piano</button>
-      <button id="resetData" class="reset">🗑️ Reset dati</button>
-    </div>
-    <div class="alert" id="fitHint" style="display:none;">
-      Se il tuo file GPX non viene letto correttamente, prova a esportarlo nuovamente dall'app o usa un convertitore GPX (es. GPSVisualizer).
-    </div>
+  <div class="checkbox-grid-bottom" id="palestraBottom">
+    <div class="chk-btn" data-day="Giovedì">Gio</div>
+    <div class="chk-btn" data-day="Venerdì">Ven</div>
+    <div class="chk-btn" data-day="Sabato">Sab</div>
+    <div class="chk-btn" data-day="Domenica">Dom</div>
   </div>
-</div>
 
-<div class="card">
-  <label>Avanzamento</label>
-  <canvas id="progressChart" width="360" height="140"></canvas>
-  <div id="chartText" class="small"></div>
+  <button id="genPlan">⚙️ Genera piano</button>
+  <button id="resetData" class="reset">🗑️ Reset</button>
 </div>
 
 <div class="card">
   <label>Piano settimanale</label>
-  <div id="planView" class="small">Nessun piano ancora generato.</div>
+  <div id="planView" class="muted">Nessun piano ancora generato.</div>
 </div>
 
 <div class="card">
   <label>Storico allenamenti</label>
-  <div id="historyList" class="small">Nessun allenamento registrato.</div>
+  <div id="historyList" class="muted">Nessun allenamento registrato.</div>
 </div>
 
-<!-- input per upload GPX -->
 <input id="hiddenFileInput" type="file" accept=".gpx" style="display:none" />
 
 <script>
-// ---------------------- Stato & storage ----------------------
-const STORAGE_KEY = "trailcoach_v14_state_v1";
-const DEFAULT_STATE = {
-  settings: { livello:"principiante", obbKm:25, obbAsc:2000, settimane:12, allenTot:4, giorniPalestra:[] },
-  planData: [],
-  progress: { km:0, ascent:0 },
-  history: []
-};
-let STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
+// ---------------------- Stato base ----------------------
+const STORAGE_KEY = "trailcoach_v14_1_state";
+const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+let STATE = JSON.parse(localStorage.getItem(STORAGE_KEY) || `{
+  "settings": {"livello":"principiante","obbKm":20,"obbAsc":800,"settimane":8,"allenTot":4,"giorniPalestra":[]},
+  "planData": [],
+  "history": []
+}`);
+
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }
-function loadState(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw){ try{ STATE = JSON.parse(raw); }catch(e){ console.warn("loadState parse error", e); } } }
 
 // ---------------------- Utility ----------------------
-const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 function paceByLevel(lvl){ return lvl==="principiante"?6 : lvl==="intermedio"?5.5 : 5; }
 function formatTime(mins){ const h=Math.floor(mins/60); const m=Math.round(mins%60); return h>0?`${h}h ${m}m`:`${m}m`; }
 
-// ---------------------- Selezione giorni corsa (supporta .5) ----------------------
-/*
-  Logic:
-   - baseRuns = floor(allenTot - giorniPalestra.length)
-   - if .5 present -> ogni seconda settimana (qui: settimane pari) aggiunge 1 run
-   - weekNumber parte da 1
-*/
-function selectRunDays(allenTot, giorniPalestra, weekNumber){
+// ---------------------- Selezione giorni corsa ----------------------
+function selectRunDays(allenTot, giorniPalestra){
+  const totalRuns = Math.max(0, allenTot - giorniPalestra.length);
   const freeDays = GIORNI.filter(d => !giorniPalestra.includes(d));
-  const totalRuns = allenTot - giorniPalestra.length;
-  const baseRuns = Math.max(0, Math.floor(totalRuns));
-  const halfRun = totalRuns - baseRuns; // 0 o 0.5
-  const extraRun = (halfRun > 0 && (weekNumber % 2 === 0)) ? 1 : 0; // add on even weeks (2,4,...)
-  const runsThisWeek = baseRuns + extraRun;
-
   const selected = [];
-  if(runsThisWeek <= 0) return selected;
-  if(runsThisWeek >= freeDays.length) return freeDays.slice();
-
-  // Preferire fine settimana per lungo: se possibile, assicurare Sab/Dom siano selezionati per il lungo
-  const weekend = ["Sabato","Domenica"].filter(d => freeDays.includes(d));
-  // if we need at least one run and weekend available -> reserve one for weekend (long)
-  let picks = [];
-  if(weekend.length > 0 && runsThisWeek > 0){
-    // choose best weekend day (prefer Domenica then Sabato)
-    const prefer = weekend.includes("Domenica") ? "Domenica" : weekend[0];
-    picks.push(prefer);
+  if(totalRuns >= freeDays.length) return freeDays;
+  const step = freeDays.length / totalRuns;
+  for(let i=0;i<totalRuns;i++){
+    const idx = Math.floor(i*step + step/2);
+    selected.push(freeDays[idx]);
   }
-
-  // fill remaining with even distribution among remaining freeDays
-  const remaining = freeDays.filter(d => !picks.includes(d));
-  const need = runsThisWeek - picks.length;
-  if(need > 0){
-    const step = remaining.length / need;
-    for(let i=0;i<need;i++){
-      const idx = Math.floor(i*step + step/2);
-      picks.push(remaining[idx]);
-    }
-  }
-
-  // ensure unique and ordered by weekday order
-  const ordered = GIORNI.filter(d=>picks.includes(d));
-  return ordered;
+  return selected;
 }
 
-// ---------------------- Tipo allenamento (dinamico) ----------------------
-function tipoAllenamentoForIndex(i, runsCount, day){
-  // if single run => long
-  if(runsCount === 1) return "Lungo trail";
-  // weekend prioritized as lungo
-  if(day === "Sabato" || day === "Domenica") return "Lungo trail";
-  const types = ["Ripetute","Progressivo","Medio costante","Fartlek","Fondo lento"];
-  return types[i % types.length];
-}
-
-// ---------------------- Creazione dettagli allenamento (distribuzione km/asc) ----------------------
+// ---------------------- Dettagli allenamento ----------------------
 function creaDettagliAllenamento(type, weeklyKm, weeklyAsc, runsCount, indexRun, livello, isScarico){
-  let dist=0, asc=0;
+  let dist, asc;
   const basePace = paceByLevel(livello);
 
-  // percentuali indicative
-  const pctLungo = 0.55;
-  const pctOthers = 1 - pctLungo; // 0.45
-
   if(type === "Lungo trail"){
-    dist = weeklyKm * pctLungo;
-    asc  = weeklyAsc * pctLungo;
-  } else if(["Medio costante","Fartlek","Progressivo","Ripetute"].includes(type)){
-    // divide remaining among other runs (excluding long)
-    // runsCount includes long -> so runsOther = runsCount - 1
-    const runsOther = Math.max(1, runsCount - 1);
-    const fraction = 1 / runsOther;
-    dist = (weeklyKm * pctOthers) * fraction;
-    asc  = (weeklyAsc * pctOthers) * fraction;
-  } else { // Fondo lento fallback
-    const runsOther = Math.max(1, runsCount);
-    dist = weeklyKm * 0.3 / runsOther;
-    asc  = weeklyAsc * 0.3 / runsOther;
+    dist = weeklyKm * 0.45;
+    asc  = weeklyAsc * 0.5;
+  } else if(["Ripetute","Fartlek","Progressivo"].includes(type)){
+    dist = weeklyKm * 0.25 / (runsCount-1);
+    asc  = weeklyAsc * 0.25 / (runsCount-1);
+  } else {
+    dist = weeklyKm * 0.30 / (runsCount-2);
+    asc  = weeklyAsc * 0.25 / (runsCount-2);
   }
-
   if(isScarico){ dist *= 0.7; asc *= 0.7; }
 
   const durationMin = dist * basePace;
+  let details = "";
+  if(type==="Ripetute") details = "6–10×400m in salita, recupero 90s";
+  else if(type==="Fartlek") details = "Alterna 2’ veloci / 2’ lenti";
+  else if(type==="Progressivo") details = "Aumenta ritmo negli ultimi km";
+  else if(type==="Lungo trail") details = "Endurance, ritmo lento e costante";
+  else details = "Ritmo facile, tecnica e recupero";
 
-  // textual details
-  let detailText = "";
-  if(type === "Ripetute") detailText = `${Math.min(12, Math.max(4, Math.round(dist)))}×400 m in salita, recupero 90–120s`;
-  else if(type === "Progressivo") detailText = `Progressivo: aumenta ritmo negli ultimi km`;
-  else if(type === "Medio costante") detailText = `Medio: ${Math.max(4, Math.round(dist*0.6))} km a ritmo sostenuto`;
-  else if(type === "Lungo trail") detailText = `Lungo: ritmo lento, endurance, lavoro su salita`;
-  else if(type === "Fartlek") detailText = `Fartlek: alternare 2–3' veloce / 2' lento`;
-  else detailText = `Ritmo facile, tecnica e recupero`;
-
-  return {
-    distance: +dist.toFixed(1),
-    ascent: Math.round(asc),
-    durationMin: Math.round(durationMin),
-    detailText
-  };
+  return { distance:+dist.toFixed(1), ascent:Math.round(asc), durationMin:Math.round(durationMin), detailText:details };
 }
 
-// ---------------------- Generazione piano (progressione dei volumi) ----------------------
+// ---------------------- Generazione piano (v14.1) ----------------------
 function generaPiano(settings){
-  const plan = [];
-  const weeks = Math.max(1, Math.floor(settings.settimane));
-  const totalKm = Math.max(1, settings.obbKm);
-  const totalAsc = Math.max(0, settings.obbAsc);
+  const plan=[];
+  const totalWeeks=settings.settimane;
+  const giorniPalestra=settings.giorniPalestra;
+  const allenTot=settings.allenTot;
+  const runBase=Math.floor(allenTot - giorniPalestra.length);
+  const mezzoAllenamento=(allenTot - giorniPalestra.length)%1>=0.5;
 
-  for(let i=0;i<weeks;i++){
-    const weekNumber = i+1;
-    const isScarico = (weekNumber === weeks); // ultima settimana = scarico
-    const scaricoFactor = isScarico ? 0.7 : 1;
-
-    // progressione: dal 20% al 100% del target (lineare)
-    const weeklyFactor = 0.2 + 0.8 * (i / Math.max(1, weeks-1));
-    const targetKm = +(totalKm * weeklyFactor * scaricoFactor).toFixed(1);
-    const targetAsc = Math.round(totalAsc * weeklyFactor * scaricoFactor);
-
-    // seleziona giorni corsa (weekNumber parte da 1)
-    const runDays = selectRunDays(settings.allenTot, settings.giorniPalestra, weekNumber);
-    const runsCount = Math.max(1, runDays.length);
-
-    let runIndex = 0;
-    const settimana = [];
-    for(const day of GIORNI){
-      if(settings.giorniPalestra.includes(day)){
-        settimana.push({
-          day,
-          type: "Palestra",
-          summary: "🏋️ Palestra",
-          details: { note: "Forza & Core" },
-          uploaded: null,
-          completed: false
-        });
-      } else if(runDays.includes(day)){
-        const type = tipoAllenamentoForIndex(runIndex, runsCount, day);
-        const det = creaDettagliAllenamento(type, targetKm, targetAsc, runsCount, runIndex, settings.livello, isScarico);
-        settimana.push({
-          day,
-          type: "Corsa",
-          summary: `🏃 ${type} — ${det.distance} km`,
-          details: det,
-          uploaded: null,
-          completed: false
-        });
-        runIndex++;
-      } else {
-        settimana.push({
-          day,
-          type: "Riposo",
-          summary: "Riposo",
-          details: { note: "Recupero attivo consigliato" },
-          uploaded: null,
-          completed: false
-        });
-      }
-    }
-
-    plan.push({
-      settimana: weekNumber,
-      targetKm,
-      targetAsc,
-      isScarico,
-      allenamenti: settimana,
-      completato: false
-    });
+  // progressione carico
+  const progression=[];
+  for(let w=1;w<=totalWeeks;w++){
+    const phase=w/totalWeeks;
+    const grow=phase<0.8?0.5+0.5*phase:1.0;
+    const scarico=(w===totalWeeks-1)?0.7:(w===totalWeeks?0.5:1);
+    progression.push(grow*scarico);
   }
 
-  STATE.settings = settings;
-  STATE.planData = plan;
-  saveState();
-  renderAll();
-}
+  for(let w=1;w<=totalWeeks;w++){
+    const coeff=progression[w-1];
+    const weekKm=+(settings.obbKm*coeff).toFixed(1);
+    const weekAsc=Math.round(settings.obbAsc*coeff);
+    const isScarico=(w===totalWeeks-1)||(w===totalWeeks);
 
-// ---------------------- Render (piano, progress, history) ----------------------
-function renderSettingsToUI(){
-  const s = STATE.settings;
-  document.getElementById("livello").value = s.livello || "principiante";
-  document.getElementById("obbKm").value = s.obbKm || "";
-  document.getElementById("obbAsc").value = s.obbAsc || "";
-  document.getElementById("settimane").value = s.settimane || 12;
-  document.getElementById("allenTot").value = s.allenTot || 4;
-  document.querySelectorAll(".chk-btn").forEach(btn=>{
-    const day = btn.getAttribute("data-day");
-    btn.classList.toggle("active", (s.giorniPalestra || []).includes(day));
-  });
-}
+    let runCount=runBase;
+    if(mezzoAllenamento && w%2===0) runCount+=1;
 
-function renderSummary(){
-  const top = document.getElementById("topSummaryCard");
-  if(!STATE.planData || STATE.planData.length === 0){ top.style.display = "none"; return; }
-  top.style.display = "block";
-  const s = STATE.settings;
-  const gym = (s.giorniPalestra || []).length;
-  const run = Math.max(0, s.allenTot - gym);
-  document.getElementById("summaryText").textContent = `Allenamenti/settimana: ${s.allenTot} — Palestra: ${gym} — Corsa (base): ${run} — Durata: ${s.settimane} settimane`;
-}
+    const runDays=selectRunDays(runCount+giorniPalestra.length,giorniPalestra);
+    const settimana=[];
+    let runIndex=0;
 
-function renderPiano(){
-  const container = document.getElementById("planView");
-  container.innerHTML = "";
-  if(!STATE.planData || STATE.planData.length === 0){ container.textContent = "Nessun piano ancora generato."; return; }
+    for(const day of GIORNI){
+      if(giorniPalestra.includes(day)){
+        settimana.push({day,type:"Palestra",summary:"🏋️ Palestra",details:{note:"Forza & Core"},uploaded:null,completed:false});
+      } else if(runDays.includes(day)){
+        let type="Fondo lento";
+        if(day==="Sabato"||day==="Domenica") type="Lungo trail";
+        else if(runIndex===0) type=["Ripetute","Progressivo","Fartlek"][w%3];
 
-  STATE.planData.forEach((w, weekIndex) => {
-    const weekDiv = document.createElement("div");
-    weekDiv.className = "week";
-
-    const header = document.createElement("h3");
-    header.style.display = "flex";
-    header.style.justifyContent = "space-between";
-    header.style.alignItems = "center";
-
-    const left = document.createElement("div");
-    left.textContent = `📅 Settimana ${w.settimana} – Target: ${w.targetKm} km / +${w.targetAsc} m ${w.completato ? "✅" : ""}${w.isScarico ? " — Scarico" : ""}`;
-    header.appendChild(left);
-
-    const btnToggle = document.createElement("button");
-    btnToggle.textContent = "Apri";
-    btnToggle.className = "small";
-    header.appendChild(btnToggle);
-
-    weekDiv.appendChild(header);
-
-    const daysDiv = document.createElement("div");
-    daysDiv.className = "days";
-    daysDiv.style.display = "none";
-
-    w.allenamenti.forEach((a, dayIndex) => {
-      const d = document.createElement("div");
-      d.className = "day";
-
-      const summary = document.createElement("div");
-      summary.innerHTML = `<strong>${a.day}</strong> — ${a.summary}${a.completed ? " ✅" : ""}`;
-      summary.style.display = "flex";
-      summary.style.justifyContent = "space-between";
-      summary.style.alignItems = "center";
-
-      const rightBtns = document.createElement("div");
-
-      // Dettagli button
-      const openBtn = document.createElement("button");
-      openBtn.textContent = "Dettagli";
-      openBtn.className = "small";
-      openBtn.style.marginLeft = "8px";
-      rightBtns.appendChild(openBtn);
-
-      // For Palestra, add "Conferma" completamento
-      if(a.type === "Palestra"){
-        const confBtn = document.createElement("button");
-        confBtn.textContent = "Segna completato";
-        confBtn.className = "small";
-        confBtn.style.marginLeft = "8px";
-        confBtn.addEventListener("click", ()=>{
-          a.completed = true;
-          a.uploaded = { filename: "Palestra (manuale)", km: 0, asc: 0, date: new Date().toLocaleDateString() };
-          STATE.history.unshift({ date: a.uploaded.date, km:0, asc:0, filename: a.uploaded.filename, week: w.settimana, day: a.day });
-          saveState();
-          renderAll();
-        });
-        rightBtns.appendChild(confBtn);
-      }
-
-      summary.appendChild(rightBtns);
-      d.appendChild(summary);
-
-      const detailBox = document.createElement("div");
-      detailBox.className = "detail";
-      detailBox.style.display = "none";
-
-      if(a.type === "Corsa" && a.details){
-        detailBox.innerHTML = `
-          <div><strong>${a.summary.split("—")[0].trim()}</strong></div>
-          <div class="muted">Obiettivo: ${a.details.distance} km — +${a.details.ascent} m — ${formatTime(a.details.durationMin)}</div>
-          <div style="margin-top:8px;"><em>${a.details.detailText}</em></div>
-        `;
-
-        // file upload line (solo per corse)
-        const fileLine = document.createElement("div");
-        fileLine.className = "fileline";
-        const uploadBtn = document.createElement("button");
-        uploadBtn.textContent = "Carica .gpx";
-        uploadBtn.className = "small";
-        const statusSpan = document.createElement("div");
-        statusSpan.className = "meta";
-        if(a.uploaded) statusSpan.innerHTML = `✅ ${a.uploaded.filename} — ${a.uploaded.km.toFixed(1)} km / +${a.uploaded.asc} m (${a.uploaded.date})`;
-        else statusSpan.innerHTML = `📎 Nessun file caricato per questo giorno.`;
-
-        fileLine.appendChild(uploadBtn);
-        fileLine.appendChild(statusSpan);
-        detailBox.appendChild(document.createElement("hr"));
-        detailBox.appendChild(fileLine);
-
-        uploadBtn.addEventListener("click", ()=> triggerUploadFor(weekIndex, dayIndex));
-      } else if(a.type === "Palestra"){
-        detailBox.innerHTML = `<div><strong>Palestra</strong></div><div class="muted">Forza & Core — esercizi consigliati</div>`;
+        const det=creaDettagliAllenamento(type,weekKm,weekAsc,runCount,runIndex,settings.livello,isScarico);
+        settimana.push({day,type:"Corsa",summary:`🏃 ${type} — ${det.distance} km`,details:det,uploaded:null,completed:false});
+        runIndex++;
       } else {
-        detailBox.innerHTML = `<div><strong>Riposo</strong></div><div class="muted">Recupero attivo consigliato</div>`;
+        settimana.push({day,type:"Riposo",summary:"Riposo",details:{note:"Recupero"},uploaded:null,completed:false});
       }
+    }
+    plan.push({settimana:w,targetKm:weekKm,targetAsc:weekAsc,isScarico,allenamenti:settimana,completato:false});
+  }
 
-      openBtn.addEventListener("click", ()=> {
-        detailBox.style.display = detailBox.style.display === "none" ? "block" : "none";
-      });
+  STATE.settings=settings;
+  STATE.planData=plan;
+  saveState();
+  renderPiano();
+  renderHistory();
+}
 
-      d.appendChild(detailBox);
+// ---------------------- Render piano ----------------------
+function renderPiano(){
+  const container=document.getElementById("planView");
+  container.innerHTML="";
+  if(!STATE.planData||STATE.planData.length===0){container.textContent="Nessun piano generato.";return;}
+  STATE.planData.forEach((w,weekIndex)=>{
+    const weekDiv=document.createElement("div");
+    weekDiv.className="week";
+    const header=document.createElement("h3");
+    header.innerHTML=`Settimana ${w.settimana} — Target: ${w.targetKm} km / +${w.targetAsc} m ${w.isScarico?"(Scarico)":""}`;
+    weekDiv.appendChild(header);
+    const btnToggle=document.createElement("button");
+    btnToggle.textContent="Apri";
+    header.appendChild(btnToggle);
+    const daysDiv=document.createElement("div");
+    daysDiv.className="days";
+
+    w.allenamenti.forEach((a,dayIndex)=>{
+      const d=document.createElement("div");d.className="day";
+      const s=document.createElement("div");s.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
+      const btn=document.createElement("button");btn.textContent="Dettagli";btn.style.background="#444";btn.style.marginLeft="8px";
+      s.appendChild(btn);
+      d.appendChild(s);
+
+      const detail=document.createElement("div");detail.className="detail";detail.style.display="none";
+      if(a.type==="Corsa"){
+        detail.innerHTML=`<strong>${a.summary}</strong><br><span class="muted">${a.details.distance} km, +${a.details.ascent} m — ${formatTime(a.details.durationMin)}</span><br><em>${a.details.detailText}</em>`;
+        const file=document.createElement("div");file.className="fileline";
+        const upl=document.createElement("button");upl.textContent="📎 Carica GPX";upl.style.background="#222";
+        upl.onclick=()=>triggerUploadFor(weekIndex,dayIndex);
+        file.appendChild(upl);
+        detail.appendChild(file);
+      } else if(a.type==="Palestra"){
+        detail.textContent="Forza e Core — esercizi funzionali";
+      } else detail.textContent="Riposo o recupero attivo";
+      d.appendChild(detail);
+      btn.onclick=()=>detail.style.display=detail.style.display==="none"?"block":"none";
       daysDiv.appendChild(d);
     });
-
+    btnToggle.onclick=()=>{daysDiv.style.display=daysDiv.style.display==="block"?"none":"block";};
     weekDiv.appendChild(daysDiv);
-    btnToggle.addEventListener("click", ()=> {
-      daysDiv.style.display = daysDiv.style.display === "block" ? "none" : "block";
-      btnToggle.textContent = daysDiv.style.display === "block" ? "Chiudi" : "Apri";
-    });
-
     container.appendChild(weekDiv);
   });
 }
 
-function renderProgress(){
-  const c = document.getElementById("progressChart");
-  const ctx = c.getContext("2d");
-  ctx.clearRect(0,0,c.width,c.height);
-  const totalTargetKm = STATE.planData.reduce((a,b)=>a + (b.targetKm||0), 0) || STATE.settings.obbKm;
-  const perc = Math.min((STATE.progress.km || 0) / Math.max(1,totalTargetKm), 1);
-  ctx.fillStyle = "#007aff";
-  ctx.fillRect(20,50,(c.width-40)*perc,18);
-  ctx.fillStyle = "#eee";
-  ctx.fillRect(20+(c.width-40)*perc,50,(c.width-40)*(1-perc),18);
-  ctx.fillStyle = "#000";
-  ctx.fillText(`Km: ${(STATE.progress.km||0).toFixed(1)} / ${totalTargetKm.toFixed(1)} km`,20,45);
-  ctx.fillText(`D+: ${(STATE.progress.ascent||0).toFixed(0)} m`,20,85);
-  document.getElementById("chartText").textContent = `Storico: ${STATE.history.length} allenamenti.`;
-}
-
-function renderHistory(){
-  const h = document.getElementById("historyList");
-  if(!STATE.history || STATE.history.length === 0){ h.textContent = "Nessun allenamento registrato."; return; }
-  h.innerHTML = STATE.history.slice(0,200).map(x=>`${x.date} — Settimana ${x.week||"-"} ${x.day||"-"} → ${x.km.toFixed(1)} km, +${x.asc.toFixed(0)} m (${x.filename})`).join("<br>");
-}
-
-function renderAll(){
-  renderSettingsToUI();
-  renderSummary();
-  renderPiano();
-  renderProgress();
+// ---------------------- Upload GPX ----------------------
+let uploadContext=null;
+const hiddenInput=document.getElementById("hiddenFileInput");
+function triggerUploadFor(weekIndex,dayIndex){uploadContext={weekIndex,dayIndex};hiddenInput.click();}
+hiddenInput.addEventListener("change",async(e)=>{
+  const f=e.target.files[0];if(!f)return;
+  const txt=await f.text();
+  const {km,asc}=parseGpxText(txt);
+  const week=STATE.planData[uploadContext.weekIndex];
+  const dayObj=week.allenamenti[uploadContext.dayIndex];
+  dayObj.uploaded={filename:f.name,km,asc,date:new Date().toLocaleDateString()};
+  dayObj.completed=true;
+  STATE.history.unshift({date:new Date().toLocaleDateString(),km,asc,filename:f.name,week:week.settimana,day:dayObj.day});
+  saveState();
   renderHistory();
-}
-
-// ---------------------- Upload & parsing (.gpx only) ----------------------
-let uploadContext = null; // { weekIndex, dayIndex }
-const hiddenInput = document.getElementById("hiddenFileInput");
-
-hiddenInput.addEventListener("change", async (ev) => {
-  const file = ev.target.files[0];
-  if(!file || !uploadContext){ ev.target.value = ""; return; }
-
-  const { weekIndex, dayIndex } = uploadContext;
-  const week = STATE.planData[weekIndex];
-  const dayObj = week.allenamenti[dayIndex];
-
-  // status span in rendered view (if present)
-  const statusSpan = document.querySelectorAll(".week")[weekIndex]
-                        ?.querySelectorAll(".days .day")[dayIndex]
-                        ?.querySelector(".meta");
-  if(statusSpan) statusSpan.textContent = "⏳ Lettura GPX...";
-
-  try {
-    const txt = await file.text();
-    const { km, asc } = parseGpxText(txt);
-    if(km === 0 && asc === 0){
-      if(statusSpan) statusSpan.textContent = "❗ GPX letto ma senza dati utili";
-      document.getElementById("fitHint").style.display = "block";
-    } else {
-      saveUploadResult(file.name, km, asc, weekIndex, dayIndex);
-    }
-  } catch(e) {
-    console.error("Errore parsing GPX", e);
-    if(statusSpan) statusSpan.textContent = "❌ Errore lettura GPX";
-  } finally {
-    setTimeout(()=>{ ev.target.value = ""; uploadContext = null; }, 300);
-  }
 });
 
-// GPX parsing: ele + trackpoints (distanza via haversine)
 function parseGpxText(txt){
-  try{
-    const eleMatches = [...txt.matchAll(/<trkpt[^>]*>[\s\S]*?<ele>([\d\.\-]+)<\/ele>/g)];
-    const elev = eleMatches.map(m => parseFloat(m[1])).filter(v=>!isNaN(v));
-    let asc = 0;
-    for(let i=1;i<elev.length;i++){ const diff = elev[i]-elev[i-1]; if(diff>0) asc += diff; }
+  const ele=[...txt.matchAll(/<ele>([\d\.\-]+)<\/ele>/g)].map(m=>parseFloat(m[1]));
+  const coords=[...txt.matchAll(/<trkpt[^>]*lat="([^"]+)" lon="([^"]+)"/g)].map(m=>({lat:+m[1],lon:+m[2]}));
+  let asc=0;for(let i=1;i<ele.length;i++){const diff=ele[i]-ele[i-1];if(diff>0)asc+=diff;}
+  let km=0;for(let i=1;i<coords.length;i++)km+=haversine(coords[i-1],coords[i]);
+  return{km:+km.toFixed(2),asc:Math.round(asc)};
+}
+function haversine(p1,p2){const R=6371,toRad=x=>x*Math.PI/180,dLat=toRad(p2.lat-p1.lat),dLon=toRad(p2.lon-p1.lon);const a=Math.sin(dLat/2)**2+Math.cos(toRad(p1.lat))*Math.cos(toRad(p2.lat))*Math.sin(dLon/2)**2;return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));}
 
-    const coordsMatches = [...txt.matchAll(/<trkpt[^>]*lat="([^"]+)"\s+lon="([^"]+)"[^>]*>/g)];
-    let km = 0;
-    if(coordsMatches.length >= 2){
-      const pts = coordsMatches.map(m => ({ lat: parseFloat(m[1]), lon: parseFloat(m[2]) }));
-      for(let i=1;i<pts.length;i++){
-        km += haversineKm(pts[i-1].lat, pts[i-1].lon, pts[i].lat, pts[i].lon);
-      }
-    } else {
-      km = Math.max(0, coordsMatches.length / 1000); // fallback
-    }
-
-    return { km: +km.toFixed(2), asc: Math.round(asc) };
-  } catch(e){
-    console.error("parseGpxText error", e);
-    return { km: 0, asc: 0 };
-  }
+// ---------------------- Storico ----------------------
+function renderHistory(){
+  const h=document.getElementById("historyList");
+  if(!STATE.history.length){h.textContent="Nessun allenamento registrato.";return;}
+  h.innerHTML=STATE.history.map(x=>`${x.date} — ${x.day} (${x.week}) → ${x.km} km +${x.asc} m`).join("<br>");
 }
 
-function haversineKm(lat1, lon1, lat2, lon2){
-  const R = 6371;
-  const toRad = v => v * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
-function saveUploadResult(filename, km, asc, weekIndex, dayIndex){
-  const week = STATE.planData[weekIndex];
-  const dayObj = week.allenamenti[dayIndex];
-  const date = new Date().toLocaleDateString();
-
-  dayObj.uploaded = { filename, km:+km, asc:+asc, date };
-  dayObj.completed = true;
-
-  STATE.progress.km = (STATE.progress.km || 0) + Number(km);
-  STATE.progress.ascent = (STATE.progress.ascent || 0) + Number(asc);
-
-  STATE.history.unshift({ date, km:Number(km), asc:Number(asc), filename, week: week.settimana, day: dayObj.day });
-
-  // marca settimane completate se cumulativo progress >= cumulativo target
-  let cum = 0;
-  for(const w of STATE.planData){
-    cum += (w.targetKm || 0);
-    if((STATE.progress.km || 0) >= cum) w.completato = true;
-  }
-
-  saveState();
-  renderAll();
-}
-
-function triggerUploadFor(weekIndex, dayIndex){
-  uploadContext = { weekIndex, dayIndex };
-  hiddenInput.click();
-}
-
-// ---------------------- Eventi UI principali ----------------------
-document.getElementById("toggleSettings").addEventListener("click", ()=>{
-  const content = document.getElementById("settingsContent");
-  const btn = document.getElementById("toggleSettings");
-  if(content.style.display === "none"){ content.style.display = "block"; btn.textContent = "Nascondi"; }
-  else{ content.style.display = "none"; btn.textContent = "Mostra"; }
-});
-
-// toggle giorni palestra
-document.getElementById("settingsCard").addEventListener("click",(e)=>{
-  if(e.target.classList && e.target.classList.contains("chk-btn")){
-    const btn = e.target;
-    btn.classList.toggle("active");
-    STATE.settings.giorniPalestra = [...document.querySelectorAll(".chk-btn.active")].map(n => n.getAttribute("data-day"));
-    saveState();
-  }
-});
-
-// genera piano
-document.getElementById("genLocal").addEventListener("click", ()=>{
-  const s = {
-    livello: document.getElementById("livello").value,
-    obbKm: Number(document.getElementById("obbKm").value) || DEFAULT_STATE.settings.obbKm,
-    obbAsc: Number(document.getElementById("obbAsc").value) || DEFAULT_STATE.settings.obbAsc,
-    settimane: Number(document.getElementById("settimane").value) || DEFAULT_STATE.settings.settimane,
-    allenTot: Number(document.getElementById("allenTot").value) || DEFAULT_STATE.settings.allenTot,
-    giorniPalestra: STATE.settings.giorniPalestra || []
+// ---------------------- Eventi ----------------------
+document.getElementById("genPlan").onclick=()=>{
+  const s={
+    livello:document.getElementById("livello").value,
+    obbKm:+document.getElementById("obbKm").value||20,
+    obbAsc:+document.getElementById("obbAsc").value||800,
+    settimane:+document.getElementById("settimane").value||8,
+    allenTot:+document.getElementById("allenTot").value||4,
+    giorniPalestra:[...document.querySelectorAll(".chk-btn.active")].map(b=>b.dataset.day)
   };
-  if(!s.obbKm || !s.obbAsc){ alert("Inserisci obiettivi gara (km e dislivello)."); return; }
   generaPiano(s);
-  document.getElementById("settingsContent").style.display = "none";
-  document.getElementById("toggleSettings").textContent = "Mostra";
-});
-
-// reset dati
-document.getElementById("resetData").addEventListener("click", ()=>{
-  if(!confirm("Sei sicuro? Questo cancellerà il piano, lo storico e i progressi salvati.")) return;
-  localStorage.removeItem(STORAGE_KEY);
-  STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  saveState();
-  renderAll();
-});
-
-// ---------------------- Init ----------------------
-loadState();
-renderAll();
-if(!STATE.planData || STATE.planData.length === 0){
-  document.getElementById("settingsContent").style.display = "block";
-  document.getElementById("toggleSettings").textContent = "Nascondi";
-}
+};
+document.getElementById("resetData").onclick=()=>{if(confirm("Cancellare tutto?")){localStorage.removeItem(STORAGE_KEY);location.reload();}};
+document.querySelectorAll(".chk-btn").forEach(b=>b.onclick=()=>b.classList.toggle("active"));
+renderPiano();renderHistory();
 </script>
 </body>
 </html>
