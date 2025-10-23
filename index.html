@@ -87,6 +87,7 @@
 
   <div style="margin-top:10px;">
     <button id="genLocal">⚙️ Genera piano</button>
+    <button id="genAI">🤖 Genera con AI</button>
     <button id="resetData" class="reset">🗑️ Reset</button>
   </div>
 </div>
@@ -283,6 +284,56 @@ if(STATE.planData?.length){
   document.getElementById("toggleSettings").style.display="inline-block";
   renderPiano();
 }
+</script>
+<script>
+async function generaPianoAI() {
+  const livello = document.getElementById("livello").value;
+  const obbKm = parseFloat(document.getElementById("obbKm").value);
+  const obbAsc = parseFloat(document.getElementById("obbAsc").value);
+  const allenTot = parseFloat(document.getElementById("allenTot").value);
+  const settimane = parseInt(document.getElementById("settimane").value);
+  const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn.active"))
+    .map(b => b.dataset.day);
+
+  const container = document.getElementById("planView");
+  container.innerHTML = "<p>⏳ Generazione piano AI in corso…</p>";
+
+  try {
+    const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        livello,
+        km: obbKm,
+        asc: obbAsc,
+        allenTot,
+        settimane,
+        palestra: giorniPalestra
+      })
+    });
+
+    if (!response.ok) throw new Error("Errore nella richiesta AI");
+
+    const data = await response.json();
+
+    container.innerHTML = `
+      <h3>📊 Piano AI Generato</h3>
+      <p><strong>Descrizione:</strong> ${data.descrizione || "—"}</p>
+      <p><strong>Focus:</strong> ${data.focus_settimana || "—"}</p>
+      <ul>
+        ${(data.suggerimenti || []).map(s => `<li>${s}</li>`).join("")}
+      </ul>
+      <hr>
+      <pre>${JSON.stringify(data, null, 2)}</pre>
+    `;
+
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = `<p style="color:red;">❌ Errore durante la generazione AI: ${err.message}</p>`;
+  }
+}
+
+document.getElementById("genAI").addEventListener("click", generaPianoAI);
 </script>
 </body>
 </html>
