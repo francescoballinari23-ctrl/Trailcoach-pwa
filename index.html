@@ -140,7 +140,134 @@
 const STORAGE_KEY="trailcoach_v17";
 let STATE={settings:{},planData:[]};
 const GIORNI=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
-// ... [Altre funzioni utili (paceByLevel, saveState, loadState, ecc.)] ...
+
+// --- FUNZIONI DI STATO E UTILITY ORIGINALI ---
+function paceByLevel(l){return l==="principiante"?6.2:l==="intermedio"?5.8:5.4;}
+function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(STATE));}
+function loadState(){const r=localStorage.getItem(STORAGE_KEY);if(r)STATE=JSON.parse(r);}
+
+document.getElementById("settingsCard").addEventListener("click",e=>{
+  if(e.target.classList.contains("chk-btn")) e.target.classList.toggle("active");
+});
+
+document.getElementById("toggleSettings").onclick=()=>{
+  const card=document.getElementById("settingsCard");
+  card.style.display=card.style.display==="none"?"block":"none";
+};
+
+function selectRunDays(allenTot,giorniPalestra,weekIndex){
+  const full=Math.floor(allenTot);
+  const free=GIORNI.filter(d=>!giorniPalestra.includes(d));
+  const runSlots=Math.min(full,free.length);
+  const selected=[];
+  const step=free.length/runSlots;
+  for(let i=0;i<runSlots;i++) selected.push(free[Math.floor(i*step)]);
+  let extraRunDay=null;
+  const isExtraWeek=allenTot%1>=0.4&&(weekIndex+1)%2===0;
+  if(isExtraWeek && selected.length<free.length){
+    extraRunDay=free.find(d=>!selected.includes(d));
+    if(extraRunDay) selected.push(extraRunDay);
+  }
+  return{runDays:selected,extraRunDay,isExtraWeek};
+}
+
+function creaDettagliAllenamento(type,weeklyKm,weeklyAsc,runsCount,livello,isExtra=false){
+  const longPct=0.55, speedPct=0.25, fondoPct=0.20;
+  const baseKm=weeklyKm, baseAsc=weeklyAsc;
+  const longKm=baseKm*longPct, longAsc=baseAsc*longPct;
+  const qualKm=baseKm*speedPct, qualAsc=baseAsc*speedPct;
+  const fondoKm=(baseKm*fondoPct)/Math.max(1,runsCount-2), fondoAsc=(baseAsc*fondoPct)/Math.max(1,runsCount-2);
+  let dist,asc;
+  if(/Lungo/i.test(type)){dist=longKm;asc=longAsc;}
+  else if(/Ripetute|Progressivo|Fartlek/.test(type)){dist=qualKm;asc=qualAsc;}
+  else{dist=fondoKm;asc=fondoAsc;}
+  if(isExtra){dist*=0.5;asc*=0.5;}
+  const dur=dist*paceByLevel(livello);
+  let det="";
+  if(/Ripetute/.test(type))det=`${Math.min(12,Math.max(4,Math.round(dist)))}×400 m in salita, rec. 90–120s`;
+  else if(/Progressivo/.test(type))det=`Progressivo: aumenta ritmo negli ultimi km`;
+  else if(/Lungo/.test(type))det=`Lungo trail: endurance e gestione salita`;
+  else det=`Fondo lento: ritmo facile, resistenza base`;
+  return{distance:+dist.toFixed(1),ascent:Math.round(asc),durationMin:Math.round(dur),detailText:det,gpx:null};
+}
+
+function generaPiano(){
+  const livello=document.getElementById("livello").value;
+  const obbKm=+document.getElementById("obbKm").value;
+  const obbAsc=+document.getElementById("obbAsc").value;
+  const settimane=+document.getElementById("settimane").value;
+  const allenTot=parseFloat(document.getElementById("allenTot").value)||4;
+  const giorniPalestra=[...document.querySelectorAll(".chk-btn.active")].map(b=>b.dataset.day);
+
+  if(obbKm<=0||obbAsc<=0){alert("Inserisci valori validi!");return;}
+
+  const plan=[]; const progressioni=[0.6,0.7,0.8,0.9,1.0];
+  for(let w=1;w<=settimane;w++){
+    const coeff=progressioni[Math.min(progressioni.length-1,Math.floor((w-1)/Math.max(1,settimane/progressioni.length)))];
+    const isScarico=(w%4===0);
+    const baseKm=obbKm*coeff*(isScarico?0.7:1);
+    const baseAsc=obbAsc*coeff*(isScarico?0.7:1);
+    const {runDays,extraRunDay}=selectRunDays(allenTot,giorniPalestra,w-1);
+    const runsCount=runDays.length;
+
+    const settimana=[]; let totalKm=0,totalAsc=0;
+    for(const day of GIORNI){
+      if(giorniPalestra.includes(day)){
+        settimana.push({day,type:"Palestra",summary:"🏋️ Palestra",details:{detailText:"Forza & Core"}});
+      } else if(runDays.includes(day)){
+        let type=""; const isExtra=(day===extraRunDay);
+        if(day==="Sabato"||day==="Domenica")type="Lungo trail";
+        else if(settimana.filter(x=>/Ripetute|Progressivo|Fartlek/.test(x.type)).length===0)type="Ripetute collinari";
+        else type="Fondo lento";
+        const det=creaDettagliAllenamento(type,baseKm,baseAsc,runsCount,livello,isExtra);
+        totalKm+=det.distance; totalAsc+=det.ascent;
+        settimana.push({day,type,summary:`🏃 ${type} — ${det.distance} km`,details:det});
+      } else settimana.push({day,type:"Riposo",summary:"Riposo",details:{detailText:"Recupero"}});
+    }
+    plan.push({settimana:w,targetKm:+totalKm.toFixed(1),targetAsc:Math.round(totalAsc),allenamenti:settimana,isScarico});
+  }
+
+  STATE={settings:{livello,obbKm,obbAsc,settimane,allenTot,giorniPalestra},planData:plan};
+  saveState();
+  document.getElementById("settingsCard").style.display="none";
+  document.getElementById("toggleSettings").style.display="inline-block";
+  document.getElementById("aiPlanCard").style.display = 'none'; // Nasconde il piano AI
+  document.getElementById("planView").style.display = 'block'; // Mostra il piano locale
+  renderPiano();
+}
+
+function uploadGPX(activity,weekIdx,runIdx){
+  const input=document.getElementById("hiddenFileInput");
+  input.onchange=(e)=>{
+    const file=e.target.files[0]; if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const xml=new DOMParser().parseFromString(reader.result,"application/xml");
+      const pts=xml.getElementsByTagName("trkpt");
+      if(!pts.length){alert("File GPX non valido");return;}
+      let dist=0,asc=0,prev=null;
+      for(const p of pts){
+        const lat=parseFloat(p.getAttribute("lat"));
+        const lon=parseFloat(p.getAttribute("lon"));
+        const ele=parseFloat(p.getElementsByTagName("ele")[0]?.textContent||0);
+        if(prev){
+          const R=6371000;
+          const dLat=(lat-prev.lat)*Math.PI/180, dLon=(lon-prev.lon)*Math.PI/180;
+          const a=Math.sin(dLat/2)**2+Math.cos(lat*Math.PI/180)*Math.cos(prev.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+          const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+          dist+=R*c;
+          const diff=ele-prev.ele;if(diff>0)asc+=diff;
+        }
+        prev={lat,lon,ele};
+      }
+      const km=(dist/1000).toFixed(1); const ascM=Math.round(asc);
+      STATE.planData[weekIdx-1].allenamenti[runIdx].details.gpx={km,asc:ascM};
+      saveState(); renderPiano();
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
 
 // Funzione di utility per la visualizzazione del piano interno (lasciata per compatibilità)
 function renderPiano(){
@@ -174,7 +301,8 @@ function renderPiano(){
     c.appendChild(wd);
   });
 }
-// ... [Resto delle funzioni (generaPiano, uploadGPX, ecc.)] ...
+
+// --- FUNZIONI AI/JSON ESTERNO (PULITE E CORRETTE) ---
 
 /**
  * Funzione per convertire e visualizzare il testo JSON esterno (dall'AI o da input).
@@ -183,11 +311,12 @@ function renderPiano(){
 function renderExternalPlan(jsonString) {
     const container = document.getElementById("piano-generato");
     const card = document.getElementById("aiPlanCard");
-    container.innerHTML = ""; // Pulisce il contenuto precedente
+    container.innerHTML = "";
     
     let piano;
-    let cleanText = jsonString; // Inizia col testo grezzo
+    let cleanText = jsonString;
     card.style.display = 'block';
+    document.getElementById("planView").style.display = 'none'; // Nasconde il piano locale
 
     try {
         // 1. Pulizia Iniziale e Estrazione del blocco JSON
@@ -198,21 +327,18 @@ function renderExternalPlan(jsonString) {
             cleanText = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
         }
         
-        // Pulizia: Rimuove i caratteri newline e di escape dei newline
+        // Pulizia: Rimuove i caratteri newline e di escape
         cleanText = cleanText
             .replace(/\\n/g, "")
             .replace(/\n/g, "")
             .replace(/\r/g, "")
             .trim();
         
-        // ⚠️ NUOVO PASSAGGIO CRUCIALE: Rimuove i backslash di escape davanti alle virgolette
-        // Questo trasforma \" in "
+        // Rimuove i backslash di escape davanti alle virgolette (trasforma \" in ")
         cleanText = cleanText.replace(/\\"/g, '"'); 
         
-        // Tenta il parsing
         piano = JSON.parse(cleanText);
     } catch (e) {
-        // ... [Codice per la visualizzazione dell'errore (lasciato invariato)] ...
         container.innerHTML = `
             <p style="color:red;">❌ Errore nel formato JSON. Impossibile eseguire JSON.parse().</p>
             <p class="muted">Testo pulito (da debug):</p>
@@ -222,18 +348,18 @@ function renderExternalPlan(jsonString) {
         return;
     }
 
-    // 2. Controllo dell'array 'settimane' (che ora dovrebbe funzionare)
+    // 2. Controllo dell'array 'settimane'
     if (!piano.settimane || !Array.isArray(piano.settimane)) {
         container.innerHTML = `
             <p style="color:red;">⚠️ Struttura JSON valida, ma manca la chiave "settimane" o non è un array.</p>
-            <p class="muted">Assicurati che l'AI usi SEMPRE la chiave "settimane".</p>
         `;
         return;
     }
 
-    // 3. Generazione Descrizione Generale e Iterazione Settimane (il resto della logica)
+    // 3. Generazione Descrizione Generale
     let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${piano.descrizione_generale || "Nessuna descrizione fornita."}</div></div>`;
 
+    // 4. Iterazione e Generazione Settimane
     piano.settimane.forEach(w => {
         const totalKm = w.allenamenti ? w.allenamenti.reduce((sum, a) => sum + (a.km || 0), 0).toFixed(1) : 0;
         
@@ -254,21 +380,12 @@ function renderExternalPlan(jsonString) {
 
     container.innerHTML = htmlOutput;
     
-        // 4. Generazione Descrizione Generale e Iterazione Settimane (il resto della logica)
-    // ... [Codice di generazione HTML] ...
-    
-    container.innerHTML = htmlOutput;
-    
-    // 5. Riattiva l'Accordion (APPLICA QUESTA MODIFICA)
+    // 5. Riattiva l'Accordion e FORZA LA VISUALIZZAZIONE COMPLETA
     document.querySelectorAll(".accordion").forEach((btn, index) => {
         const panel = btn.nextElementSibling;
         
         // 🚨 CAMBIO CRUCIALE: Forza la visualizzazione di tutte le settimane (display: block)
-        // Se vuoi che siano tutte visibili subito, rimuovi il commento da questa riga:
         panel.style.display = "block"; 
-        
-        // Se preferisci che solo la prima settimana sia aperta:
-        // panel.style.display = (index === 0) ? "block" : "none"; 
 
         btn.addEventListener("click", function() {
             this.classList.toggle("active");
@@ -279,22 +396,37 @@ function renderExternalPlan(jsonString) {
 }
 
 
-// 🛠️ FUNZIONE MODIFICATA: Cattura il risultato AI (simulato) e lo passa a renderExternalPlan
 async function generaPianoAI() {
-  // ... [Il tuo codice per raccogliere i dati di input] ...
   const container = document.getElementById("piano-generato");
   container.innerHTML = "<p>⏳ Generazione piano AI in corso…</p>";
   document.getElementById("aiPlanCard").style.display = 'block';
+  document.getElementById("planView").style.display = 'none'; // Nasconde il piano locale
 
   try {
+    const livello = document.getElementById("livello").value;
+    const obbKm = parseFloat(document.getElementById("obbKm").value);
+    const obbAsc = parseFloat(document.getElementById("obbAsc").value);
+    const allenTot = parseFloat(document.getElementById("allenTot").value);
+    const settimane = parseInt(document.getElementById("settimane").value);
+    const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn.active"))
+      .map(b => b.dataset.day);
+
     const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
-      // ... [corpo della richiesta] ...
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        livello,
+        km: obbKm,
+        asc: obbAsc,
+        allenTot,
+        settimane,
+        palestra: giorniPalestra
+      })
     });
 
     if (!response.ok) throw new Error("Errore nella richiesta AI");
     const rawText = await response.text();
 
-    // 🎯 Passa la stringa grezza alla funzione di rendering esterno
     renderExternalPlan(rawText); 
 
   } catch (err) {
@@ -303,62 +435,37 @@ async function generaPianoAI() {
   }
 }
 
-// TEST DI INIZIALIZZAZIONE (Puoi rimuovere questo blocco se usi solo il pulsante AI)
-document.addEventListener('DOMContentLoaded', () => {
-    // [La tua logica di caricamento STATE e renderPiano va qui...]
-    
-    // ⚠️ Blocco per la visualizzazione immediata del piano JSON di test
-    const testoJSONCorretto = `
-{
-  "descrizione_generale": "Piano di allenamento per principianti, focalizzato sul completamento di un trail di 32km con 2000m D+ in 12 settimane. L'allenamento è strutturato per aumentare gradualmente il volume e la difficoltà, con un focus sulla corsa lenta, camminata in salita e discesa controllata. Importante: Ascolta il tuo corpo e riposa quando necessario. Adatta il piano in base alle tue sensazioni. Questo piano non include allenamento in palestra. Concentrati sull'alimentazione e sull'idratazione.",
-  "settimane": [
-    {
-      "numero": 1,
-      "focus": "Costruzione della base aerobica e adattamento al terreno.",
-      "allenamenti": [
-        { "tipo": "Corsa lenta", "km": 6, "dettagli": "Terreno misto (strada/sterrato). Ritmo molto confortevole, che permetta di parlare." },
-        { "tipo": "Camminata in salita", "km": 4, "dettagli": "Percorso collinare con dislivello moderato (150-200m D+). Alternare camminata veloce e corsa leggera." },
-        { "tipo": "Corsa lenta", "km": 5, "dettagli": "Terreno pianeggiante. Ritmo confortevole." },
-        { "tipo": "Riposo/Cross-training", "km": 0, "dettagli": "Attività leggera come camminata, yoga, nuoto. Ascolta il tuo corpo." },
-        { "tipo": "Lunghetto", "km": 8, "dettagli": "Terreno misto. Alterna corsa lenta e camminata in salita se necessario." }
-      ]
-    },
-    {
-      "numero": 2,
-      "focus": "Aumento del volume e introduzione di dislivello.",
-      "allenamenti": [
-        { "tipo": "Corsa lenta", "km": 7, "dettagli": "Terreno misto. Ritmo molto confortevole." },
-        { "tipo": "Camminata in salita", "km": 5, "dettagli": "Percorso collinare con dislivello (200-250m D+). Concentrati sulla tecnica." },
-        { "tipo": "Corsa lenta", "km": 6, "dettagli": "Terreno pianeggiante." },
-        { "tipo": "Riposo/Cross-training", "km": 0, "dettagli": "Attività leggera." },
-        { "tipo": "Lunghetto", "km": 10, "dettagli": "Terreno misto con un po' di dislivello." }
-      ]
-    },
-    {
-      "numero": 12,
-      "focus": "GARA!",
-      "allenamenti": [
-        { "tipo": "Gara", "km": 32, "dettagli": "32km con 2000m D+. Dai il massimo!" },
-        { "tipo": "Riposo", "km": 0, "dettagli": "Recupero post-gara." },
-        { "tipo": "Riposo", "km": 0, "dettagli": "Recupero post-gara." },
-        { "tipo": "Riposo", "km": 0, "dettagli": "Recupero post-gara." },
-        { "tipo": "Camminata leggera", "km": 3, "dettagli": "Camminata defaticante." }
-      ]
-    }
-  ]
-}
-`;
-    // Disattivare la visualizzazione del piano interno all'avvio:
-    document.getElementById("planView").style.display = 'none';
-
-    // ➡️ Chiama la funzione di rendering per visualizzare il piano di test all'apertura.
-    // Rimuovi o commenta questa riga se vuoi che il piano appaia solo dopo aver cliccato "Genera con AI".
-    renderExternalPlan(testoJSONCorretto); 
-});
-
+// --- LOGICA DI AVVIO E GESTIONE PULSANTI ---
+document.getElementById("genLocal").onclick=generaPiano;
 document.getElementById("genAI").addEventListener("click", generaPianoAI);
-// ... [Il resto della tua logica e chiusura script] ...
+document.getElementById("resetData").onclick=()=>{localStorage.removeItem(STORAGE_KEY);location.reload();};
+
+loadState();
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Verifica se esiste un piano locale salvato
+    if(STATE.planData?.length){
+        document.getElementById("settingsCard").style.display="none";
+        document.getElementById("toggleSettings").style.display="inline-block";
+        document.getElementById("planView").style.display = 'block';
+        document.getElementById("aiPlanCard").style.display = 'none';
+        renderPiano();
+    } else {
+        // 2. Esegui il test JSON solo se non c'è un piano salvato
+        // Blocca solo per il debug, sblocca per il rilascio.
+        const testoJSONCorretto = `{
+          "descrizione_generale": "Piano di allenamento per principianti, focalizzato sul completamento di un trail di 32km con 2000m D+ in 12 settimane...",
+          "settimane": [
+            { "numero": 1, "focus": "Costruzione della base aerobica", "allenamenti": [ { "tipo": "Corsa lenta", "km": 6, "dettagli": "Ritmo confortevole." } ] },
+            { "numero": 2, "focus": "Aumento del volume", "allenamenti": [ { "tipo": "Corsa collinare", "km": 10, "dettagli": "200m D+." } ] },
+            { "numero": 12, "focus": "GARA!", "allenamenti": [ { "tipo": "Gara", "km": 32, "dettagli": "32km con 2000m D+." } ] }
+          ]
+        }`;
+        // Rimuovi o commenta la riga sotto quando non devi più testare il JSON all'avvio.
+        renderExternalPlan(testoJSONCorretto); 
+    }
+});
 </script>
+
 
 </body>
 </html>
