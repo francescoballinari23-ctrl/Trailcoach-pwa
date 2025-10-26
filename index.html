@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v17.5</ title>
+<title>🏔️ TrailCoach AI v17.5</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -28,7 +28,6 @@
   button.reset { background:#ff3b30; margin-left:6px; }
   .week { 
     background:#f7f9ff; border-radius:8px; margin:8px 0;
-    /* Rimosso padding-bottom:8px per farlo sembrare una "card" unica */
   }
   .days { margin-top:6px; padding: 0 10px 10px 10px; display: block; }
   .day { padding:6px 0; border-bottom:1px solid #eee; }
@@ -58,7 +57,7 @@
     border: none;
     outline: none;
     transition: background-color 0.2s ease;
-    border-radius: 8px 8px 0 0; /* Solo bordi superiori arrotondati */
+    border-radius: 8px 8px 0 0; 
     margin-top: 0;
     margin-bottom: 0;
     font-size: 16px;
@@ -71,7 +70,7 @@
     background-color: #fcfcfc;
     overflow: hidden;
     padding-top: 10px;
-    border-radius: 0 0 8px 8px; /* Solo bordi inferiori arrotondati */
+    border-radius: 0 0 8px 8px;
     border: 1px solid #eee;
     border-top: none;
   }
@@ -125,12 +124,12 @@
 </div>
 
 <div class="card">
-  <label>Piano settimanale</label>
+  <label>Piano settimanale (Locale)</label>
   <div id="planView" class="muted">Nessun piano ancora generato.</div>
 </div>
 
 <div class="card" id="aiPlanCard" style="display: none;">
-  <h2><label>📋 Piano Generato (JSON)</label></h2>
+  <h2><label>📋 Piano Generato (AI)</label></h2>
   <div id="piano-generato"></div>
 </div>
 
@@ -146,6 +145,7 @@ function paceByLevel(l){return l==="principiante"?6.2:l==="intermedio"?5.8:5.4;}
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(STATE));}
 function loadState(){const r=localStorage.getItem(STORAGE_KEY);if(r)STATE=JSON.parse(r);}
 
+// Riattivazione del toggle per i giorni di palestra
 document.getElementById("settingsCard").addEventListener("click",e=>{
   if(e.target.classList.contains("chk-btn")) e.target.classList.toggle("active");
 });
@@ -269,7 +269,7 @@ function uploadGPX(activity,weekIdx,runIdx){
   input.click();
 }
 
-// Funzione di utility per la visualizzazione del piano interno (lasciata per compatibilità)
+// Funzione di utility per la visualizzazione del piano interno
 function renderPiano(){
   const c=document.getElementById("planView");
   if(!STATE.planData?.length){c.textContent="Nessun piano ancora generato.";return;}
@@ -280,12 +280,12 @@ function renderPiano(){
     h.textContent=`📅 Settimana ${w.settimana} — ${w.targetKm} km / +${w.targetAsc} m ${w.isScarico?"(Scarico)":""}`;
     wd.appendChild(h);
     const days=document.createElement("div"); days.className="days";
+    days.style.display = 'none'; // Inizialmente chiuso
 
     w.allenamenti.forEach((a,idx)=>{
       const d=document.createElement("div"); d.className="day";
       const s=document.createElement("div");
       s.innerHTML=`<strong>${a.day}</strong> — ${a.summary}`;
-      // [Logica per dettagli e GPX...]
       d.appendChild(s);
       const det=document.createElement("div"); det.className="detail"; det.style.display="none";
       if(a.details){
@@ -324,6 +324,7 @@ function renderExternalPlan(jsonString) {
         if (match) {
             cleanText = match[1];
         } else {
+            // Tenta di estrarre il blocco JSON tra la prima { e l'ultima }
             cleanText = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
         }
         
@@ -381,16 +382,17 @@ function renderExternalPlan(jsonString) {
     container.innerHTML = htmlOutput;
     
     // 5. Riattiva l'Accordion e FORZA LA VISUALIZZAZIONE COMPLETA
-    document.querySelectorAll(".accordion").forEach((btn, index) => {
+    document.querySelectorAll(".accordion").forEach((btn) => {
         const panel = btn.nextElementSibling;
         
-        // 🚨 CAMBIO CRUCIALE: Forza la visualizzazione di tutte le settimane (display: block)
+        // Forza la visualizzazione completa
         panel.style.display = "block"; 
 
         btn.addEventListener("click", function() {
             this.classList.toggle("active");
             const isVisible = panel.style.display === "block";
-            panel.style.display = isVisible ? "none" : "block";
+            // Toggle per nascondere/mostrare
+            panel.style.display = isVisible ? "none" : "block"; 
         });
     });
 }
@@ -400,7 +402,7 @@ async function generaPianoAI() {
   const container = document.getElementById("piano-generato");
   container.innerHTML = "<p>⏳ Generazione piano AI in corso…</p>";
   document.getElementById("aiPlanCard").style.display = 'block';
-  document.getElementById("planView").style.display = 'none'; // Nasconde il piano locale
+  document.getElementById("planView").style.display = 'none';
 
   try {
     const livello = document.getElementById("livello").value;
@@ -408,19 +410,13 @@ async function generaPianoAI() {
     const obbAsc = parseFloat(document.getElementById("obbAsc").value);
     const allenTot = parseFloat(document.getElementById("allenTot").value);
     const settimane = parseInt(document.getElementById("settimane").value);
-    const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn.active"))
-      .map(b => b.dataset.day);
+    const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn.active")).map(b => b.dataset.day);
 
     const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        livello,
-        km: obbKm,
-        asc: obbAsc,
-        allenTot,
-        settimane,
-        palestra: giorniPalestra
+        livello, km: obbKm, asc: obbAsc, allenTot, settimane, palestra: giorniPalestra
       })
     });
 
@@ -436,9 +432,10 @@ async function generaPianoAI() {
 }
 
 // --- LOGICA DI AVVIO E GESTIONE PULSANTI ---
-document.getElementById("genLocal").onclick=generaPiano;
+document.getElementById("genLocal").onclick = generaPiano;
 document.getElementById("genAI").addEventListener("click", generaPianoAI);
-document.getElementById("resetData").onclick=()=>{localStorage.removeItem(STORAGE_KEY);location.reload();};
+// Riattivazione del Reset
+document.getElementById("resetData").onclick = () => {localStorage.removeItem(STORAGE_KEY);location.reload();};
 
 loadState();
 document.addEventListener('DOMContentLoaded', () => {
@@ -450,22 +447,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById("aiPlanCard").style.display = 'none';
         renderPiano();
     } else {
-        // 2. Esegui il test JSON solo se non c'è un piano salvato
-        // Blocca solo per il debug, sblocca per il rilascio.
+        // Blocco di test JSON: Rimuovi o commenta la chiamata a renderExternalPlan per rimuovere il test all'avvio
         const testoJSONCorretto = `{
           "descrizione_generale": "Piano di allenamento per principianti, focalizzato sul completamento di un trail di 32km con 2000m D+ in 12 settimane...",
           "settimane": [
-            { "numero": 1, "focus": "Costruzione della base aerobica", "allenamenti": [ { "tipo": "Corsa lenta", "km": 6, "dettagli": "Ritmo confortevole." } ] },
+            { "numero": 1, "focus": "Test Visivo", "allenamenti": [ { "tipo": "Corsa lenta", "km": 6, "dettagli": "Ritmo confortevole." } ] },
             { "numero": 2, "focus": "Aumento del volume", "allenamenti": [ { "tipo": "Corsa collinare", "km": 10, "dettagli": "200m D+." } ] },
             { "numero": 12, "focus": "GARA!", "allenamenti": [ { "tipo": "Gara", "km": 32, "dettagli": "32km con 2000m D+." } ] }
           ]
         }`;
-        // Rimuovi o commenta la riga sotto quando non devi più testare il JSON all'avvio.
+        // Se vuoi rimuovere la visualizzazione del piano di TEST all'avvio, commenta la riga sotto:
         renderExternalPlan(testoJSONCorretto); 
     }
 });
 </script>
-
 
 </body>
 </html>
