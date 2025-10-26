@@ -299,6 +299,7 @@ async function generaPianoAI() {
   container.innerHTML = "<p>⏳ Generazione piano AI in corso…</p>";
 
   try {
+    // 🔹 Chiama il tuo webhook Pipedream
     const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -313,18 +314,59 @@ async function generaPianoAI() {
     });
 
     if (!response.ok) throw new Error("Errore nella richiesta AI");
-
     const data = await response.json();
 
+    // 🔹 1️⃣ Prendi il testo restituito dall’AI (potrebbe essere un testo o un JSON)
+    let testoAI = "";
+    if (data.testo) testoAI = data.testo;
+    else if (typeof data === "string") testoAI = data;
+    else testoAI = JSON.stringify(data);
+
+    // 🔹 2️⃣ Prova a estrarre un JSON leggibile (in caso GPT l’abbia inviato)
+    let pianoAI = null;
+    try {
+      // Cerca blocchi tipo ```json ... ```
+      const match = testoAI.match(/```json([\s\S]*?)```/);
+      if (match) testoAI = match[1];
+      pianoAI = JSON.parse(testoAI);
+    } catch (e) {
+      console.warn("⚠️ L'AI non ha restituito un JSON valido:", e);
+    }
+
+    // 🔹 3️⃣ Se il JSON contiene un piano compatibile, integralo nel rendering
+    if (pianoAI && pianoAI.settimane) {
+      // Adattamento struttura
+      STATE = {
+        settings: { livello, obbKm, obbAsc, settimane, allenTot, giorniPalestra },
+        planData: pianoAI.settimane.map((sett, i) => ({
+          settimana: i + 1,
+          targetKm: sett.km_totali || 0,
+          targetAsc: sett.asc_totale || 0,
+          allenamenti: sett.giorni.map(g => ({
+            day: g.giorno || g.nome || "Giorno",
+            type: g.tipo || "Allenamento",
+            summary: g.riassunto || `${g.tipo || "Allenamento"} - ${g.km || 0} km`,
+            details: {
+              detailText: g.descrizione || "Dettagli non forniti",
+              distance: g.km || 0,
+              ascent: g.asc || 0,
+              durationMin: g.durata || 0
+            }
+          }))
+        }))
+      };
+      saveState();
+      document.getElementById("settingsCard").style.display = "none";
+      document.getElementById("toggleSettings").style.display = "inline-block";
+      renderPiano();
+      return;
+    }
+
+    // 🔹 4️⃣ Se non c’è JSON, mostra comunque il testo
     container.innerHTML = `
-      <h3>📊 Piano AI Generato</h3>
-      <p><strong>Descrizione:</strong> ${data.descrizione || "—"}</p>
-      <p><strong>Focus:</strong> ${data.focus_settimana || "—"}</p>
-      <ul>
-        ${(data.suggerimenti || []).map(s => `<li>${s}</li>`).join("")}
-      </ul>
-      <hr>
-      <pre>${JSON.stringify(data, null, 2)}</pre>
+      <h3>📊 Risposta AI (testuale)</h3>
+      <pre style="white-space:pre-wrap;">${testoAI}</pre>
+      <p style="color:gray;">💡 Se vuoi che l’AI generi un piano strutturato, assicurati che Pipedream chieda di rispondere in JSON.</p>
     `;
 
   } catch (err) {
