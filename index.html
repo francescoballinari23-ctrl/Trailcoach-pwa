@@ -383,75 +383,88 @@ document.getElementById("genAI").addEventListener("click", generaPianoAI);
 <div id="piano-generato"></div>
 
 <script>
-  // 👇 INCOLLA QUI la stringa della risposta che ottieni da Pipedream
-  const rispostaAI = `
-📊 Risposta AI (testuale)
-\\n{\\n  "descrizione_generale": "Piano di allenamento di 12 settimane...",\\n  "settimane": [...]
-  }
-\\n💡 Se vuoi che l’AI generi un piano strutturato,
-`;
+async function generaPianoAI() {
+  const livello = document.getElementById("livello").value;
+  const obbKm = parseFloat(document.getElementById("obbKm").value);
+  const obbAsc = parseFloat(document.getElementById("obbAsc").value);
+  const allenTot = parseFloat(document.getElementById("allenTot").value);
+  const settimane = parseInt(document.getElementById("settimane").value);
+  const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn.active"))
+    .map(b => b.dataset.day);
 
-  // Mostra la risposta grezza per debug
-  document.getElementById("ai-output-raw").textContent = rispostaAI;
+  const container = document.getElementById("planView");
+  container.innerHTML = "<p>⏳ Generazione piano AI in corso…</p>";
 
   try {
-    // 🔍 Estrae solo la parte del JSON dal testo (tra la prima e ultima graffa)
-    const match = rispostaAI.match(/{[\s\S]*}/);
-    if (!match) throw new Error("Nessun JSON trovato nel testo");
-
-    const jsonString = match[0]
-      .replace(/\\n/g, "")  // rimuove \n
-      .replace(/```json/g, "") // rimuove blocchi markdown
-      .replace(/```/g, "")    // idem
-      .trim();
-
-    const piano = JSON.parse(jsonString);
-
-    // 🏃‍♂️ Genera HTML
-    let html = `
-      <p class="descrizione"><strong>Descrizione:</strong> ${piano.descrizione_generale}</p>
-    `;
-
-    piano.settimane.forEach(sett => {
-      html += `
-        <div class="settimana">
-          <button class="accordion">Settimana ${sett.numero} — ${sett.focus}</button>
-          <div class="panel">
-            <table class="tabella-allenamenti">
-              <thead>
-                <tr><th>Tipo</th><th>Km</th><th>Dettagli</th></tr>
-              </thead>
-              <tbody>
-                ${sett.allenamenti.map(a => `
-                  <tr>
-                    <td>${a.tipo}</td>
-                    <td>${a.km}</td>
-                    <td>${a.dettagli}</td>
-                  </tr>`).join("")}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
+    const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        livello,
+        km: obbKm,
+        asc: obbAsc,
+        allenTot,
+        settimane,
+        palestra: giorniPalestra
+      })
     });
 
-    document.getElementById("piano-generato").innerHTML = html;
+    if (!response.ok) throw new Error("Errore nella richiesta AI");
+    const text = await response.text();
 
-    // 🎛️ Accordion
-    const acc = document.querySelectorAll(".accordion");
-    acc.forEach(btn => {
+    // 🔍 Estrae la parte JSON (tra la prima e ultima graffa)
+    const match = text.match(/{[\s\S]*}/);
+    if (!match) throw new Error("Nessun JSON trovato nella risposta AI");
+
+    const jsonString = match[0]
+      .replace(/\\n/g, "")
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    let data;
+    try {
+      data = JSON.parse(jsonString);
+    } catch (err) {
+      console.error("Errore nel parsing JSON:", err);
+      container.innerHTML = `<pre>${jsonString}</pre>`;
+      return;
+    }
+
+    // ✅ Costruisce layout in stile piano locale
+    let html = `<h3>📊 Piano AI — ${data.descrizione_generale || "Descrizione non disponibile"}</h3>`;
+
+    data.settimane.forEach(sett => {
+      html += `
+        <div class="week">
+          <h3 class="accordion">📅 Settimana ${sett.numero} — ${sett.focus || ""}</h3>
+          <div class="days panel">
+            ${sett.allenamenti.map(a => `
+              <div class="day">
+                <div><strong>${a.tipo}</strong> — ${a.km} km</div>
+                <div class="muted">${a.dettagli}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+
+    // 🎛️ Accordion interattivo
+    document.querySelectorAll(".accordion").forEach(btn => {
       btn.addEventListener("click", function() {
         this.classList.toggle("active");
         const panel = this.nextElementSibling;
-        panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
+        panel.style.display = panel.style.display === "block" ? "none" : "block";
       });
     });
 
   } catch (err) {
-    console.error("Errore parsing JSON:", err);
-    document.getElementById("piano-generato").innerHTML =
-      "<p style='color:red'>⚠️ Errore: non sono riuscito a leggere il piano AI.</p>";
+    console.error(err);
+    container.innerHTML = `<p style="color:red;">❌ Errore durante la generazione AI: ${err.message}</p>`;
   }
+}
 </script>
 
 <style>
