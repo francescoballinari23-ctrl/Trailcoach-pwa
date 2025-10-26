@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v17.4</title>
+<title>🏔️ TrailCoach AI v17.5</ title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -78,7 +78,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v17.4</h1>
+<h1>🏔️ TrailCoach AI v17.5</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="display:none; background:#34c759;">⚙️ Impostazioni</button>
@@ -254,22 +254,30 @@ function renderExternalPlan(jsonString) {
 
     container.innerHTML = htmlOutput;
     
-    // 5. Riattiva l'Accordion (Verifica questa logica)
-document.querySelectorAll(".accordion").forEach((btn, index) => {
-    const panel = btn.nextElementSibling;
+        // 4. Generazione Descrizione Generale e Iterazione Settimane (il resto della logica)
+    // ... [Codice di generazione HTML] ...
     
-    // Inizializza tutte le settimane su Nascosto (tranne, opzionalmente, la prima)
-    // Se vuoi vederle tutte aperte all'inizio, imposta 'block' qui
-    panel.style.display = (index === 0) ? "block" : "none"; 
+    container.innerHTML = htmlOutput;
     
-    btn.addEventListener("click", function() {
-      this.classList.toggle("active");
-      const isVisible = panel.style.display === "block";
-      panel.style.display = isVisible ? "none" : "block";
-    });
-});
+    // 5. Riattiva l'Accordion (APPLICA QUESTA MODIFICA)
+    document.querySelectorAll(".accordion").forEach((btn, index) => {
+        const panel = btn.nextElementSibling;
+        
+        // 🚨 CAMBIO CRUCIALE: Forza la visualizzazione di tutte le settimane (display: block)
+        // Se vuoi che siano tutte visibili subito, rimuovi il commento da questa riga:
+        panel.style.display = "block"; 
+        
+        // Se preferisci che solo la prima settimana sia aperta:
+        // panel.style.display = (index === 0) ? "block" : "none"; 
 
+        btn.addEventListener("click", function() {
+            this.classList.toggle("active");
+            const isVisible = panel.style.display === "block";
+            panel.style.display = isVisible ? "none" : "block";
+        });
+    });
 }
+
 
 // 🛠️ FUNZIONE MODIFICATA: Cattura il risultato AI (simulato) e lo passa a renderExternalPlan
 async function generaPianoAI() {
