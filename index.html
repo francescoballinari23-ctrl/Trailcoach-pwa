@@ -377,5 +377,141 @@ async function generaPianoAI() {
 
 document.getElementById("genAI").addEventListener("click", generaPianoAI);
 </script>
+<!-- 🔹 CONTENITORI per la risposta AI -->
+<h2>Piano generato con AI</h2>
+<div id="ai-output-raw" style="display:none;"></div>
+<div id="piano-generato"></div>
+
+<!-- 🔹 SCRIPT per generare piano + accordion -->
+<script>
+  // 👇 INCOLLA QUI la risposta che arriva da Pipedream (temporaneamente statica)
+  const rispostaAI = `{
+    "descrizione_generale": "Piano di allenamento di 12 settimane per principianti...",
+    "settimane": [
+      {
+        "numero": 1,
+        "focus": "Costruzione base aerobica",
+        "allenamenti": [
+          { "tipo": "Corsa Facile", "km": 5, "dettagli": "Sentiero pianeggiante, ritmo confortevole." },
+          { "tipo": "Corsa Lunga", "km": 8, "dettagli": "Dislivello leggero, ritmo conversazionale." }
+        ]
+      }
+    ]
+  }`;
+
+  // ✅ Mostra (opzionale) la risposta grezza
+  document.getElementById("ai-output-raw").textContent = rispostaAI;
+
+  try {
+    // 🧩 1. Pulisce e converte il testo in JSON
+    const clean = rispostaAI.replace(/\\n/g, "").trim();
+    const piano = JSON.parse(clean);
+
+    // 🏃‍♂️ 2. Crea il layout HTML del piano
+    let html = `
+      <p class="descrizione"><strong>Descrizione:</strong> ${piano.descrizione_generale}</p>
+    `;
+
+    piano.settimane.forEach(sett => {
+      html += `
+        <div class="settimana">
+          <button class="accordion">Settimana ${sett.numero} — ${sett.focus}</button>
+          <div class="panel">
+            <table class="tabella-allenamenti">
+              <thead>
+                <tr><th>Tipo</th><th>Km</th><th>Dettagli</th></tr>
+              </thead>
+              <tbody>
+                ${sett.allenamenti.map(a => `
+                  <tr>
+                    <td>${a.tipo}</td>
+                    <td>${a.km}</td>
+                    <td>${a.dettagli}</td>
+                  </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    });
+
+    // 🎨 3. Inserisce tutto nella pagina
+    document.getElementById("piano-generato").innerHTML = html;
+
+    // 🔽 4. Attiva comportamento "accordion"
+    const accordions = document.querySelectorAll(".accordion");
+    accordions.forEach(btn => {
+      btn.addEventListener("click", function() {
+        this.classList.toggle("active");
+        const panel = this.nextElementSibling;
+        if (panel.style.maxHeight) {
+          panel.style.maxHeight = null;
+        } else {
+          panel.style.maxHeight = panel.scrollHeight + "px";
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error("Errore nel parsing JSON:", err);
+    document.getElementById("piano-generato").innerHTML =
+      "<p style='color:red'>⚠️ Errore: il formato del piano AI non è valido.</p>";
+  }
+</script>
+
+<!-- 🔹 STILE base + accordion -->
+<style>
+  #piano-generato {
+    font-family: system-ui, sans-serif;
+    margin-top: 20px;
+  }
+
+  .descrizione {
+    background: #f1f8ff;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .accordion {
+    background-color: #2a5d84;
+    color: white;
+    cursor: pointer;
+    padding: 12px;
+    width: 100%;
+    text-align: left;
+    border: none;
+    outline: none;
+    transition: background-color 0.2s ease;
+    border-radius: 6px;
+    margin-top: 10px;
+  }
+
+  .accordion.active, .accordion:hover {
+    background-color: #357ca0;
+  }
+
+  .panel {
+    background-color: #f8f8f8;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+    max-height: 0;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+
+  .tabella-allenamenti {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .tabella-allenamenti th, .tabella-allenamenti td {
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+
+  .tabella-allenamenti th {
+    background: #e8f1f7;
+  }
+</style>
 </body>
 </html>
