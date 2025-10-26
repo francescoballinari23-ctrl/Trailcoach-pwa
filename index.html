@@ -254,15 +254,21 @@ function renderExternalPlan(jsonString) {
 
     container.innerHTML = htmlOutput;
     
-    // 4. Riattiva l'Accordion
-    document.querySelectorAll(".accordion").forEach(btn => {
-      btn.addEventListener("click", function() {
-        this.classList.toggle("active");
-        const panel = this.nextElementSibling;
-        const isVisible = panel.style.display === "block";
-        panel.style.display = isVisible ? "none" : "block";
-      });
+    // 5. Riattiva l'Accordion (Verifica questa logica)
+document.querySelectorAll(".accordion").forEach((btn, index) => {
+    const panel = btn.nextElementSibling;
+    
+    // Inizializza tutte le settimane su Nascosto (tranne, opzionalmente, la prima)
+    // Se vuoi vederle tutte aperte all'inizio, imposta 'block' qui
+    panel.style.display = (index === 0) ? "block" : "none"; 
+    
+    btn.addEventListener("click", function() {
+      this.classList.toggle("active");
+      const isVisible = panel.style.display === "block";
+      panel.style.display = isVisible ? "none" : "block";
     });
+});
+
 }
 
 // 🛠️ FUNZIONE MODIFICATA: Cattura il risultato AI (simulato) e lo passa a renderExternalPlan
