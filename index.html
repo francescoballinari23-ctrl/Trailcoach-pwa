@@ -379,35 +379,35 @@ document.getElementById("genAI").addEventListener("click", generaPianoAI);
 </script>
 <!-- 🔹 CONTENITORI per la risposta AI -->
 <h2>Piano generato con AI</h2>
-<div id="ai-output-raw" style="display:none;"></div>
+<div id="ai-output-raw" style="white-space: pre-wrap; background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:10px;"></div>
 <div id="piano-generato"></div>
 
-<!-- 🔹 SCRIPT per generare piano + accordion -->
 <script>
-  // 👇 INCOLLA QUI la risposta che arriva da Pipedream (temporaneamente statica)
-  const rispostaAI = `{
-    "descrizione_generale": "Piano di allenamento di 12 settimane per principianti...",
-    "settimane": [
-      {
-        "numero": 1,
-        "focus": "Costruzione base aerobica",
-        "allenamenti": [
-          { "tipo": "Corsa Facile", "km": 5, "dettagli": "Sentiero pianeggiante, ritmo confortevole." },
-          { "tipo": "Corsa Lunga", "km": 8, "dettagli": "Dislivello leggero, ritmo conversazionale." }
-        ]
-      }
-    ]
-  }`;
+  // 👇 INCOLLA QUI la stringa della risposta che ottieni da Pipedream
+  const rispostaAI = `
+📊 Risposta AI (testuale)
+\\n{\\n  "descrizione_generale": "Piano di allenamento di 12 settimane...",\\n  "settimane": [...]
+  }
+\\n💡 Se vuoi che l’AI generi un piano strutturato,
+`;
 
-  // ✅ Mostra (opzionale) la risposta grezza
+  // Mostra la risposta grezza per debug
   document.getElementById("ai-output-raw").textContent = rispostaAI;
 
   try {
-    // 🧩 1. Pulisce e converte il testo in JSON
-    const clean = rispostaAI.replace(/\\n/g, "").trim();
-    const piano = JSON.parse(clean);
+    // 🔍 Estrae solo la parte del JSON dal testo (tra la prima e ultima graffa)
+    const match = rispostaAI.match(/{[\s\S]*}/);
+    if (!match) throw new Error("Nessun JSON trovato nel testo");
 
-    // 🏃‍♂️ 2. Crea il layout HTML del piano
+    const jsonString = match[0]
+      .replace(/\\n/g, "")  // rimuove \n
+      .replace(/```json/g, "") // rimuove blocchi markdown
+      .replace(/```/g, "")    // idem
+      .trim();
+
+    const piano = JSON.parse(jsonString);
+
+    // 🏃‍♂️ Genera HTML
     let html = `
       <p class="descrizione"><strong>Descrizione:</strong> ${piano.descrizione_generale}</p>
     `;
@@ -435,31 +435,25 @@ document.getElementById("genAI").addEventListener("click", generaPianoAI);
       `;
     });
 
-    // 🎨 3. Inserisce tutto nella pagina
     document.getElementById("piano-generato").innerHTML = html;
 
-    // 🔽 4. Attiva comportamento "accordion"
-    const accordions = document.querySelectorAll(".accordion");
-    accordions.forEach(btn => {
+    // 🎛️ Accordion
+    const acc = document.querySelectorAll(".accordion");
+    acc.forEach(btn => {
       btn.addEventListener("click", function() {
         this.classList.toggle("active");
         const panel = this.nextElementSibling;
-        if (panel.style.maxHeight) {
-          panel.style.maxHeight = null;
-        } else {
-          panel.style.maxHeight = panel.scrollHeight + "px";
-        }
+        panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
       });
     });
 
   } catch (err) {
-    console.error("Errore nel parsing JSON:", err);
+    console.error("Errore parsing JSON:", err);
     document.getElementById("piano-generato").innerHTML =
-      "<p style='color:red'>⚠️ Errore: il formato del piano AI non è valido.</p>";
+      "<p style='color:red'>⚠️ Errore: non sono riuscito a leggere il piano AI.</p>";
   }
 </script>
 
-<!-- 🔹 STILE base + accordion -->
 <style>
   #piano-generato {
     font-family: system-ui, sans-serif;
@@ -467,7 +461,7 @@ document.getElementById("genAI").addEventListener("click", generaPianoAI);
   }
 
   .descrizione {
-    background: #f1f8ff;
+    background: #eef8ff;
     padding: 10px;
     border-radius: 8px;
   }
