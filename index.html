@@ -176,8 +176,6 @@ function renderPiano(){
 }
 // ... [Resto delle funzioni (generaPiano, uploadGPX, ecc.)] ...
 
-// 🛠️ FUNZIONE AGGIUNTA/MODIFICATA: Visualizzazione del JSON Esterno
-/**
 /**
  * Funzione per convertire e visualizzare il testo JSON esterno (dall'AI o da input).
  * @param {string} jsonString - La stringa JSON da tradurre.
@@ -192,27 +190,29 @@ function renderExternalPlan(jsonString) {
     card.style.display = 'block';
 
     try {
-        // 1. Pulizia ESTREMA per rimuovere blocchi di codice Markdown e newline di escape
-        // Rimuove blocchi di codice Markdown (```json ... ```) se presenti
+        // 1. Pulizia Iniziale e Estrazione del blocco JSON
         const match = jsonString.match(/```json([\s\S]*?)```/);
         if (match) {
             cleanText = match[1];
         } else {
-            // Se non c'è Markdown, tenta di estrarre il blocco JSON tra la prima { e l'ultima }
             cleanText = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
         }
         
-        // Rimuove tutti i caratteri newline e di escape dei newline
+        // Pulizia: Rimuove i caratteri newline e di escape dei newline
         cleanText = cleanText
             .replace(/\\n/g, "")
             .replace(/\n/g, "")
             .replace(/\r/g, "")
             .trim();
         
+        // ⚠️ NUOVO PASSAGGIO CRUCIALE: Rimuove i backslash di escape davanti alle virgolette
+        // Questo trasforma \" in "
+        cleanText = cleanText.replace(/\\"/g, '"'); 
+        
         // Tenta il parsing
         piano = JSON.parse(cleanText);
     } catch (e) {
-        // In caso di errore di parsing, mostra il testo pulito per il debug
+        // ... [Codice per la visualizzazione dell'errore (lasciato invariato)] ...
         container.innerHTML = `
             <p style="color:red;">❌ Errore nel formato JSON. Impossibile eseguire JSON.parse().</p>
             <p class="muted">Testo pulito (da debug):</p>
@@ -222,7 +222,7 @@ function renderExternalPlan(jsonString) {
         return;
     }
 
-    // 2. Controllo dell'array 'settimane' (Qui è dove falliva precedentemente)
+    // 2. Controllo dell'array 'settimane' (che ora dovrebbe funzionare)
     if (!piano.settimane || !Array.isArray(piano.settimane)) {
         container.innerHTML = `
             <p style="color:red;">⚠️ Struttura JSON valida, ma manca la chiave "settimane" o non è un array.</p>
@@ -231,11 +231,9 @@ function renderExternalPlan(jsonString) {
         return;
     }
 
-    // 3. Generazione Descrizione Generale
-    // Il resto della funzione rimane invariato
+    // 3. Generazione Descrizione Generale e Iterazione Settimane (il resto della logica)
     let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${piano.descrizione_generale || "Nessuna descrizione fornita."}</div></div>`;
 
-    // 4. Iterazione e Generazione Settimane
     piano.settimane.forEach(w => {
         const totalKm = w.allenamenti ? w.allenamenti.reduce((sum, a) => sum + (a.km || 0), 0).toFixed(1) : 0;
         
@@ -256,7 +254,7 @@ function renderExternalPlan(jsonString) {
 
     container.innerHTML = htmlOutput;
     
-    // 5. Riattiva l'Accordion
+    // 4. Riattiva l'Accordion
     document.querySelectorAll(".accordion").forEach(btn => {
       btn.addEventListener("click", function() {
         this.classList.toggle("active");
@@ -266,7 +264,6 @@ function renderExternalPlan(jsonString) {
       });
     });
 }
-
 
 // 🛠️ FUNZIONE MODIFICATA: Cattura il risultato AI (simulato) e lo passa a renderExternalPlan
 async function generaPianoAI() {
