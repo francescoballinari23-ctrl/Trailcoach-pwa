@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v17.6</title>
+<title>🏔️ TrailCoach AI v17.7</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -29,7 +29,6 @@
   .week { 
     background:#f7f9ff; border-radius:8px; margin:8px 0;
   }
-  /* 🎯 MODIFICA CSS: Rimuovo display: block forzato qui per permettere il toggle JS */
   .days { margin-top:6px; padding: 0 10px 10px 10px; } 
   .day { padding:6px 0; border-bottom:1px solid #eee; }
   .day:last-child { border-bottom: none; }
@@ -74,16 +73,15 @@
     border-radius: 0 0 8px 8px;
     border: 1px solid #eee;
     border-top: none;
-    /* 🎯 MODIFICA CSS: Garantisco che sia chiuso di default per il caricamento */
     display: none; 
   }
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v17.6</h1>
+<h1>🏔️ TrailCoach AI v17.7</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
-  <button id="toggleSettings" style="display:none; background:#34c759;">⚙️ Impostazioni</button>
+  <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
 </div>
 
 <div class="card" id="settingsCard">
@@ -149,9 +147,7 @@ function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(STATE));}
 function loadState(){
     const r=localStorage.getItem(STORAGE_KEY);
     if(r) {
-        // 🎯 MODIFICA: Caricamento dello stato
         STATE=JSON.parse(r);
-        // Aggiorna gli input con i dati salvati
         if (STATE.settings) {
             document.getElementById("livello").value = STATE.settings.livello || 'principiante';
             document.getElementById("obbKm").value = STATE.settings.obbKm || 42;
@@ -159,7 +155,6 @@ function loadState(){
             document.getElementById("settimane").value = STATE.settings.settimane || 12;
             document.getElementById("allenTot").value = STATE.settings.allenTot || 4.5;
             
-            // Reattiva i giorni di palestra
             document.querySelectorAll(".chk-btn").forEach(btn => {
                 btn.classList.remove("active");
                 if (STATE.settings.giorniPalestra?.includes(btn.dataset.day)) {
@@ -176,6 +171,7 @@ document.getElementById("settingsCard").addEventListener("click",e=>{
 
 document.getElementById("toggleSettings").onclick=()=>{
   const card=document.getElementById("settingsCard");
+  // 🎯 MODIFICA: La logica qui gestisce solo l'apertura/chiusura della card
   card.style.display=card.style.display==="none"?"block":"none";
 };
 
@@ -262,10 +258,10 @@ function generaPiano(){
 
   const descrizione_generale = `Piano generato localmente per ${livello} su ${settimane} settimane. Obiettivo: ${obbKm} km con ${obbAsc} m D+, con ${allenTot} allenamenti a settimana. Giorni di palestra: ${giorniPalestra.join(', ') || 'Nessuno'}.`;
 
-  STATE={settings:{livello,obbKm,obbAsc,settimane,allenTot,giorniPalestra,descrizione_generale},planData:plan};
-  saveState(); // 🎯 MODIFICA: Salva lo stato dopo la generazione
+  STATE={settings:{livello,obbKm,obbAsc,settimane,allenTot,giorniPalestra,descrizione_generale},planData:plan, planDataAI: null}; // Resetta planDataAI
+  saveState(); 
   document.getElementById("settingsCard").style.display="none";
-  document.getElementById("toggleSettings").style.display="inline-block";
+  // 🎯 MODIFICA: Rimosso toggleSettings.style.display
   document.getElementById("aiPlanCard").style.display = 'none';
   document.getElementById("planView").style.display = 'block';
   renderPiano();
@@ -320,12 +316,9 @@ function renderPiano(){
 
   c.innerHTML = htmlOutput;
 
-  // 🎯 MODIFICA: La sezione panel è ora nascosta di default (CSS) e viene mostrata/nascosta al click.
   document.querySelectorAll("#planView .accordion").forEach((btn) => {
     const panel = btn.nextElementSibling;
     
-    // Non forzare display: block qui
-
     btn.addEventListener("click", function() {
         this.classList.toggle("active");
         const isVisible = panel.style.display === "block";
@@ -334,7 +327,7 @@ function renderPiano(){
   });
 }
 
-// --- FUNZIONI AI/JSON ESTERNO ---
+// --- FUNZIONI AI/JSON ESTERNO (MODIFICATA PER SALVATAGGIO) ---
 
 function renderExternalPlan(jsonString) {
     const container = document.getElementById("piano-generato");
@@ -373,6 +366,20 @@ function renderExternalPlan(jsonString) {
         return;
     }
 
+    // 🎯 LOGICA DI SALVATAGGIO PER IL PIANO AI
+    const settings = { 
+        descrizione_generale: piano.descrizione_generale || 'Piano generato tramite AI. I dettagli degli input iniziali sono solo stimati.',
+        // Manteniamo le impostazioni attuali (es. giorniPalestra) se non forzate dall'AI
+        ...STATE.settings,
+    };
+    
+    STATE = {
+        settings: settings,
+        planData: null, 
+        planDataAI: piano 
+    };
+    saveState();
+
     let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${piano.descrizione_generale || "Nessuna descrizione fornita."}</div></div>`;
 
     piano.settimane.forEach(w => {
@@ -400,10 +407,8 @@ function renderExternalPlan(jsonString) {
 
     container.innerHTML = htmlOutput;
     
-    // 🎯 MODIFICA: La sezione panel è ora nascosta di default (CSS) e viene mostrata/nascosta al click.
     document.querySelectorAll("#piano-generato .accordion").forEach((btn) => {
         const panel = btn.nextElementSibling;
-        // Non forzare display: block qui
 
         btn.addEventListener("click", function() {
             this.classList.toggle("active");
@@ -412,7 +417,6 @@ function renderExternalPlan(jsonString) {
         });
     });
 }
-
 
 async function generaPianoAI() {
   const container = document.getElementById("piano-generato");
@@ -453,27 +457,20 @@ document.getElementById("genAI").addEventListener("click", generaPianoAI);
 document.getElementById("resetData").onclick = () => {localStorage.removeItem(STORAGE_KEY);location.reload();};
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 🎯 MODIFICA: Chiama loadState all'inizio per caricare i dati salvati
     loadState();
     
-    // 2. Verifica e rendering del piano salvato
-    if(STATE.planData?.length){
-        document.getElementById("settingsCard").style.display="none";
-        document.getElementById("toggleSettings").style.display="inline-block";
+    // Al caricamento, nascondiamo la card delle impostazioni, lasciando il pulsante visibile per aprirla
+    document.getElementById("settingsCard").style.display="none"; 
+
+    if(STATE.planDataAI){
+        document.getElementById("planView").style.display = 'none';
+        document.getElementById("aiPlanCard").style.display = 'block';
+        renderExternalPlan(JSON.stringify(STATE.planDataAI)); 
+    }
+    else if(STATE.planData?.length){
         document.getElementById("planView").style.display = 'block';
         document.getElementById("aiPlanCard").style.display = 'none';
         renderPiano();
-    } else {
-        // Blocco di test JSON: mostrato solo se non ci sono dati salvati
-        const testoJSONCorretto = `{
-          "descrizione_generale": "Piano di allenamento per principianti, focalizzato sul completamento di un trail di 32km con 2000m D+ in 12 settimane...",
-          "settimane": [
-            { "numero": 1, "focus": "Test Visivo", "allenamenti": [ { "tipo": "Corsa lenta", "km": 6, "dettagli": "Ritmo confortevole." } ] },
-            { "numero": 2, "focus": "Aumento del volume", "allenamenti": [ { "tipo": "Palestra", "km": 0, "dettagli": "Forza e Core." }, { "tipo": "Corsa collinare", "km": 10, "dettagli": "200m D+." } ] },
-            { "numero": 12, "focus": "GARA!", "allenamenti": [ { "tipo": "Gara", "km": 32, "dettagli": "32km con 2000m D+." } ] }
-          ]
-        }`;
-        // renderExternalPlan(testoJSONCorretto); // Rimosso per non mostrare il piano di test all'avvio se vuoto
     }
 });
 </script>
