@@ -178,6 +178,7 @@ function renderPiano(){
 
 // 🛠️ FUNZIONE AGGIUNTA/MODIFICATA: Visualizzazione del JSON Esterno
 /**
+/**
  * Funzione per convertire e visualizzare il testo JSON esterno (dall'AI o da input).
  * @param {string} jsonString - La stringa JSON da tradurre.
  */
@@ -187,32 +188,55 @@ function renderExternalPlan(jsonString) {
     container.innerHTML = ""; // Pulisce il contenuto precedente
     
     let piano;
+    let cleanText = jsonString; // Inizia col testo grezzo
+    card.style.display = 'block';
 
     try {
-        // 1. Pulizia e Parsing
-        // Cerca il blocco JSON puro, rimuovendo testo superfluo e newline
-        let cleanText = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-        cleanText = cleanText.replace(/\\n/g, "").replace(/\n/g, "").replace(/\r/g, "").trim();
+        // 1. Pulizia ESTREMA per rimuovere blocchi di codice Markdown e newline di escape
+        // Rimuove blocchi di codice Markdown (```json ... ```) se presenti
+        const match = jsonString.match(/```json([\s\S]*?)```/);
+        if (match) {
+            cleanText = match[1];
+        } else {
+            // Se non c'è Markdown, tenta di estrarre il blocco JSON tra la prima { e l'ultima }
+            cleanText = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
+        }
         
+        // Rimuove tutti i caratteri newline e di escape dei newline
+        cleanText = cleanText
+            .replace(/\\n/g, "")
+            .replace(/\n/g, "")
+            .replace(/\r/g, "")
+            .trim();
+        
+        // Tenta il parsing
         piano = JSON.parse(cleanText);
-        card.style.display = 'block'; // Mostra il contenitore
     } catch (e) {
-        container.innerHTML = `<p style="color:red;">❌ Errore nel formato JSON. Assicurati che l'AI restituisca solo il JSON corretto.</p><pre>${e.message}</pre>`;
-        card.style.display = 'block';
+        // In caso di errore di parsing, mostra il testo pulito per il debug
+        container.innerHTML = `
+            <p style="color:red;">❌ Errore nel formato JSON. Impossibile eseguire JSON.parse().</p>
+            <p class="muted">Testo pulito (da debug):</p>
+            <pre style="white-space: pre-wrap; background: #ffebeb; padding: 10px; border: 1px solid red; border-radius: 5px;">${cleanText}</pre>
+            <p class="muted">Errore: ${e.message}</p>
+        `;
         return;
     }
 
+    // 2. Controllo dell'array 'settimane' (Qui è dove falliva precedentemente)
     if (!piano.settimane || !Array.isArray(piano.settimane)) {
-        container.innerHTML = '<p style="color:red;">⚠️ Struttura JSON non valida: manca l\'array "settimane" o non è un array.</p>';
+        container.innerHTML = `
+            <p style="color:red;">⚠️ Struttura JSON valida, ma manca la chiave "settimane" o non è un array.</p>
+            <p class="muted">Assicurati che l'AI usi SEMPRE la chiave "settimane".</p>
+        `;
         return;
     }
 
-    // 2. Generazione Descrizione Generale
+    // 3. Generazione Descrizione Generale
+    // Il resto della funzione rimane invariato
     let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${piano.descrizione_generale || "Nessuna descrizione fornita."}</div></div>`;
 
-    // 3. Iterazione e Generazione Settimane
+    // 4. Iterazione e Generazione Settimane
     piano.settimane.forEach(w => {
-        // Calcolo km totali per l'header (se non forniti)
         const totalKm = w.allenamenti ? w.allenamenti.reduce((sum, a) => sum + (a.km || 0), 0).toFixed(1) : 0;
         
         htmlOutput += `
@@ -232,7 +256,7 @@ function renderExternalPlan(jsonString) {
 
     container.innerHTML = htmlOutput;
     
-    // 4. Riattiva l'Accordion (funzionalità base)
+    // 5. Riattiva l'Accordion
     document.querySelectorAll(".accordion").forEach(btn => {
       btn.addEventListener("click", function() {
         this.classList.toggle("active");
@@ -242,6 +266,7 @@ function renderExternalPlan(jsonString) {
       });
     });
 }
+
 
 // 🛠️ FUNZIONE MODIFICATA: Cattura il risultato AI (simulato) e lo passa a renderExternalPlan
 async function generaPianoAI() {
