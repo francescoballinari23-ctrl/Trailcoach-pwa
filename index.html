@@ -637,9 +637,9 @@ function uploadGPX(planType, weekIdx, runIdx) {
             const requiredDurationMinutes = planType === 'local' ? run.details.durationMin : (run.durationMin || 60); 
             
             // Criteri di corrispondenza
-            const distMatch = gpxData.distanceKm >= requiredKm * 0.9 && gpxData.distanceKm <= requiredKm * 1.1; 
-            const ascMatch = gpxData.ascentMeters >= requiredAscent * 0.8 && gpxData.ascentMeters <= requiredAscent * 1.2; 
-            const durMatch = gpxData.durationMinutes >= requiredDurationMinutes * 0.9 && gpxData.durationMinutes <= requiredDurationMinutes * 1.1; 
+            const distMatch = gpxData.distanceKm >= requiredKm * 0.8 && gpxData.distanceKm <= requiredKm * 1.2; 
+            const ascMatch = gpxData.ascentMeters >= requiredAscent * 0.6 && gpxData.ascentMeters <= requiredAscent * 1.5; 
+            const durMatch = gpxData.durationMinutes >= requiredDurationMinutes * 0.5 && gpxData.durationMinutes <= requiredDurationMinutes * 1.5; 
 
             const isCompleted = distMatch && ascMatch && durMatch;
             
