@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v18.0 (GPX Ready)</title>
+<title>🏔️ TrailCoach AI v18.1 (GPX Ready)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -75,7 +75,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v18.0</h1>
+<h1>🏔️ TrailCoach AI v18.1</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -188,6 +188,12 @@ function loadState(){
             });
         }
     }
+}
+
+// 🎯 FIX: Funzione di reset consolidata
+function resetApplicationData() {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
 }
 
 document.getElementById("settingsCard").addEventListener("click",e=>{
@@ -390,6 +396,7 @@ function renderExternalPlan(jsonString) {
         if (match) {
             cleanText = match[1];
         } else {
+            // Tentativo di pulizia per JSON non formattato
             cleanText = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
         }
         cleanText = cleanText
@@ -398,7 +405,7 @@ function renderExternalPlan(jsonString) {
         
         piano = JSON.parse(cleanText);
     } catch (e) {
-        // GESTIONE ERRORE JSON
+        // GESTIONE ERRORE JSON - Mantiene la card AI visibile per il debug
         container.innerHTML = `<p style="color:red;">❌ Errore nel formato JSON: ${e.message}</p><div style="background:#fff3f3; border:1px solid #ffaaaa; padding:10px; border-radius:8px; margin-top:10px; font-size:12px; white-space:pre-wrap; word-wrap:break-word;"><p><strong>Testo Ricevuto (tentativo di parsing):</strong></p>${jsonString.substring(0, 1000)} ${jsonString.length > 1000 ? '...' : ''}</div>`;
         return;
     }
@@ -420,6 +427,7 @@ function renderExternalPlan(jsonString) {
             w.startDate = weekStartDate.toISOString().split('T')[0]; 
             
             w.allenamenti.forEach(a => {
+                   // Assicura che completed e gpxData esistano per il salvataggio dello stato
                    a.completed = a.completed || false;
                    a.gpxData = a.gpxData || null;
             });
@@ -507,14 +515,6 @@ function attachAccordionListeners(containerId) {
     document.querySelectorAll(`#${containerId} .accordion`).forEach((btn) => {
         const panel = btn.nextElementSibling;
         btn.addEventListener("click", function() {
-            // Chiude tutti i pannelli aperti tranne quello corrente (opzionale)
-            // document.querySelectorAll(`#${containerId} .accordion.active`).forEach(activeBtn => {
-            //     if (activeBtn !== this) {
-            //         activeBtn.classList.remove("active");
-            //         activeBtn.nextElementSibling.style.display = "none";
-            //     }
-            // });
-            
             this.classList.toggle("active");
             const isVisible = panel.style.display === "block";
             panel.style.display = isVisible ? "none" : "block"; 
@@ -606,8 +606,9 @@ function uploadGPX(planType, weekIdx, runIdx) {
     const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
     const run = plan[weekIdx].allenamenti[runIdx];
     
-    // Controlla se l'attività è una corsa
-    if (run.tipo === "Riposo" || run.tipo === "Palestra" || run.type === "Riposo" || run.type === "Palestra") {
+    // Controlla se l'attività è una corsa (i nomi delle proprietà variano)
+    const runType = planType === 'local' ? run.type : run.tipo;
+    if (runType === "Riposo" || runType === "Palestra") {
         alert("Non è necessario caricare un GPX per questa attività.");
         return;
     }
@@ -674,19 +675,74 @@ function uploadGPX(planType, weekIdx, runIdx) {
 }
 
 
+async function generaPianoAI() {
+  const container = document.getElementById("piano-generato");
+  container.innerHTML = "<p>⏳ Generazione piano AI in corso…</p>";
+  document.getElementById("aiPlanCard").style.display = 'block';
+  document.getElementById("planView").style.display = 'none';
+
+  let rawText = null; 
+
+  try {
+    const livello = document.getElementById("livello").value;
+    const obbKm = parseFloat(document.getElementById("obbKm").value);
+    const obbAsc = parseFloat(document.getElementById("obbAsc").value);
+    const allenTot = parseFloat(document.getElementById("allenTot").value);
+    const settimane = parseInt(document.getElementById("settimane").value);
+    const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn.active")).map(b => b.dataset.day);
+    const dataGara=document.getElementById("dataGara").value; 
+
+    if(!dataGara){alert("Inserisci la data della gara per generare un piano con date.");return;} 
+
+    const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        livello, km: obbKm, asc: obbAsc, allenTot, settimane, palestra: giorniPalestra
+      })
+    });
+    
+    rawText = await response.text(); 
+    
+    if (!response.ok) {
+        throw new Error(`Errore HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    renderExternalPlan(rawText); 
+
+  } catch (err) {
+    console.error("Errore Generazione AI:", err);
+    
+    let debugOutput = '';
+    if (rawText) {
+        debugOutput = `
+            <div style="background:#fff3f3; border:1px solid #ffaaaa; padding:10px; border-radius:8px; margin-top:10px; font-size:12px; white-space:pre-wrap; word-wrap:break-word;">
+                <p><strong>Contenuto della Risposta (Debug):</strong></p>
+                ${rawText.substring(0, 1000)} ${rawText.length > 1000 ? '...' : ''}
+            </div>
+        `;
+    }
+
+    container.innerHTML = `
+        <p style="color:red;">❌ Errore durante la generazione AI: ${err.message}</p>
+        ${debugOutput}
+    `;
+  }
+}
+
 // --- LOGICA DI AVVIO E GESTIONE PULSANTI ---
 document.getElementById("genLocal").onclick = generaPiano;
 document.getElementById("genAI").addEventListener("click", generaPianoAI);
-document.getElementById("resetData").onclick = () => {localStorage.removeItem(STORAGE_KEY);location.reload();};
+// 🎯 FIX: Assegna la funzione di reset al pulsante
+document.getElementById("resetData").onclick = resetApplicationData; 
 
 document.addEventListener('DOMContentLoaded', () => {
     loadState();
     
-    // Al caricamento, determiniamo quale piano visualizzare
     if(STATE.planDataAI){
         document.getElementById("planView").style.display = 'none';
         document.getElementById("aiPlanCard").style.display = 'block';
-        // Passiamo il JSON salvato al render
+        // Ricarica la vista AI dal dato salvato
         renderExternalPlan(JSON.stringify(STATE.planDataAI)); 
     }
     else if(STATE.planData){ 
@@ -696,6 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
+
 
 </body>
 </html>
