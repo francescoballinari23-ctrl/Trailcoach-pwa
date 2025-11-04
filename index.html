@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v18.1 (GPX Ready)</title>
+<title>🏔️ TrailCoach AI v18.2 (PDF & Target Time)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -26,6 +26,8 @@
   }
   button:hover { background:#005fd6; }
   button.reset { background:#ff3b30; margin-left:6px; }
+  .btn-action { margin-top: 10px; width: 100%; box-sizing: border-box; }
+  
   .week { 
     background:#f7f9ff; border-radius:10px; margin:8px 0;
   }
@@ -73,9 +75,11 @@
   }
   .gpx-upload-btn:hover { background: #2f9a4b; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v18.1</h1>
+<h1>🏔️ TrailCoach AI v18.2</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -97,6 +101,10 @@
   
   <label>Data della gara</label>
   <input id="dataGara" type="date" />
+  
+  <label>Tempo Obiettivo Gara (Ore)</label>
+  <input id="tempoObiettivo" type="number" value="6" min="1" step="0.5" />
+  
   <label>Durata piano (settimane)</label>
   <input id="settimane" type="number" value="12" min="1" max="52" />
 
@@ -126,11 +134,15 @@
 <div class="card">
   <label>Piano settimanale (Locale)</label>
   <div id="planView" class="muted">Nessun piano ancora generato.</div>
+  
+  <button onclick="esportaInPDF('planView')" class="btn-action" style="background:#ef802e;">📄 Esporta Piano Locale in PDF</button>
 </div>
 
 <div class="card" id="aiPlanCard" style="display: none;">
   <h2><label>📋 Piano Generato (AI)</label></h2>
   <div id="piano-generato"></div>
+  
+  <button onclick="esportaInPDF('piano-generato')" class="btn-action" style="background:#ef802e;">📄 Esporta Piano AI in PDF</button>
 </div>
 
 <input id="hiddenFileInput" type="file" accept=".gpx" style="display:none" />
@@ -177,6 +189,8 @@ function loadState(){
             document.getElementById("obbKm").value = STATE.settings.obbKm || 42;
             document.getElementById("obbAsc").value = STATE.settings.obbAsc || 2000;
             document.getElementById("dataGara").value = STATE.settings.dataGara || '';
+            // 🎯 RECUPERA NUOVO CAMPO
+            document.getElementById("tempoObiettivo").value = STATE.settings.tempoObiettivo || 6;
             document.getElementById("settimane").value = STATE.settings.settimane || 12;
             document.getElementById("allenTot").value = STATE.settings.allenTot || 4.5;
             
@@ -255,19 +269,43 @@ function generaPiano(){
   const allenTot=parseFloat(document.getElementById("allenTot").value)||4;
   const giorniPalestra=[...document.querySelectorAll(".chk-btn.active")].map(b=>b.dataset.day);
   const dataGara=document.getElementById("dataGara").value; 
+  const tempoObiettivo=+document.getElementById("tempoObiettivo").value; // Recupero nuovo campo
     
   if(obbKm<=0||obbAsc<=0||!dataGara){alert("Inserisci valori validi e la data della gara!");return;}
 
   const { startDate, raceDate } = calculatePlanDates(dataGara, settimane); 
 
-  const plan=[]; const progressioni=[0.6,0.7,0.8,0.9,1.0];
+  const plan=[]; 
+  // Progressioni [0.6, 0.75, 0.9, 1.05, 1.0...]
+  const baseVolumeCoeff = 0.6; // Inizia dal 60% dell'obiettivo finale
+
   for(let w=1;w<=settimane;w++){
     const weekStartDate = addDays(startDate, (w - 1) * 7);
     
-    const coeff=progressioni[Math.min(progressioni.length-1,Math.floor((w-1)/Math.max(1,settimane/progressioni.length)))];
-    const isScarico=(w%4===0);
-    const baseKm=obbKm*coeff*(isScarico?0.7:1);
-    const baseAsc=obbAsc*coeff*(isScarico?0.7:1);
+    // Logica di progressione volume (3 settimane carico, 1 scarico)
+    const w_mod = (w - 1) % 4; // 0, 1, 2 (carico), 3 (scarico)
+    const w_cycle = Math.floor((w - 1) / 4); // Ciclo corrente (0, 1, 2...)
+    
+    let cycleCoeff = baseVolumeCoeff + (w_cycle * 0.15); // Aumento del 15% per ciclo
+    cycleCoeff = Math.min(cycleCoeff, 1.0); // Limita all'obiettivo massimo
+    
+    // Applicazione della progressione settimanale all'interno del ciclo
+    let weeklyCoeff = cycleCoeff;
+    if (w_mod === 1) { // Settimana 2 di carico (+10%)
+        weeklyCoeff *= 1.10;
+    } else if (w_mod === 2) { // Settimana 3 di carico (+20%)
+        weeklyCoeff *= 1.20; 
+    }
+
+    const isScarico = (w_mod === 3);
+    const moltiplicatoreScarico = isScarico ? 0.7 : 1;
+    const finalCoeff = weeklyCoeff * moltiplicatoreScarico;
+    
+    const baseKm = obbKm * finalCoeff;
+    const baseAsc = obbAsc * finalCoeff;
+    
+    // Fine logica progressione
+
     const {runDays,extraRunDay}=selectRunDays(allenTot,giorniPalestra,w-1);
     const runsCount=runDays.length;
 
@@ -301,9 +339,9 @@ function generaPiano(){
     });
   }
 
-  const descrizione_generale = `Piano generato localmente per ${livello} su ${settimane} settimane, che termina il ${formatDate(raceDate)}. Obiettivo: ${obbKm} km con ${obbAsc} m D+, con ${allenTot} allenamenti a settimana. Giorni di palestra: ${giorniPalestra.join(', ') || 'Nessuno'}.`;
+  const descrizione_generale = `Piano generato localmente per ${livello} su ${settimane} settimane, che termina il ${formatDate(raceDate)}. Obiettivo: ${obbKm} km con ${obbAsc} m D+, Tempo Target: ${tempoObiettivo}h, con ${allenTot} allenamenti a settimana. Giorni di palestra: ${giorniPalestra.join(', ') || 'Nessuno'}.`;
 
-  STATE={settings:{livello,obbKm,obbAsc,settimane,allenTot,giorniPalestra,dataGara,descrizione_generale},planData:plan, planDataAI: null}; 
+  STATE={settings:{livello,obbKm,obbAsc,settimane,allenTot,giorniPalestra,dataGara,tempoObiettivo,descrizione_generale},planData:plan, planDataAI: null}; 
   saveState(); 
   document.getElementById("settingsCard").style.display="none";
   document.getElementById("aiPlanCard").style.display = 'none';
@@ -510,6 +548,52 @@ function renderExternalPlan(jsonString) {
     attachDayDetailListeners();
 }
 
+// 🎯 NUOVA FUNZIONE DI ESPORTAZIONE PDF
+function esportaInPDF(elementId) {
+    const { jsPDF } = window.jspdf;
+    const element = document.getElementById(elementId); 
+    
+    // Controlla che il piano sia stato generato prima di esportare
+    if (!element || element.children.length === 0 || element.textContent.includes("Nessun piano")) {
+        alert("Genera prima un piano di allenamento da esportare.");
+        return;
+    }
+
+    // Puoi visualizzare un overlay di caricamento qui, se vuoi.
+    // Esempio: alert("Preparazione PDF in corso...");
+
+    html2canvas(element, {
+        scale: 2, // Aumenta la scala per una migliore qualità
+        useCORS: true, // Importante se usi immagini esterne/icone
+        allowTaint: true 
+    }).then(function(canvas) {
+        const imgData = canvas.toDataURL('image/jpeg', 0.8); // JPEG per file più piccolo
+        const pdf = new jsPDF('p', 'mm', 'a4'); 
+
+        const pdfWidth = 210; // Larghezza A4 in mm
+        const pdfHeight = 297; // Altezza A4 in mm
+        const imgHeight = canvas.height * pdfWidth / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        // Aggiunge la prima pagina
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        // Gestisce le pagine successive se il contenuto è troppo lungo
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight + (pdfHeight * (Math.ceil(imgHeight / pdfHeight) - 1)); // Calcolo della posizione corretta
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+        }
+        
+        // Salva il file
+        pdf.save('TrailCoach_Piano_Allenamento.pdf');
+    });
+}
+
+
 // --- FUNZIONI DI GESTIONE UI (Accordion) ---
 function attachAccordionListeners(containerId) {
     document.querySelectorAll(`#${containerId} .accordion`).forEach((btn) => {
@@ -691,14 +775,23 @@ async function generaPianoAI() {
     const settimane = parseInt(document.getElementById("settimane").value);
     const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn.active")).map(b => b.dataset.day);
     const dataGara=document.getElementById("dataGara").value; 
+    // 🎯 RECUPERO NUOVO CAMPO
+    const tempoObiettivo = parseFloat(document.getElementById("tempoObiettivo").value);
 
-    if(!dataGara){alert("Inserisci la data della gara per generare un piano con date.");return;} 
+    if(!dataGara || !tempoObiettivo){alert("Inserisci la data della gara e il tempo obiettivo per generare un piano con l'AI.");return;} 
 
     const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        livello, km: obbKm, asc: obbAsc, allenTot, settimane, palestra: giorniPalestra
+        livello, 
+        km: obbKm, 
+        asc: obbAsc, 
+        allenTot, 
+        settimane, 
+        palestra: giorniPalestra,
+        // 🎯 INVIO NUOVO CAMPO ALL'AI
+        tempoObiettivo: tempoObiettivo 
       })
     });
     
