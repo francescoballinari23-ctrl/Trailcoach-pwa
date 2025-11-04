@@ -833,7 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadState();
     
     if(STATE.planDataAI){
-        document.getElementById("planView").style.display = 'none';
+        document.getElementById("planView").style.display = 'block';
         document.getElementById("aiPlanCard").style.display = 'block';
         // Ricarica la vista AI dal dato salvato
         renderExternalPlan(JSON.stringify(STATE.planDataAI)); 
