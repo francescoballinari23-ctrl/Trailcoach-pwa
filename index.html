@@ -142,7 +142,7 @@
   <h2><label>📋 Piano Generato (AI)</label></h2>
   <div id="piano-generato"></div>
   
-  <button onclick="esportaInPDF('piano-generato')" class="btn-action" style="background:#ef802e;">📄 Esporta Piano AI in PDF</button>
+  <button onclick="esportaInPDF('piano-generato')" class="btn-action" style="background:#ef802e;">📄 Esporta Piano AI in PDF (Solo Sezioni Aperte)</button>
 </div>
 
 <input id="hiddenFileInput" type="file" accept=".gpx" style="display:none" />
@@ -204,7 +204,7 @@ function loadState(){
     }
 }
 
-// 🎯 FIX: Funzione di reset consolidata
+// --- FIX: Funzione di reset consolidata ---
 function resetApplicationData() {
     localStorage.removeItem(STORAGE_KEY);
     location.reload();
@@ -419,6 +419,16 @@ function renderPiano(){
   attachDayDetailListeners();
 }
 
+function calculatePace(km, durationMin) {
+    if (km > 0 && durationMin > 0) {
+        const paceMin = durationMin / km;
+        const minutes = Math.floor(paceMin);
+        const seconds = Math.round((paceMin - minutes) * 60);
+        return `${minutes}'${String(seconds).padStart(2, '0')}" /km`;
+    }
+    return 'N/A';
+}
+
 function renderExternalPlan(jsonString) {
     const container = document.getElementById("piano-generato");
     const card = document.getElementById("aiPlanCard");
@@ -502,7 +512,14 @@ function renderExternalPlan(jsonString) {
                         const kmDisplay = a.tipo === "Palestra" || a.tipo === "Riposo" ? a.tipo : (a.km !== undefined ? a.km + ' km' : 'N/A');
                         const titleDisplay = a.tipo === "Palestra" ? '🏋️ Palestra' : a.tipo;
                         
-                        let detContent = `<div class="muted">Obiettivo: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 'N/A'} min</div>`;
+                        let paceDisplay = '';
+                        if(isRun) {
+                            // Cerca il passo fornito dall'AI o calcolalo
+                            const paceText = a.pace || calculatePace(a.km, a.durationMin);
+                            paceDisplay = ` • Passo: ${paceText}`;
+                        }
+
+                        let detContent = `<div class="muted">Obiettivo: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 'N/A'} min ${paceDisplay}</div>`;
                         if (a.tipo === "Palestra") detContent = `<div class="muted">Durata stimata: ${a.durationMin || 60} min</div>`;
                         if (a.tipo === "Riposo") detContent = '';
                         
@@ -548,141 +565,15 @@ function renderExternalPlan(jsonString) {
     attachDayDetailListeners();
 }
 
-// 🎯 NUOVA FUNZIONE DI ESPORTAZIONE PDF
-function esportaInPDF(elementId) {
-    const { jsPDF } = window.jspdf;
-    const element = document.getElementById(elementId); 
-    
-    // Controlla che il piano sia stato generato prima di esportare
-    if (!element || element.children.length === 0 || element.textContent.includes("Nessun piano")) {
-        alert("Genera prima un piano di allenamento da esportare.");
-        return;
+// --- NUOVA FUNZIONE PER CALCOLARE IL PASSO ---
+function calculatePace(km, durationMin) {
+    if (km > 0 && durationMin > 0) {
+        const paceMin = durationMin / km;
+        const minutes = Math.floor(paceMin);
+        const seconds = Math.round((paceMin - minutes) * 60);
+        return `${minutes}'${String(seconds).padStart(2, '0')}" /km`;
     }
-
-    // Puoi visualizzare un overlay di caricamento qui, se vuoi.
-    // Esempio: alert("Preparazione PDF in corso...");
-
-    html2canvas(element, {
-        scale: 2, // Aumenta la scala per una migliore qualità
-        useCORS: true, // Importante se usi immagini esterne/icone
-        allowTaint: true 
-    }).then(function(canvas) {
-        const imgData = canvas.toDataURL('image/jpeg', 0.8); // JPEG per file più piccolo
-        const pdf = new jsPDF('p', 'mm', 'a4'); 
-
-        const pdfWidth = 210; // Larghezza A4 in mm
-        const pdfHeight = 297; // Altezza A4 in mm
-        const imgHeight = canvas.height * pdfWidth / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        // Aggiunge la prima pagina
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pdfHeight;
-
-        // Gestisce le pagine successive se il contenuto è troppo lungo
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight + (pdfHeight * (Math.ceil(imgHeight / pdfHeight) - 1)); // Calcolo della posizione corretta
-            pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-            heightLeft -= pdfHeight;
-        }
-        
-        // Salva il file
-        pdf.save('TrailCoach_Piano_Allenamento.pdf');
-    });
-}
-
-
-// --- FUNZIONI DI GESTIONE UI (Accordion) ---
-function attachAccordionListeners(containerId) {
-    document.querySelectorAll(`#${containerId} .accordion`).forEach((btn) => {
-        const panel = btn.nextElementSibling;
-        btn.addEventListener("click", function() {
-            this.classList.toggle("active");
-            const isVisible = panel.style.display === "block";
-            panel.style.display = isVisible ? "none" : "block"; 
-        });
-    });
-}
-function attachDayDetailListeners() {
-    document.querySelectorAll(".day-header").forEach(header => {
-        header.addEventListener("click", () => {
-            const panelId = header.getAttribute("data-toggle-panel");
-            const panel = document.getElementById(panelId);
-            if (panel) {
-                panel.style.display = panel.style.display === "block" ? "none" : "block";
-            }
-        });
-    });
-}
-
-
-// --- LOGICA GPX (Parsing e Verifica) ---
-
-function haversineDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; 
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c;
-}
-
-function parseGPX(xmlString) {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-    const trackPoints = xmlDoc.querySelectorAll('trkpt');
-    if (trackPoints.length === 0) return null;
-
-    let totalDistanceMeters = 0;
-    let totalAscentMeters = 0;
-    let startTime = null;
-    let endTime = null;
-    let lastLat = null;
-    let lastLon = null;
-    let lastEle = null;
-
-    for (const point of trackPoints) {
-        const lat = parseFloat(point.getAttribute('lat'));
-        const lon = parseFloat(point.getAttribute('lon'));
-        const eleElement = point.querySelector('ele');
-        const timeElement = point.querySelector('time');
-
-        if (!eleElement || !timeElement) continue;
-
-        const ele = parseFloat(eleElement.textContent);
-        const time = new Date(timeElement.textContent);
-
-        if (startTime === null) startTime = time;
-        endTime = time;
-
-        if (lastLat !== null) {
-            const distance2D = haversineDistance(lastLat, lastLon, lat, lon);
-            const deltaEle = ele - lastEle;
-            const distance3D = Math.sqrt(distance2D ** 2 + deltaEle ** 2);
-            totalDistanceMeters += distance3D;
-
-            if (deltaEle > 1) {
-                totalAscentMeters += deltaEle;
-            }
-        }
-        lastLat = lat; lastLon = lon; lastEle = ele;
-    }
-
-    const totalDurationSeconds = endTime ? Math.floor((endTime - startTime) / 1000) : 0;
-    
-    return {
-        distanceKm: totalDistanceMeters / 1000,
-        ascentMeters: Math.round(totalAscentMeters),
-        durationMinutes: Math.floor(totalDurationSeconds / 60)
-    };
+    return 'N/A';
 }
 
 
@@ -802,6 +693,10 @@ async function generaPianoAI() {
     }
 
     renderExternalPlan(rawText); 
+    
+    // --- MODIFICA 1: NASCONDI PIANO LOCALE ---
+    document.getElementById("planView").style.display = 'none'; 
+    document.getElementById("aiPlanCard").style.display = 'block';
 
   } catch (err) {
     console.error("Errore Generazione AI:", err);
@@ -823,26 +718,130 @@ async function generaPianoAI() {
   }
 }
 
-// --- LOGICA DI AVVIO E GESTIONE PULSANTI ---
+// --- MODIFICA 2: Aggiornata per gestire l'esportazione specifica ---
+function esportaInPDF(elementId) {
+    const { jsPDF } = window.jspdf;
+    const container = document.getElementById(elementId); 
+    
+    if (!container || container.children.length === 0 || container.textContent.includes("Nessun piano")) {
+        alert("Genera prima un piano di allenamento da esportare.");
+        return;
+    }
+
+    let elementsToCapture = [];
+    
+    if (elementId === 'planView') {
+        // Per il piano locale, esporta tutto il contenitore (comportamento precedente)
+        elementsToCapture = [container];
+    } else if (elementId === 'piano-generato') {
+        // Per il piano AI, cattura SOLO le settimane con pannello espanso
+        const weeks = container.querySelectorAll('.week');
+        weeks.forEach(week => {
+            const accordion = week.querySelector('.accordion');
+            const panel = week.querySelector('.days.panel');
+            
+            // Cattura solo se l'accordion è attivo (cioè il pannello è aperto)
+            if (accordion && accordion.classList.contains('active') && panel && panel.style.display === 'block') {
+                elementsToCapture.push(week);
+            }
+        });
+
+        if (elementsToCapture.length === 0) {
+             alert("Apri almeno una settimana del piano AI per esportare i dettagli giornalieri.");
+             return;
+        }
+    } 
+
+    const pdf = new jsPDF('p', 'mm', 'a4'); 
+    let position = 0;
+    const pdfWidth = 210; 
+    const pdfHeight = 297; 
+    
+    // Funzione helper per aggiungere un'immagine al PDF con gestione multi-pagina
+    function addImageToPdf(imgData, canvasWidth, canvasHeight) {
+        const imgHeight = canvasWidth > 0 ? (canvasHeight * pdfWidth / canvasWidth) : pdfHeight;
+        
+        if (position + imgHeight > pdfHeight && position !== 0) {
+            pdf.addPage();
+            position = 0;
+        }
+
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+        position += imgHeight;
+    }
+
+    // Processa gli elementi da catturare in sequenza
+    const capturePromises = elementsToCapture.map(element => {
+        return new Promise(resolve => {
+            html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true 
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/jpeg', 0.8);
+                resolve({ imgData, canvasWidth: canvas.width, canvasHeight: canvas.height });
+            }).catch(error => {
+                console.error("Errore nella cattura con html2canvas:", error);
+                resolve(null);
+            });
+        });
+    });
+
+    Promise.all(capturePromises).then(results => {
+        results.forEach(result => {
+            if (result && result.imgData) {
+                addImageToPdf(result.imgData, result.canvasWidth, result.canvasHeight);
+            }
+        });
+        
+        pdf.save(`TrailCoach_Piano_${elementId === 'planView' ? 'Locale' : 'AI_Dettaglio'}.pdf`);
+    });
+}
+
+
+// --- FUNZIONI DI GESTIONE UI (Accordion) ---
+function attachAccordionListeners(containerId) {
+    document.querySelectorAll(`#${containerId} .accordion`).forEach((btn) => {
+        const panel = btn.nextElementSibling;
+        btn.addEventListener("click", function() {
+            this.classList.toggle("active");
+            const isVisible = panel.style.display === "block";
+            panel.style.display = isVisible ? "none" : "block"; 
+        });
+    });
+}
+function attachDayDetailListeners() {
+    document.querySelectorAll(".day-header").forEach(header => {
+        header.addEventListener("click", () => {
+            const panelId = header.getAttribute("data-toggle-panel");
+            const panel = document.getElementById(panelId);
+            if (panel) {
+                panel.style.display = panel.style.display === "block" ? "none" : "block";
+            }
+        });
+    });
+}
+
+// --- LOGICA DI AVVIO ---
 document.getElementById("genLocal").onclick = generaPiano;
 document.getElementById("genAI").addEventListener("click", generaPianoAI);
-// 🎯 FIX: Assegna la funzione di reset al pulsante
 document.getElementById("resetData").onclick = resetApplicationData; 
 
 document.addEventListener('DOMContentLoaded', () => {
     loadState();
     
+    // Logica per decidere cosa mostrare all'avvio
     if(STATE.planDataAI){
-        document.getElementById("planView").style.display = 'block';
-        document.getElementById("aiPlanCard").style.display = 'block';
-        // Ricarica la vista AI dal dato salvato
+        document.getElementById("planView").style.display = 'none'; // Nasconde il locale
+        document.getElementById("aiPlanCard").style.display = 'block'; // Mostra l'AI
         renderExternalPlan(JSON.stringify(STATE.planDataAI)); 
     }
     else if(STATE.planData){ 
-        document.getElementById("planView").style.display = 'block';
-        document.getElementById("aiPlanCard").style.display = 'none';
+        document.getElementById("planView").style.display = 'block'; // Mostra il locale
+        document.getElementById("aiPlanCard").style.display = 'none'; // Nasconde l'AI
         renderPiano();
     }
+    // Se non ci sono dati, planView sarà mostrato (default) e aiPlanCard nascosto (default)
 });
 </script>
 
