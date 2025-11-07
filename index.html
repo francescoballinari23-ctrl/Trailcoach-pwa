@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v20.2 (PDF & Target Time)</title>
+<title>🏔️ TrailCoach AI v20.3 (PDF & Target Time)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -79,7 +79,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v20.2</h1>
+<h1>🏔️ TrailCoach AI v20.3</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -576,6 +576,68 @@ function calculatePace(km, durationMin) {
     return 'N/A';
 }
 
+function parseGPX(xmlString) {
+    try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+        
+        // Semplice tentativo di estrarre metriche comuni GPX
+        const trkpts = xmlDoc.querySelectorAll("trkpt");
+        if (trkpts.length < 2) return null;
+
+        let distanceKm = 0;
+        let ascentMeters = 0;
+        let prevLat = null, prevLon = null, prevEle = null;
+        let startTime = null;
+        let endTime = null;
+
+        trkpts.forEach(pt => {
+            const lat = parseFloat(pt.getAttribute("lat"));
+            const lon = parseFloat(pt.getAttribute("lon"));
+            const eleEl = pt.querySelector("ele");
+            const ele = eleEl ? parseFloat(eleEl.textContent) : null;
+            const timeEl = pt.querySelector("time");
+            const time = timeEl ? new Date(timeEl.textContent) : null;
+
+            if (time && !startTime) startTime = time;
+            if (time) endTime = time;
+
+            if (prevLat !== null && prevLon !== null) {
+                // Calcola distanza (Formula Haversine - approssimativa)
+                const R = 6371; // Raggio terrestre in km
+                const dLat = (lat - prevLat) * Math.PI / 180;
+                const dLon = (lon - prevLon) * Math.PI / 180;
+                const a = 
+                    Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(prevLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                distanceKm += R * c; 
+
+                // Calcola dislivello (solo positivo)
+                if (ele !== null && prevEle !== null && ele > prevEle) {
+                    ascentMeters += (ele - prevEle);
+                }
+            }
+            prevLat = lat;
+            prevLon = lon;
+            prevEle = ele;
+        });
+
+        const durationMs = endTime && startTime ? endTime.getTime() - startTime.getTime() : 0;
+        const durationMinutes = Math.round(durationMs / 60000);
+
+        return {
+            distanceKm: distanceKm,
+            ascentMeters: Math.round(ascentMeters),
+            durationMinutes: durationMinutes
+        };
+
+    } catch (e) {
+        console.error("Errore nel parsing GPX:", e);
+        return null;
+    }
+}
+
 
 function uploadGPX(planType, weekIdx, runIdx) {
     const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
@@ -589,15 +651,22 @@ function uploadGPX(planType, weekIdx, runIdx) {
     }
 
     const input = document.getElementById("hiddenFileInput");
+    // **FIX 1: Rimuovi l'handler precedente per evitare doppi eventi**
     input.onchange = null; 
+    // **FIX 2: Pulisci il valore per forzare l'evento 'change' anche con lo stesso file**
+    input.value = ''; 
 
     input.onchange = (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+             input.value = ''; // Pulisci anche in caso di annullamento
+             return;
+        }
 
         const reader = new FileReader();
         reader.onload = function(event) {
             const xmlString = event.target.result;
+            // **FIX 3: Ora chiama la funzione parseGPX, che è stata aggiunta**
             const gpxData = parseGPX(xmlString);
 
             if (!gpxData) {
@@ -606,7 +675,7 @@ function uploadGPX(planType, weekIdx, runIdx) {
                 return;
             }
             
-            // Requisiti
+            // Requisiti (logica di verifica mantenuta)
             const requiredKm = planType === 'local' ? run.details.distance : run.km;
             const requiredAscent = planType === 'local' ? run.details.ascent : (run.asc || 0); 
             const requiredDurationMinutes = planType === 'local' ? run.details.durationMin : (run.durationMin || 60); 
@@ -648,8 +717,7 @@ function uploadGPX(planType, weekIdx, runIdx) {
 
     input.click();
 }
-
-
+  
 async function generaPianoAI() {
   const container = document.getElementById("piano-generato");
   container.innerHTML = "<p>⏳ Generazione piano AI in corso…</p>";
