@@ -1,4 +1,4 @@
-mi<!doctype html>
+<!doctype html>
 <html lang="it">
 <head>
 <meta charset="utf-8" />
@@ -345,6 +345,7 @@ function generaPiano(){
   saveState(); 
   document.getElementById("settingsCard").style.display="none";
   document.getElementById("aiPlanCard").style.display = 'none';
+  document.getElementById("planCard").style.display = 'block';
   document.getElementById("planView").style.display = 'block';
   renderPiano();
 }
@@ -438,6 +439,7 @@ function renderExternalPlan(jsonString) {
     let cleanText = jsonString;
     card.style.display = 'block';
     document.getElementById("planView").style.display = 'none';
+    document.getElementById("planCard").style.display = 'none';
 
     try {
         const match = jsonString.match(/```json([\s\S]*?)```/);
@@ -763,7 +765,8 @@ async function generaPianoAI() {
     renderExternalPlan(rawText); 
     
     // --- MODIFICA 1: NASCONDI PIANO LOCALE ---
-    document.getElementById("planView").style.display = 'none'; 
+    document.getElementById("planView").style.display = 'none';
+    document.getElementById("PlanCard").style.display = 'none';
     document.getElementById("aiPlanCard").style.display = 'block';
 
   } catch (err) {
