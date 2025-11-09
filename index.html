@@ -764,6 +764,11 @@ async function generaPianoAI() {
 
     renderExternalPlan(rawText); 
     
+    const plandCard =
+    document.getSlementById("PlandCard");
+    if (plandcard) {
+      plandCard.style.display ='none';
+      }
     // --- MODIFICA 1: NASCONDI PIANO LOCALE ---
     document.getElementById("planView").style.display = 'none';
     document.getElementById("PlandCard").style.display = 'none';
@@ -911,6 +916,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById("planView").style.display = 'block'; // Mostra il locale
         document.getElementById("aiPlanCard").style.display = 'none'; // Nasconde l'AI
         renderPiano();
+    }
+    const plandCard =
+    document.getElentById("Plandcard");
+    if STATE.plandData && plandCard) {
+    plandCard.style.display = 'none';
     }
     // Se non ci sono dati, planView sarà mostrato (default) e aiPlanCard nascosto (default)
 });
