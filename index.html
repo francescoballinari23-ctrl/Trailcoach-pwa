@@ -906,23 +906,23 @@ document.getElementById("resetData").onclick = resetApplicationData;
 document.addEventListener('DOMContentLoaded', () => {
     loadState();
     
-    // Logica per decidere cosa mostrare all'avvio
+    const plandCard = document.getElementById("PlandCard"); // Ottieni il riferimento una sola volta
+    
     if(STATE.planDataAI){
-        document.getElementById("planView").style.display = 'none'; // Nasconde il locale
-        document.getElementById("aiPlanCard").style.display = 'block'; // Mostra l'AI
+        document.getElementById("planView").style.display = 'none';
+        document.getElementById("aiPlanCard").style.display = 'block';
         renderExternalPlan(JSON.stringify(STATE.planDataAI)); 
     }
     else if(STATE.planData){ 
-        document.getElementById("planView").style.display = 'block'; // Mostra il locale
-        document.getElementById("aiPlanCard").style.display = 'none'; // Nasconde l'AI
+        document.getElementById("planView").style.display = 'block';
+        document.getElementById("aiPlanCard").style.display = 'none';
         renderPiano();
     }
-    const plandCard =
-    document.getElentById("Plandcard");
-    if STATE.plandData && plandCard) {
-    plandCard.style.display = 'none';
+    
+    // CORREZIONE CRUCIALE: Assicurati che PlandCard sia nascosto se c'è un piano AI
+    if (STATE.planDataAI && plandCard) {
+        plandCard.style.display = 'none';
     }
-    // Se non ci sono dati, planView sarà mostrato (default) e aiPlanCard nascosto (default)
 });
 </script>
 
