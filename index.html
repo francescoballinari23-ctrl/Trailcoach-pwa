@@ -680,12 +680,12 @@ function uploadGPX(planType, weekIdx, runIdx) {
             const requiredAscent = planType === 'local' ? run.details.ascent : (run.asc || 0); 
             const requiredDurationMinutes = planType === 'local' ? run.details.durationMin : (run.durationMin || 60); 
             
-            // Criteri di corrispondenza
-            const distMatch = gpxData.distanceKm >= requiredKm * 0.8 && gpxData.distanceKm <= requiredKm * 1.2; 
-            const ascMatch = gpxData.ascentMeters >= requiredAscent * 0.6 && gpxData.ascentMeters <= requiredAscent * 1.5; 
-            const durMatch = gpxData.durationMinutes >= requiredDurationMinutes * 0.5 && gpxData.durationMinutes <= requiredDurationMinutes * 1.5; 
+            // Criteri di corrispondenza per ora in pausa
+            // const distMatch = gpxData.distanceKm >= requiredKm * 0.8 && gpxData.distanceKm <= requiredKm * 1.2; 
+            // const ascMatch = gpxData.ascentMeters >= requiredAscent * 0.6 && gpxData.ascentMeters <= requiredAscent * 1.5; 
+            // const durMatch = gpxData.durationMinutes >= requiredDurationMinutes * 0.5 && gpxData.durationMinutes <= requiredDurationMinutes * 1.5; 
 
-            const isCompleted = distMatch && ascMatch && durMatch;
+            const isCompleted = true //distMatch && ascMatch && durMatch;
             
             // Aggiorna lo stato
             if (planType === 'local') {
