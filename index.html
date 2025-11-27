@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v20.6 (PDF & Target Time)</title>
+<title>🏔️ TrailCoach AI v20.7 (PDF & Target Time)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -78,12 +78,20 @@
   font-size:13px; margin-top: 6px; border: none;
   }
   .gpx-upload-btn:hover { background: #2f9a4b; }
+  
+  /* STILI PER IL MODAL DI MODIFICA */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6); display: none; z-index: 1000;
+    justify-content: center; align-items: center;
+  }
+  .modal-content {
+    width: 90%; max-width: 400px; padding: 20px;
+  }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v20.6</h1>
+<h1>🏔️ TrailCoach AI v20.7</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -152,10 +160,36 @@
 
 <input id="hiddenFileInput" type="file" accept=".gpx" style="display:none" />
 
+<div id="editModal" class="modal-overlay">
+  <div class="modal-content card">
+    <h3>Modifica Allenamento</h3>
+    <div id="modalForm">
+        </div>
+    <div style="margin-top: 15px; text-align: right;">
+        <button onclick="closeEditDialog()" style="background:#8e8e93;">Annulla</button>
+        <button id="saveEditBtn" style="background:#34c759; margin-left: 8px;">Salva Modifiche</button>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const STORAGE_KEY="trailcoach_v17";
 let STATE={settings:{},planData:null, planDataAI:null};
 const GIORNI=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+
+// NUOVA COSTANTE PER I TIPI DI CORSA
+const CORSA_TYPES = [
+    "Corsa Lenta",
+    "Corsa Facile",
+    "Lungo Lento",
+    "Corsa in Collina",
+    "Ripetute Veloci",
+    "Fartlek",
+    "Progressivo",
+    "Interval Training",
+    "Tempo Run"
+];
 
 // --- FUNZIONI DI STATO E UTILITY PER LA DATA ---
 function paceByLevel(l){return l==="principiante"?6.2:l==="intermedio"?5.8:5.4;}
@@ -446,41 +480,125 @@ function calculatePace(km, durationMin) {
     return 'N/A';
 }
 
-// --- FUNZIONE AGGIUNTA: Gestione Modifica Dettagli AI/Locale ---
-function editAIActivity(planType, weekIdx, runIdx) {
-    const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
-    const activity = plan[weekIdx].allenamenti[runIdx];
+// NUOVA FUNZIONE PER CHIUDERE IL DIALOG
+function closeEditDialog() {
+    document.getElementById("editModal").style.display = 'none';
+}
 
-    // Seleziona le proprietà corrette in base al tipo di piano
+// NUOVA FUNZIONE PER MOSTRARE IL DIALOG DI MODIFICA
+function showEditDialog(planType, weekIdx, runIdx, activity) {
+    const currentType = planType === 'local' ? activity.type : activity.tipo;
     const currentDetails = planType === 'local' ? activity.details.detailText : activity.dettagli;
     const currentKm = planType === 'local' ? activity.details.distance : activity.km;
-    const currentAsc = planType === 'local' ? activity.details.ascent : (activity.asc || 0);
-    const currentDuration = planType === 'local' ? activity.details.durationMin : (activity.durationMin || 60);
+    const currentAsc = planType === 'local' ? (activity.details.ascent || 0) : (activity.asc || 0);
+    const currentDuration = planType === 'local' ? (activity.details.durationMin || 60) : (activity.durationMin || 60);
 
-    const newDetails = prompt(`Modifica i dettagli dell'attività (es. Ritmo, Ripetute):`, currentDetails);
-    if (newDetails === null) return; // Annullato
+    const form = document.getElementById("modalForm");
+    let formHtml = '';
+    
+    // Se è riposo, mostra solo il messaggio
+    if (currentType === "Riposo") {
+        form.innerHTML = `<p>💤 Riposo - Questa attività non è modificabile nel tipo. Puoi solo cambiare la durata se necessario.</p>
+            <label for="editDuration">Durata (minuti)</label>
+            <input id="editDuration" type="number" value="0" readonly/>
+        `;
+        document.getElementById("editModal").style.display = 'flex';
+        document.getElementById("saveEditBtn").onclick = closeEditDialog;
+        return;
+    }
+    
+    // 1. Dropdown per il tipo di allenamento
+    let optionsHtml = CORSA_TYPES.map(t => 
+        `<option value="${t}" ${currentType === t ? 'selected' : ''}>${t}</option>`
+    ).join('');
+    // Aggiungi sempre l'opzione Palestra
+    optionsHtml += `<option value="Palestra" ${currentType.includes("Palestra") ? 'selected' : ''}>🏋️ Palestra</option>`;
+    
+    formHtml += `
+        <label for="editType">Tipo Allenamento</label>
+        <select id="editType">${optionsHtml}</select>
+    `;
 
-    let newKm = prompt(`Modifica i chilometri (km):`, currentKm);
-    if (newKm === null) return;
-    newKm = parseFloat(newKm);
+    // 2. Dettagli (testo libero)
+    formHtml += `
+        <label for="editDetails">Dettagli</label>
+        <input id="editDetails" type="text" value="${currentDetails}" />
+    `;
+    
+    // 3. Campi KM, ASC, DURATA
+    formHtml += `
+        <div id="runFields" style="display: block;">
+            <label for="editKm">Chilometri (km)</label>
+            <input id="editKm" type="number" step="0.1" value="${currentKm}" />
+            
+            <label for="editAsc">Dislivello (m)</label>
+            <input id="editAsc" type="number" value="${currentAsc}" />
+        </div>
+        
+        <label for="editDuration">Durata (minuti)</label>
+        <input id="editDuration" type="number" value="${currentDuration}" />
+    `;
 
-    let newAsc = prompt(`Modifica il dislivello positivo (m):`, currentAsc);
-    if (newAsc === null) return;
-    newAsc = parseInt(newAsc);
+    form.innerHTML = formHtml;
+    document.getElementById("editModal").style.display = 'flex';
+    
+    // Assegna l'handler di salvataggio
+    document.getElementById("saveEditBtn").onclick = () => saveEditedActivity(planType, weekIdx, runIdx);
+    
+    // Listener per abilitare/disabilitare i campi in base alla selezione del tipo
+    document.getElementById("editType").onchange = function() {
+        const runFields = document.getElementById("runFields");
+        const isPalestra = this.value.includes("Palestra");
 
-    let newDuration = prompt(`Modifica la durata (minuti):`, currentDuration);
-    if (newDuration === null) return;
-    newDuration = parseInt(newDuration);
+        if (isPalestra) {
+            runFields.style.display = 'none';
+        } else {
+            runFields.style.display = 'block';
+        }
+    };
+    // Eseguilo una volta all'apertura per gestire lo stato iniziale
+    document.getElementById("editType").dispatchEvent(new Event('change'));
+}
 
+// NUOVA FUNZIONE PER SALVARE I DATI DAL MODAL
+function saveEditedActivity(planType, weekIdx, runIdx) {
+    const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
+    const activity = plan[weekIdx].allenamenti[runIdx];
+    
+    // Controllo per riposo
+    if ((planType === 'local' ? activity.type : activity.tipo) === "Riposo") {
+        closeEditDialog();
+        return;
+    }
+
+    // Recupero i nuovi valori dal modal
+    const newType = document.getElementById("editType").value;
+    const newDetails = document.getElementById("editDetails").value;
+    let newKm = parseFloat(document.getElementById("editKm").value);
+    let newAsc = parseInt(document.getElementById("editAsc").value);
+    let newDuration = parseInt(document.getElementById("editDuration").value);
+
+    // Gestione campi per Palestra
+    if (newType.includes("Palestra")) {
+        newKm = 0;
+        newAsc = 0;
+        if (isNaN(newDuration) || newDuration < 1) newDuration = 60;
+    } else {
+        if (isNaN(newKm) || newKm < 0) newKm = 0;
+        if (isNaN(newAsc) || newAsc < 0) newAsc = 0;
+        if (isNaN(newDuration) || newDuration < 1) newDuration = 60;
+    }
+    
     // Aggiornamento dello Stato
     if (planType === 'local') {
+        activity.type = newType; 
+        activity.summary = newType.includes("Palestra") ? "🏋️ Palestra" : `🏃 ${newType} — ${newKm.toFixed(1)} km`; 
         activity.details.detailText = newDetails;
         activity.details.distance = newKm;
         activity.details.ascent = newAsc;
         activity.details.durationMin = newDuration;
-        // Aggiorna anche il riassunto principale
-        activity.summary = `🏃 ${activity.type} — ${newKm.toFixed(1)} km`;
     } else { // Piano AI
+        activity.tipo = newType; 
         activity.dettagli = newDetails;
         activity.km = newKm;
         activity.asc = newAsc;
@@ -488,17 +606,27 @@ function editAIActivity(planType, weekIdx, runIdx) {
     }
 
     saveState();
+    closeEditDialog();
 
     // Rirenderizza la vista
     if (planType === 'local') {
         renderPiano();
     } else {
-        // Chiama il re-rendering del piano AI (passando il piano aggiornato in forma di stringa)
         renderExternalPlan(JSON.stringify(STATE.planDataAI));
     }
     alert("Dettagli dell'allenamento aggiornati localmente!");
 }
-// --- FINE FUNZIONE AGGIUNTA ---
+
+
+// --- MODIFICA FUNZIONE editAIActivity: ora chiama il nuovo modal ---
+function editAIActivity(planType, weekIdx, runIdx) {
+    const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
+    const activity = plan[weekIdx].allenamenti[runIdx];
+    
+    // Passa i dati al nuovo dialog
+    showEditDialog(planType, weekIdx, runIdx, activity);
+}
+
 
 function renderExternalPlan(jsonString) {
     const container = document.getElementById("piano-generato");
@@ -523,7 +651,7 @@ function renderExternalPlan(jsonString) {
         cleanText = cleanText
             .replace(/\\n/g, "").replace(/\n/g, "").replace(/\r/g, "").trim();
         
-        // CORREZIONE: Pulizia per robustezza del parsing JSON (AGGIUNTO)
+        // CORREZIONE: Pulizia per robustezza del parsing JSON
         cleanText = cleanText.replace(/^[^{]*/, '').replace(/[^}]+$/, '}');
         
         cleanText = cleanText.replace(/\\"/g, '"');
@@ -979,7 +1107,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(STATE.planDataAI){
         document.getElementById("planView").style.display = 'none';
         document.getElementById("aiPlanCard").style.display = 'block';
-        // Ho dovuto rinserire la funzione nella sua interezza prima di questo punto
         renderExternalPlan(JSON.stringify(STATE.planDataAI)); 
     }
     else if(STATE.planData){ 
