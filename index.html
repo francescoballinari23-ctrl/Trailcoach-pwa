@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v20.5 (PDF & Target Time)</title>
+<title>🏔️ TrailCoach AI v20.6 (PDF & Target Time)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -12,12 +12,10 @@
   }
   h1 { text-align:center; font-size:22px; margin:6px 0; }
   .card {
-    background:#fff; border-radius:10px;
-    padding:12px; margin:10px 0;
+    background:#fff; border-radius:10px; padding:12px; margin:10px 0;
     box-shadow:0 1px 6px rgba(0,0,0,.06);
   }
-  label { display:block; margin:8px 0 6px; font-weight:600;
-  }
+  label { display:block; margin:8px 0 6px; font-weight:600; }
   input, select {
     width:100%; padding:8px; border:1px solid #ddd; border-radius:8px;
     font-size:15px; box-sizing:border-box;
@@ -28,15 +26,13 @@
   }
   button:hover { background:#005fd6; }
   button.reset { background:#ff3b30; margin-left:6px; }
-  .btn-action { margin-top: 10px; width: 100%;
-  box-sizing: border-box; }
+  .btn-action { margin-top: 10px; width: 100%; box-sizing: border-box; }
   
   .week { 
     background:#f7f9ff; border-radius:10px; margin:8px 0;
   }
   .days { margin-top:6px; padding: 0 10px 10px 10px; } 
-  .day { padding:6px 0; border-bottom:1px solid #eee;
-  }
+  .day { padding:6px 0; border-bottom:1px solid #eee; }
   .day:last-child { border-bottom: none; }
   
   .chk-btn {
@@ -45,11 +41,9 @@
   border:1px solid transparent; font-weight:700;
   }
   .chk-btn.active { background:#007aff; color:#fff; border-color:#0060d6; }
-  .checkbox-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px;
-  }
+  .checkbox-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px; }
   .checkbox-grid-bottom { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
-  .muted { color:#666; font-size:13px;
-  }
+  .muted { color:#666; font-size:13px; }
 
   /* Stili per l'Accordion Settimanale */
   .accordion {
@@ -58,8 +52,7 @@
     transition: background-color 0.2s ease; border-radius: 10px 10px 0 0;
   margin-top: 0; margin-bottom: 0; font-size: 16px; font-weight: 600;
   }
-  .accordion.active, .accordion:hover { background-color: #357ca0;
-  }
+  .accordion.active, .accordion:hover { background-color: #357ca0; }
   .days.panel {
     background-color: #fcfcfc; overflow: hidden; padding-top: 10px;
     border-radius: 0 0 10px 10px;
@@ -72,28 +65,25 @@
   justify-content: space-between; align-items: center;
     cursor: pointer; padding: 4px 0;
   }
-  .day-status { font-size: 18px; margin-right: 8px;
-  }
+  .day-status { font-size: 18px; margin-right: 8px; }
   .day-details-panel {
     background: #fff; border-radius: 8px; padding: 8px 10px; 
     margin: 6px 0;
   border: 1px solid #eee; display: none;
   }
-  .gpx-data { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;
-  }
+  .gpx-data { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; }
   .gpx-data p { margin: 4px 0; }
   .gpx-upload-btn {
     background:#34c759; color:#fff; padding:6px 10px; border-radius:6px;
   font-size:13px; margin-top: 6px; border: none;
   }
-  .gpx-upload-btn:hover { background: #2f9a4b;
-  }
+  .gpx-upload-btn:hover { background: #2f9a4b; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v20.5</h1>
+<h1>🏔️ TrailCoach AI v20.6</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -123,8 +113,7 @@
   <input id="settimane" type="number" value="12" 
   min="1" max="52" />
 
-  <label>Allenamenti corsa totali a settimana (es.
-  4.5)</label>
+  <label>Allenamenti corsa totali a settimana (es. 4.5)</label>
   <input id="allenTot" type="number" step="0.5" value="2" min="2" max="7" />
 
   <label>Giorni palestra</label>
@@ -149,8 +138,7 @@
 
 <div class="card" id="PlandCard">
   <label>Piano settimanale (Locale)</label>
-  <div 
-  id="planView" class="muted">Nessun piano ancora generato.</div>
+  <div id="planView" class="muted">Nessun piano ancora generato.</div>
   
   <button onclick="esportaInPDF('planView')" class="btn-action" style="background:#ef802e;">📄 Esporta Piano Locale in PDF</button>
 </div>
@@ -204,9 +192,7 @@ function loadState(){
             document.getElementById("obbKm").value = STATE.settings.obbKm || 42;
             document.getElementById("obbAsc").value = STATE.settings.obbAsc || 2000;
             document.getElementById("dataGara").value = STATE.settings.dataGara || '';
-            // 🎯 RECUPERA NUOVO CAMPO
-            document.getElementById("tempoObiettivo").value = STATE.settings.tempoObiettivo ||
-            6;
+            document.getElementById("tempoObiettivo").value = STATE.settings.tempoObiettivo || 6;
             document.getElementById("settimane").value = STATE.settings.settimane || 12;
             document.getElementById("allenTot").value = STATE.settings.allenTot || 4.5;
             document.querySelectorAll(".chk-btn").forEach(btn => {
@@ -285,7 +271,6 @@ function generaPiano(){
   const giorniPalestra=[...document.querySelectorAll(".chk-btn.active")].map(b=>b.dataset.day);
   const dataGara=document.getElementById("dataGara").value; 
   const tempoObiettivo=+document.getElementById("tempoObiettivo").value;
-  // Recupero nuovo campo
     
   if(obbKm<=0||obbAsc<=0||!dataGara){alert("Inserisci valori validi e la data della gara!");return;}
 
@@ -293,26 +278,19 @@ function generaPiano(){
   const plan=[]; 
   // Progressioni [0.6, 0.75, 0.9, 1.05, 1.0...]
   const baseVolumeCoeff = 0.6;
-  // Inizia dal 60% dell'obiettivo finale
 
   for(let w=1;w<=settimane;w++){
     const weekStartDate = addDays(startDate, (w - 1) * 7);
-    // Logica di progressione volume (3 settimane carico, 1 scarico)
     const w_mod = (w - 1) % 4;
-    // 0, 1, 2 (carico), 3 (scarico)
     const w_cycle = Math.floor((w - 1) / 4);
-    // Ciclo corrente (0, 1, 2...)
     
     let cycleCoeff = baseVolumeCoeff + (w_cycle * 0.15);
-    // Aumento del 15% per ciclo
     cycleCoeff = Math.min(cycleCoeff, 1.0);
-    // Limita all'obiettivo massimo
     
-    // Applicazione della progressione settimanale all'interno del ciclo
     let weeklyCoeff = cycleCoeff;
-    if (w_mod === 1) { // Settimana 2 di carico (+10%)
+    if (w_mod === 1) { 
         weeklyCoeff *= 1.10;
-    } else if (w_mod === 2) { // Settimana 3 di carico (+20%)
+    } else if (w_mod === 2) { 
         weeklyCoeff *= 1.20;
     }
 
@@ -322,7 +300,6 @@ function generaPiano(){
     
     const baseKm = obbKm * finalCoeff;
     const baseAsc = obbAsc * finalCoeff;
-    // Fine logica progressione
 
     const {runDays,extraRunDay}=selectRunDays(allenTot,giorniPalestra,w-1);
     const runsCount=runDays.length;
@@ -357,8 +334,8 @@ function generaPiano(){
   }
 
   const descrizione_generale = `Piano generato localmente per ${livello} su ${settimane} settimane, che termina il ${formatDate(raceDate)}.
-  Obiettivo: ${obbKm} km con ${obbAsc} m D+, Tempo Target: ${tempoObiettivo}h, con ${allenTot} allenamenti a settimana.
-  Giorni di palestra: ${giorniPalestra.join(', ') || 'Nessuno'}.`;
+Obiettivo: ${obbKm} km con ${obbAsc} m D+, Tempo Target: ${tempoObiettivo}h, con ${allenTot} allenamenti a settimana.
+Giorni di palestra: ${giorniPalestra.join(', ') || 'Nessuno'}.`;
 
   STATE={settings:{livello,obbKm,obbAsc,settimane,allenTot,giorniPalestra,dataGara,tempoObiettivo,descrizione_generale},planData:plan, planDataAI: null}; 
   saveState(); 
@@ -374,8 +351,7 @@ function renderPiano(){
   const c=document.getElementById("planView");
   if(!STATE.planData?.length){c.textContent="Nessun piano ancora generato.";return;}
   
-  const descrizione_generale = STATE.settings.descrizione_generale ||
-  "Nessuna descrizione.";
+  const descrizione_generale = STATE.settings.descrizione_generale || "Nessuna descrizione.";
   let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${descrizione_generale}</div></div>`;
   const planData = STATE.planData;
   planData.forEach((w, wIdx) => {
@@ -386,40 +362,36 @@ function renderPiano(){
         <div class="week">
             <div class="accordion">📅 Settimana ${w.settimana} (dal ${weekDisplayDate}) — ${w.focus || w.summary} (${totalKm} km)</div>
             <div class="days panel">
-                ${w.allenamenti.map((a, aIdx) 
-  => {
+                ${w.allenamenti.map((a, aIdx) => {
                     const d = a.details;
                     const isRun = a.type !== "Riposo" && a.type !== "Palestra";
                     const statusIcon = d.completed ? '✅' : (a.type === "Riposo" ? '💤' : (a.type === "Palestra" ? '💪' : '⭕'));
-        
             
                     const kmStr = a.type === "Palestra" || a.type === "Riposo" ? a.summary : a.type + ' — ' + (d?.distance !== undefined ? d.distance + ' km' : 'N/A');
                     
                     
-        let detContent = `<div class="muted">Obiettivo: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>`;
-        if (a.type === "Palestra") detContent = `<div class="muted">Durata stimata: ${d.durationMin} min</div>`;
+                    let detContent = `<div class="muted">Obiettivo: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>`;
+                    if (a.type === "Palestra") detContent = `<div class="muted">Durata stimata: ${d.durationMin} min</div>`;
                     if (a.type === "Riposo") detContent = '';
-        let gpxSection = '';
+                    let gpxSection = '';
                     if (isRun) {
                         if (d.gpxData) {
                             gpxSection = `
                                 <div class="gpx-data">
-     
-                                <strong>Caricato (${d.completed ? 'Verificato ✅' : 'Non Verificato ❌'}):</strong>
+                                    <strong>Caricato (${d.completed ? 'Verificato ✅' : 'Non Verificato ❌'}):</strong>
                                     <p class="muted">Km: ${d.gpxData.distanceKm.toFixed(2)} • D+: ${d.gpxData.ascentMeters} m • Durata: ${d.gpxData.durationMinutes} min</p>
-               
-                         </div>
+                                </div>
                             `;
-         } else {
+                        } else {
                             gpxSection = `
                                 <button class="gpx-upload-btn" onclick="uploadGPX('local', ${wIdx}, ${aIdx})">
-                                
-        Carica GPX
+                                    Carica GPX
                                 </button>
                             `;
-         }
+                        }
                         
-                         gpxSection += `
+                        // AGGIUNTA Pulsante Modifica per le corse LOCALI
+                        gpxSection += `
                             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
                                 <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('local', ${wIdx}, ${aIdx})">
                                     ✏️ Modifica Dettagli
@@ -428,6 +400,7 @@ function renderPiano(){
                         `;
                     }
                     
+                    // AGGIUNTA Pulsante Modifica per la Palestra LOCALE
                     if (a.type === "Palestra") {
                         gpxSection = `
                             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
@@ -442,21 +415,17 @@ function renderPiano(){
                     return `
                         <div class="day">
                             <div class="day-header" data-toggle-panel="local-${wIdx}-${aIdx}">
-    
                                 <div><span class="day-status">${statusIcon}</span><strong>${a.day}</strong> — ${kmStr}</div>
-                                <div><span style="font-size:10px;">${d?.detailText ||
-        ''}</span></div>
+                                <div><span style="font-size:10px;">${d?.detailText || ''}</span></div>
                             </div>
                             <div class="day-details-panel" id="local-${wIdx}-${aIdx}">
-                                <em>${d?.detailText ||
-        a.summary}</em>
+                                <em>${d?.detailText || a.summary}</em>
                                 ${detContent}
                                 ${gpxSection}
                             </div>
-        
-                    </div>
+                        </div>
                     `;
-        }).join("")}
+                }).join("")}
             </div>
         </div>
     `;
@@ -477,193 +446,7 @@ function calculatePace(km, durationMin) {
     return 'N/A';
 }
 
-function renderExternalPlan(jsonString) {
-    const container = document.getElementById("piano-generato");
-    const card = document.getElementById("aiPlanCard");
-    container.innerHTML = "";
-    
-    let piano;
-    let cleanText = jsonString;
-    card.style.display = 'block';
-    document.getElementById("planView").style.display = 'none';
-    document.getElementById("PlandCard").style.display = 'none';
-
-    try {
-        const match = jsonString.match(/```json([\s\S]*?)```/);
-        if (match) {
-      
-          cleanText = match[1];
-        } else {
-            // Tentativo di pulizia per JSON non formattato
-            cleanText = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-        }
-        cleanText = cleanText
-            .replace(/\\n/g, "").replace(/\n/g, "").replace(/\r/g, "").trim();
-        
-        // <<< MODIFICA A: Migliorare la robustezza del parsing JSON >>>
-        cleanText = cleanText.replace(/^[^{]*/, '').replace(/[^}]+$/, '}');
-        
-        cleanText = cleanText.replace(/\\"/g, '"');
-        piano = JSON.parse(cleanText);
-    } catch (e) {
-        // GESTIONE ERRORE JSON - Mantiene la card AI visibile per il debug
-        container.innerHTML = `<p style="color:red;">❌ Errore nel formato JSON: ${e.message}</p><div style="background:#fff3f3; border:1px solid #ffaaaa; padding:10px; border-radius:8px; margin-top:10px; font-size:12px; white-space:pre-wrap; word-wrap:break-word;"><p><strong>Testo Ricevuto (tentativo di parsing):</strong></p>${jsonString.substring(0, 1000)} ${jsonString.length > 1000 ?
-        '...' : ''}</div>`;
-        return;
-    }
-
-    if (!piano.settimane || !Array.isArray(piano.settimane)) {
-        container.innerHTML = `<p style="color:red;">⚠️ Struttura JSON valida, ma manca la chiave "settimane" o non è un array.</p>`;
-        return;
-    }
-    
-    // LOGICA DI CALCOLO E AGGIUNTA DATE AL PIANO AI
-    const dataGara = document.getElementById("dataGara").value;
-    const settimane = piano.settimane.length;
-    
-    if (dataGara && settimane > 0) {
-        const { startDate } = calculatePlanDates(dataGara, settimane);
-        piano.settimane.forEach((w, index) => {
-            const weekStartDate = addDays(startDate, index * 7);
-            w.startDate = weekStartDate.toISOString().split('T')[0]; 
-            
-            w.allenamenti.forEach(a => {
-                   // Assicura che completed e gpxData esistano per il salvataggio dello stato
-        
-                   a.completed = a.completed || false;
-                   a.gpxData = a.gpxData || null;
-            });
-        });
-    }
-
-    const settings = { 
-        descrizione_generale: piano.descrizione_generale ||
-        'Piano generato tramite AI. Dettagli generati da LLM.',
-        ...STATE.settings,
-    };
-    STATE = {
-        settings: settings,
-        planData: null, 
-        planDataAI: piano 
-    };
-    saveState();
-
-    let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${piano.descrizione_generale || "Nessuna descrizione fornita."}</div></div>`;
-    piano.settimane.forEach((w, wIdx) => {
-        const totalKm = w.allenamenti ? w.allenamenti.reduce((sum, a) => sum + (a.km || 0), 0).toFixed(1) : 0;
-        const weekDisplayDate = w.startDate ? formatDate(w.startDate) : 'Data N/A';
-        
-        htmlOutput += `
-            <div class="week">
-                <div class="accordion">📅 Settimana ${w.numero} (dal ${weekDisplayDate}) — ${w.focus || "Nessun focus"} 
-        (${totalKm} km)</div>
-                <div class="days panel">
-                    ${w.allenamenti.map((a, aIdx) => {
-                        const isRun = a.tipo !== "Riposo" && a.tipo !== "Palestra";
-                        const 
-        statusIcon = a.completed ? '✅' : (a.tipo === "Riposo" ? '💤' : (a.tipo === "Palestra" ? '💪' : '⭕'));
-
-                        const giornoDisplay = a.giorno ? `${a.giorno} — ` : ''; 
-                        const kmDisplay = a.tipo === "Palestra" || a.tipo === "Riposo" ? a.tipo : (a.km !== undefined ? a.km + ' km' : 'N/A');
-  
-                        const titleDisplay = a.tipo === "Palestra" ?
-        '🏋️ Palestra' : a.tipo;
-                        
-                        let paceDisplay = '';
-                        if(isRun && a.km > 0 && a.durationMin > 0) {
-                            // Cerca il passo fornito dall'AI o calcolalo
-                            const paceText = a.pace ||
-        calculatePace(a.km, a.durationMin);
-                            paceDisplay = ` • Passo: ${paceText}`;
-                        }
-
-                        let detContent = `<div class="muted">Obiettivo: ${a.km} km • +${a.asc ||
-        0} m • ${a.durationMin || 'N/A'} min ${paceDisplay}</div>`;
-                        if (a.tipo === "Palestra") detContent = `<div class="muted">Durata stimata: ${a.durationMin ||
-        60} min</div>`;
-                        if (a.tipo === "Riposo") detContent = '';
-                        
-                        let gpxSection = '';
-        if (isRun) { // Solo per la corsa
-                            if (a.gpxData) {
-                                gpxSection = `
-                             
-                <div class="gpx-data">
-                                        <strong>Caricato (${a.completed ? 'Verificato ✅' : 'Non Verificato ❌'}):</strong>
-                                        <p class="muted">Km: ${a.gpxData.distanceKm.toFixed(2)} • 
-        D+: ${a.gpxData.ascentMeters} m • Durata: ${a.gpxData.durationMinutes} min</p>
-                                    </div>
-                                `;
-                            } else {
-                                gpxSection = `
-                                    <button class="gpx-upload-btn" onclick="uploadGPX('ai', ${wIdx}, ${aIdx})">
-                        
-                                    Carica GPX
-                                    </button>
-                                `;
-                            }
-                            
-                            // <<< MODIFICA B: Pulsante Modifica per le corse AI >>>
-                            gpxSection += `
-                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
-                                    <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('ai', ${wIdx}, ${aIdx})">
-                                        ✏️ Modifica Dettagli
-                                    </button>
-                                </div>
-                            `;
-                        }
-                        
-                        // <<< MODIFICA B: Pulsante Modifica per la Palestra AI >>>
-                        if (a.tipo === "Palestra") {
-                            gpxSection = `
-                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
-                                    <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('ai', ${wIdx}, ${aIdx})">
-                                        ✏️ Modifica Dettagli
-                                    </button>
-                                </div>
-                            `;
-                        }
-
-                        return `
-                        <div class="day">
-                          
-                            <div class="day-header" data-toggle-panel="ai-${wIdx}-${aIdx}">
-                                <div><span class="day-status">${statusIcon}</span><strong>${giornoDisplay}${titleDisplay}</strong> — ${kmDisplay}</div>
-                                <div><span style="font-size:10px;">${a.dettagli ||
-        ''}</span></div>
-                            </div>
-                            <div class="day-details-panel" id="ai-${wIdx}-${aIdx}">
-                                <em>${a.dettagli ||
-        'Nessun dettaglio'}</em>
-                                ${detContent}
-                                ${gpxSection}
-                            </div>
-       
-                        </div>
-                        `;
-                    }).join("")}
-                </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = htmlOutput;
-    attachAccordionListeners("piano-generato");
-    attachDayDetailListeners();
-}
-
-// --- NUOVA FUNZIONE PER CALCOLARE IL PASSO ---
-function calculatePace(km, durationMin) {
-    if (km > 0 && durationMin > 0) {
-        const paceMin = durationMin / km;
-        const minutes = Math.floor(paceMin);
-        const seconds = Math.round((paceMin - minutes) * 60);
-        return `${minutes}'${String(seconds).padStart(2, '0')}" /km`;
-    }
-    return 'N/A';
-}
-
-// --- NUOVA FUNZIONE PER MODIFICARE L'ALLENAMENTO AI/LOCALE (PUNTO B) ---
+// --- FUNZIONE AGGIUNTA: Gestione Modifica Dettagli AI/Locale ---
 function editAIActivity(planType, weekIdx, runIdx) {
     const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
     const activity = plan[weekIdx].allenamenti[runIdx];
@@ -671,8 +454,8 @@ function editAIActivity(planType, weekIdx, runIdx) {
     // Seleziona le proprietà corrette in base al tipo di piano
     const currentDetails = planType === 'local' ? activity.details.detailText : activity.dettagli;
     const currentKm = planType === 'local' ? activity.details.distance : activity.km;
-    const currentAsc = planType === 'local' ? activity.details.ascent : activity.asc;
-    const currentDuration = planType === 'local' ? activity.details.durationMin : activity.durationMin;
+    const currentAsc = planType === 'local' ? activity.details.ascent : (activity.asc || 0);
+    const currentDuration = planType === 'local' ? activity.details.durationMin : (activity.durationMin || 60);
 
     const newDetails = prompt(`Modifica i dettagli dell'attività (es. Ritmo, Ripetute):`, currentDetails);
     if (newDetails === null) return; // Annullato
@@ -715,7 +498,168 @@ function editAIActivity(planType, weekIdx, runIdx) {
     }
     alert("Dettagli dell'allenamento aggiornati localmente!");
 }
+// --- FINE FUNZIONE AGGIUNTA ---
 
+function renderExternalPlan(jsonString) {
+    const container = document.getElementById("piano-generato");
+    const card = document.getElementById("aiPlanCard");
+    container.innerHTML = "";
+    
+    let piano;
+    let cleanText = jsonString;
+    card.style.display = 'block';
+    document.getElementById("planView").style.display = 'none';
+    document.getElementById("PlandCard").style.display = 'none';
+
+    try {
+        const match = jsonString.match(/```json([\s\S]*?)```/);
+        if (match) {
+      
+            cleanText = match[1];
+        } else {
+            // Tentativo di pulizia per JSON non formattato
+            cleanText = jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
+        }
+        cleanText = cleanText
+            .replace(/\\n/g, "").replace(/\n/g, "").replace(/\r/g, "").trim();
+        
+        // CORREZIONE: Pulizia per robustezza del parsing JSON (AGGIUNTO)
+        cleanText = cleanText.replace(/^[^{]*/, '').replace(/[^}]+$/, '}');
+        
+        cleanText = cleanText.replace(/\\"/g, '"');
+        piano = JSON.parse(cleanText);
+    } catch (e) {
+        // GESTIONE ERRORE JSON - Mantiene la card AI visibile per il debug
+        container.innerHTML = `<p style="color:red;">❌ Errore nel formato JSON: ${e.message}</p><div style="background:#fff3f3; border:1px solid #ffaaaa; padding:10px; border-radius:8px; margin-top:10px; font-size:12px; white-space:pre-wrap; word-wrap:break-word;"><p><strong>Testo Ricevuto (tentativo di parsing):</strong></p>${jsonString.substring(0, 1000)} ${jsonString.length > 1000 ? '...' : ''}</div>`;
+        return;
+    }
+
+    if (!piano.settimane || !Array.isArray(piano.settimane)) {
+        container.innerHTML = `<p style="color:red;">⚠️ Struttura JSON valida, ma manca la chiave "settimane" o non è un array.</p>`;
+        return;
+    }
+    
+    // LOGICA DI CALCOLO E AGGIUNTA DATE AL PIANO AI
+    const dataGara = document.getElementById("dataGara").value;
+    const settimane = piano.settimane.length;
+    
+    if (dataGara && settimane > 0) {
+        const { startDate } = calculatePlanDates(dataGara, settimane);
+        piano.settimane.forEach((w, index) => {
+            const weekStartDate = addDays(startDate, index * 7);
+            w.startDate = weekStartDate.toISOString().split('T')[0]; 
+            
+            w.allenamenti.forEach(a => {
+                   // Assicura che completed e gpxData esistano per il salvataggio dello stato
+                   a.completed = a.completed || false;
+                   a.gpxData = a.gpxData || null;
+            });
+        });
+    }
+
+    const settings = { 
+        descrizione_generale: piano.descrizione_generale || 'Piano generato tramite AI. Dettagli generati da LLM.',
+        ...STATE.settings,
+    };
+    STATE = {
+        settings: settings,
+        planData: null, 
+        planDataAI: piano 
+    };
+    saveState();
+
+    let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${piano.descrizione_generale || "Nessuna descrizione fornita."}</div></div>`;
+    piano.settimane.forEach((w, wIdx) => {
+        const totalKm = w.allenamenti ? w.allenamenti.reduce((sum, a) => sum + (a.km || 0), 0).toFixed(1) : 0;
+        const weekDisplayDate = w.startDate ? formatDate(w.startDate) : 'Data N/A';
+        
+        htmlOutput += `
+            <div class="week">
+                <div class="accordion">📅 Settimana ${w.numero} (dal ${weekDisplayDate}) — ${w.focus || "Nessun focus"} (${totalKm} km)</div>
+                <div class="days panel">
+                    ${w.allenamenti.map((a, aIdx) => {
+                        const isRun = a.tipo !== "Riposo" && a.tipo !== "Palestra";
+                        const statusIcon = a.completed ? '✅' : (a.tipo === "Riposo" ? '💤' : (a.tipo === "Palestra" ? '💪' : '⭕'));
+
+                        const giornoDisplay = a.giorno ? `${a.giorno} — ` : ''; 
+                        const kmDisplay = a.tipo === "Palestra" || a.tipo === "Riposo" ? a.tipo : (a.km !== undefined ? a.km + ' km' : 'N/A');
+  
+                        const titleDisplay = a.tipo === "Palestra" ? '🏋️ Palestra' : a.tipo;
+                        
+                        let paceDisplay = '';
+                        // Correzione: Calcola il passo solo se è una corsa
+                        if(isRun && a.km > 0 && a.durationMin > 0) {
+                            const paceText = a.pace || calculatePace(a.km, a.durationMin);
+                            paceDisplay = ` • Passo: ${paceText}`;
+                        }
+
+                        let detContent = `<div class="muted">Obiettivo: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 'N/A'} min ${paceDisplay}</div>`;
+                        if (a.tipo === "Palestra") detContent = `<div class="muted">Durata stimata: ${a.durationMin || 60} min</div>`;
+                        if (a.tipo === "Riposo") detContent = '';
+                        
+                        let gpxSection = '';
+                        if (isRun) { // Solo per la corsa
+                            if (a.gpxData) {
+                                gpxSection = `
+                                    <div class="gpx-data">
+                                        <strong>Caricato (${a.completed ? 'Verificato ✅' : 'Non Verificato ❌'}):</strong>
+                                        <p class="muted">Km: ${a.gpxData.distanceKm.toFixed(2)} • D+: ${a.gpxData.ascentMeters} m • Durata: ${a.gpxData.durationMinutes} min</p>
+                                    </div>
+                                `;
+                            } else {
+                                gpxSection = `
+                                    <button class="gpx-upload-btn" onclick="uploadGPX('ai', ${wIdx}, ${aIdx})">
+                                        Carica GPX
+                                    </button>
+                                `;
+                            }
+                            
+                            // AGGIUNTA: Pulsante Modifica per le corse AI
+                            gpxSection += `
+                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
+                                    <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('ai', ${wIdx}, ${aIdx})">
+                                        ✏️ Modifica Dettagli
+                                    </button>
+                                </div>
+                            `;
+                        }
+                        
+                        // AGGIUNTA: Pulsante Modifica per la Palestra AI
+                        if (a.tipo === "Palestra") {
+                            gpxSection = `
+                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
+                                    <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('ai', ${wIdx}, ${aIdx})">
+                                        ✏️ Modifica Dettagli
+                                    </button>
+                                </div>
+                            `;
+                        }
+
+                        return `
+                        <div class="day">
+                          
+                            <div class="day-header" data-toggle-panel="ai-${wIdx}-${aIdx}">
+                                <div><span class="day-status">${statusIcon}</span><strong>${giornoDisplay}${titleDisplay}</strong> — ${kmDisplay}</div>
+                                <div><span style="font-size:10px;">${a.dettagli || ''}</span></div>
+                            </div>
+                            <div class="day-details-panel" id="ai-${wIdx}-${aIdx}">
+                                <em>${a.dettagli || 'Nessun dettaglio'}</em>
+                                ${detContent}
+                                ${gpxSection}
+                            </div>
+       
+                        </div>
+                        `;
+                    }).join("")}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = htmlOutput;
+    attachAccordionListeners("piano-generato");
+    attachDayDetailListeners();
+}
 
 function parseGPX(xmlString) {
     try {
@@ -726,8 +670,7 @@ function parseGPX(xmlString) {
         const trkpts = xmlDoc.querySelectorAll("trkpt");
         if (trkpts.length < 2) return null;
 
-        let distanceKm 
-        = 0;
+        let distanceKm = 0;
         let ascentMeters = 0;
         let prevLat = null, prevLon = null, prevEle = null;
         let startTime = null;
@@ -741,26 +684,26 @@ function parseGPX(xmlString) {
             const ele = eleEl ? parseFloat(eleEl.textContent) : null;
             const timeEl = pt.querySelector("time");
             const time = timeEl ? new Date(timeEl.textContent) : null;
-        if (time && !startTime) startTime = time;
+            if (time && !startTime) startTime = time;
             if (time) endTime = time;
-        if (prevLat !== null && prevLon !== null) {
+            if (prevLat !== null && prevLon !== null) {
                 // Calcola distanza (Formula Haversine - approssimativa)
                 const R = 6371;
-        // Raggio terrestre in km
+                // Raggio terrestre in km
                 const dLat = (lat - prevLat) * Math.PI / 180;
-        const dLon = (lon - prevLon) * Math.PI / 180;
-        const a = 
+                const dLon = (lon - prevLon) * Math.PI / 180;
+                const a = 
                     Math.sin(dLat/2) * Math.sin(dLat/2) +
                     Math.cos(prevLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
                 distanceKm += R * c;
-        // Calcola dislivello (solo positivo)
+                // Calcola dislivello (solo positivo)
                 if (ele !== null && prevEle !== null && ele > prevEle) {
                     ascentMeters += (ele - prevEle);
-        }
+                }
             }
             prevLat = lat;
-        prevLon = lon;
+            prevLon = lon;
             prevEle = ele;
         });
 
@@ -784,11 +727,10 @@ function uploadGPX(planType, weekIdx, runIdx) {
     const run = plan[weekIdx].allenamenti[runIdx];
     
     // Controlla se l'attività è una corsa (i nomi delle proprietà variano)
-    const runType = planType === 'local' ?
-    run.type : run.tipo;
+    const runType = planType === 'local' ? run.type : run.tipo;
     if (runType === "Riposo" || runType === "Palestra") {
         alert("Non è necessario caricare un GPX per questa attività.");
-    return;
+        return;
     }
 
     const input = document.getElementById("hiddenFileInput");
@@ -798,54 +740,49 @@ function uploadGPX(planType, weekIdx, runIdx) {
     input.value = '';
     input.onchange = (e) => {
         const file = e.target.files[0];
-    if (!file) {
+        if (!file) {
              input.value = '';
-    // Pulisci anche in caso di annullamento
+             // Pulisci anche in caso di annullamento
              return;
-    }
+        }
 
         const reader = new FileReader();
-    reader.onload = function(event) {
+        reader.onload = function(event) {
             const xmlString = event.target.result;
-    // **FIX 3: Ora chiama la funzione parseGPX, che è stata aggiunta**
+            // **FIX 3: Ora chiama la funzione parseGPX, che è stata aggiunta**
             const gpxData = parseGPX(xmlString);
-    if (!gpxData) {
+            if (!gpxData) {
                 alert("Errore nell'analisi del file GPX o dati mancanti.");
-    input.value = '';
+                input.value = '';
                 return;
             }
             
             // Requisiti (logica di verifica mantenuta)
-            const requiredKm = planType === 'local' ?
-    run.details.distance : run.km;
+            const requiredKm = planType === 'local' ? run.details.distance : run.km;
             const requiredAscent = planType === 'local' ? run.details.ascent : (run.asc || 0);
-    const requiredDurationMinutes = planType === 'local' ? run.details.durationMin : (run.durationMin || 60);
-    // Criteri di corrispondenza per ora in pausa
-            // const distMatch = gpxData.distanceKm >= requiredKm * 0.8 && gpxData.distanceKm <= requiredKm * 1.2;
-            // const ascMatch = gpxData.ascentMeters >= requiredAscent * 0.6 && gpxData.ascentMeters <= requiredAscent * 1.5;
-            // const durMatch = gpxData.durationMinutes >= requiredDurationMinutes * 0.5 && gpxData.durationMinutes <= requiredDurationMinutes * 1.5;
-    const isCompleted = true //distMatch && ascMatch && durMatch; // Riscrivi qui la logica se vuoi riattivare la verifica
+            const requiredDurationMinutes = planType === 'local' ? run.details.durationMin : (run.durationMin || 60);
+            const isCompleted = true //distMatch && ascMatch && durMatch;
             
             // Aggiorna lo stato
             if (planType === 'local') {
                 run.details.gpxData = gpxData;
-    run.details.completed = isCompleted;
+                run.details.completed = isCompleted;
             } else { // AI
                 run.gpxData = gpxData;
-    run.completed = isCompleted;
+                run.completed = isCompleted;
             }
             
             saveState();
-    // Aggiorna la UI e notifica
+            // Aggiorna la UI e notifica
             const message = `Distanza (Richiesto: ${requiredKm} km, Trovato: ${gpxData.distanceKm.toFixed(2)} km)\nDislivello (Richiesto: ${requiredAscent} m, Trovato: ${gpxData.ascentMeters} m)\nDurata (Richiesto: ${requiredDurationMinutes} min, Trovato: ${gpxData.durationMinutes} min)`;
-    if (isCompleted) {
+            if (isCompleted) {
                 alert(`✅ Allenamento completato! Dati GPX verificati.\n\n${message}`);
-    } else {
+            } else {
                 alert(`⚠️ Caricamento completato, ma i dati non combaciano.\n\n${message}`);
-    }
+            }
             
             if (planType === 'local') renderPiano();
-    else renderExternalPlan(JSON.stringify(STATE.planDataAI));
+            else renderExternalPlan(JSON.stringify(STATE.planDataAI));
 
             input.value = ''; 
         };
@@ -862,7 +799,7 @@ async function generaPianoAI() {
   document.getElementById("planView").style.display = 'none';
 
   let rawText = null;
-    try {
+  try {
     const livello = document.getElementById("livello").value;
     const obbKm = parseFloat(document.getElementById("obbKm").value);
     const obbAsc = parseFloat(document.getElementById("obbAsc").value);
@@ -870,7 +807,6 @@ async function generaPianoAI() {
     const settimane = parseInt(document.getElementById("settimane").value);
     const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn.active")).map(b => b.dataset.day);
     const dataGara=document.getElementById("dataGara").value;
-    // 🎯 RECUPERO NUOVO CAMPO
     const tempoObiettivo = parseFloat(document.getElementById("tempoObiettivo").value);
     if(!dataGara || !tempoObiettivo){alert("Inserisci la data della gara e il tempo obiettivo per generare un piano con l'AI.");return;} 
 
@@ -885,7 +821,6 @@ async function generaPianoAI() {
         settimane, 
    
         palestra: giorniPalestra,
-        // 🎯 INVIO NUOVO CAMPO ALL'AI
         tempoObiettivo: tempoObiettivo 
       })
     });
@@ -897,14 +832,11 @@ async function generaPianoAI() {
 
     renderExternalPlan(rawText); 
     
-    // INIZIO CORREZIONE: Ho sistemato l'errore di battitura in getElementById e la logica variabile.
     const plandCardElement = document.getElementById("PlandCard"); 
     if (plandCardElement) {
       plandCardElement.style.display ='none';
     }
-    // FINE CORREZIONE
     
-    // --- MODIFICA 1: NASCONDI PIANO LOCALE ---
     document.getElementById("planView").style.display = 'none';
     document.getElementById("PlandCard").style.display = 'none';
     document.getElementById("aiPlanCard").style.display = 'block';
@@ -916,8 +848,7 @@ async function generaPianoAI() {
         debugOutput = `
             <div style="background:#fff3f3; border:1px solid #ffaaaa; padding:10px; border-radius:8px; margin-top:10px; font-size:12px; white-space:pre-wrap; word-wrap:break-word;">
                 <p><strong>Contenuto della Risposta (Debug):</strong></p>
-                ${rawText.substring(0, 1000)} ${rawText.length > 1000 ?
-        '...' : ''}
+                ${rawText.substring(0, 1000)} ${rawText.length > 1000 ? '...' : ''}
             </div>
         `;
     }
@@ -926,7 +857,7 @@ async function generaPianoAI() {
         <p style="color:red;">❌ Errore durante la generazione AI: ${err.message}</p>
         ${debugOutput}
     `;
-    }
+  }
 }
 
 // --- MODIFICA 2: Aggiornata per gestire l'esportazione specifica ---
@@ -936,7 +867,7 @@ function esportaInPDF(elementId) {
     
     if (!container || container.children.length === 0 || container.textContent.includes("Nessun piano")) {
         alert("Genera prima un piano di allenamento da esportare.");
-    return;
+        return;
     }
 
     let elementsToCapture = [];
@@ -957,9 +888,9 @@ function esportaInPDF(elementId) {
                 elementsToCapture.push(week);
             }
         });
-    if (elementsToCapture.length === 0) {
+        if (elementsToCapture.length === 0) {
              alert("Apri almeno una settimana del piano AI per esportare i dettagli giornalieri.");
-    return;
+            return;
         }
     } 
 
@@ -969,12 +900,11 @@ function esportaInPDF(elementId) {
     const pdfHeight = 297;
     // Funzione helper per aggiungere un'immagine al PDF con gestione multi-pagina
     function addImageToPdf(imgData, canvasWidth, canvasHeight) {
-        const imgHeight = canvasWidth > 0 ?
-        (canvasHeight * pdfWidth / canvasWidth) : pdfHeight;
+        const imgHeight = canvasWidth > 0 ? (canvasHeight * pdfWidth / canvasWidth) : pdfHeight;
         
         if (position + imgHeight > pdfHeight && position !== 0) {
             pdf.addPage();
-    position = 0;
+            position = 0;
         }
 
         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
@@ -995,7 +925,7 @@ function esportaInPDF(elementId) {
             }).catch(error => {
                 console.error("Errore nella cattura con html2canvas:", error);
             
-    resolve(null);
+                resolve(null);
             });
         });
     });
@@ -1049,12 +979,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if(STATE.planDataAI){
         document.getElementById("planView").style.display = 'none';
         document.getElementById("aiPlanCard").style.display = 'block';
+        // Ho dovuto rinserire la funzione nella sua interezza prima di questo punto
         renderExternalPlan(JSON.stringify(STATE.planDataAI)); 
     }
     else if(STATE.planData){ 
         document.getElementById("planView").style.display = 'block';
-        document.getElementById("aiPlanCard").style.display 
-        = 'none';
+        document.getElementById("aiPlanCard").style.display = 'none';
         renderPiano();
     }
     
