@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v20.8 (PDF & Target Time)</title>
+<title>🏔️ TrailCoach AI v21.0 Modificabile</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -91,7 +91,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v20.8</h1>
+<h1>🏔️ TrailCoach AI v21.0</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -213,6 +213,8 @@ function getDefaultDetails(type) {
             return "Corsa a soglia (Z3) per 20-30 minuti, per migliorare la capacità di sostenere un ritmo elevato. Riscaldamento e defaticamento inclusi.";
         case "Palestra":
             return "Allenamento di Forza o Core, 45-60 min. Focus su gambe, schiena e stabilità. Evita gambe il giorno prima della corsa lunga.";
+        case "Riposo":
+            return "Giorno di recupero completo. Ideale per stretching, mobilità o riposo passivo.";
         default:
             return "Dettagli specifici per l'allenamento. Modifica liberamente.";
     }
@@ -432,9 +434,8 @@ function renderPiano(){
                     const kmStr = a.type === "Palestra" || a.type === "Riposo" ? a.summary : a.type + ' — ' + (d?.distance !== undefined ? d.distance + ' km' : 'N/A');
                     
                     
-                    let detContent = `<div class="muted">Obiettivo: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>`;
-                    if (a.type === "Palestra") detContent = `<div class="muted">Durata stimata: ${d.durationMin} min</div>`;
-                    if (a.type === "Riposo") detContent = '';
+                    let detContent = isRun ? `<div class="muted">Obiettivo: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>` : (a.type === "Palestra" ? `<div class="muted">Durata stimata: ${d.durationMin} min</div>` : '');
+                    
                     let gpxSection = '';
                     if (isRun) {
                         if (d.gpxData) {
@@ -443,35 +444,24 @@ function renderPiano(){
                                     <strong>Caricato (${d.completed ? 'Verificato ✅' : 'Non Verificato ❌'}):</strong>
                                     <p class="muted">Km: ${d.gpxData.distanceKm.toFixed(2)} • D+: ${d.gpxData.ascentMeters} m • Durata: ${d.gpxData.durationMinutes} min</p>
                                 </div>
+                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;"></div>
                             `;
                         } else {
                             gpxSection = `
                                 <button class="gpx-upload-btn" onclick="uploadGPX('local', ${wIdx}, ${aIdx})">
                                     Carica GPX
                                 </button>
+                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;"></div>
                             `;
                         }
-                        
-                        // AGGIUNTA Pulsante Modifica per le corse LOCALI
-                        gpxSection += `
-                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
-                                <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('local', ${wIdx}, ${aIdx})">
-                                    ✏️ Modifica Dettagli
-                                </button>
-                            </div>
-                        `;
                     }
                     
-                    // AGGIUNTA Pulsante Modifica per la Palestra LOCALE
-                    if (a.type === "Palestra") {
-                        gpxSection = `
-                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
-                                <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('local', ${wIdx}, ${aIdx})">
-                                    ✏️ Modifica Dettagli
-                                </button>
-                            </div>
-                        `;
-                    }
+                    // Pulsante Modifica per tutti i tipi
+                    gpxSection += `
+                        <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('local', ${wIdx}, ${aIdx})">
+                            ✏️ Modifica Dettagli
+                        </button>
+                    `;
 
 
                     return `
@@ -524,23 +514,13 @@ function showEditDialog(planType, weekIdx, runIdx, activity) {
     const form = document.getElementById("modalForm");
     let formHtml = '';
     
-    // Se è riposo, mostra solo il messaggio
-    if (currentType === "Riposo") {
-        form.innerHTML = `<p>💤 Riposo - Questa attività non è modificabile nel tipo. Puoi solo cambiare la durata se necessario.</p>
-            <label for="editDuration">Durata (minuti)</label>
-            <input id="editDuration" type="number" value="0" readonly/>
-        `;
-        document.getElementById("editModal").style.display = 'flex';
-        document.getElementById("saveEditBtn").onclick = closeEditDialog;
-        return;
-    }
-    
     // 1. Dropdown per il tipo di allenamento
     let optionsHtml = CORSA_TYPES.map(t => 
         `<option value="${t}" ${currentType === t || currentType.includes(t) ? 'selected' : ''}>${t}</option>`
     ).join('');
-    // Aggiungi sempre l'opzione Palestra
+    // Aggiungi sempre l'opzione Palestra e Riposo
     optionsHtml += `<option value="Palestra" ${currentType.includes("Palestra") ? 'selected' : ''}>🏋️ Palestra</option>`;
+    optionsHtml += `<option value="Riposo" ${currentType.includes("Riposo") ? 'selected' : ''}>💤 Riposo</option>`; // <-- Riposo aggiunto
     
     formHtml += `
         <label for="editType">Tipo Allenamento</label>
@@ -577,25 +557,39 @@ function showEditDialog(planType, weekIdx, runIdx, activity) {
     document.getElementById("editType").onchange = function() {
         const runFields = document.getElementById("runFields");
         const detailsInput = document.getElementById("editDetails");
+        const durationInput = document.getElementById("editDuration");
         const selectedType = this.value; 
 
         const isPalestra = selectedType.includes("Palestra");
+        const isRiposo = selectedType.includes("Riposo");
 
-        if (isPalestra) {
+        if (isPalestra || isRiposo) {
             runFields.style.display = 'none';
+            if (isRiposo) {
+                durationInput.value = 0;
+                durationInput.readOnly = true;
+            } else {
+                durationInput.readOnly = false;
+                if (durationInput.value == 0) durationInput.value = 60;
+            }
         } else {
+            // Corsa
             runFields.style.display = 'block';
+            durationInput.readOnly = false;
+            if (durationInput.value == 0) durationInput.value = 60;
         }
         
-        // **AGGIUNTO: Aggiorna il dettaglio con un testo standard**
         detailsInput.value = getDefaultDetails(selectedType);
     };
     
-    // INIZIALIZZAZIONE: Se il tipo iniziale è Palestra, nascondi i campi corsa all'apertura.
-    // I dettagli restano quelli salvati, a meno che l'utente non cambi tipo
+    // INIZIALIZZAZIONE: Se il tipo iniziale è Palestra o Riposo, nascondi i campi corsa all'apertura.
     const initialType = document.getElementById("editType").value;
-    if (initialType.includes("Palestra")) {
+    const isInitialRiposo = initialType.includes("Riposo");
+    if (initialType.includes("Palestra") || isInitialRiposo) {
          document.getElementById("runFields").style.display = 'none';
+         if (isInitialRiposo) {
+             document.getElementById("editDuration").readOnly = true;
+         }
     }
 }
 
@@ -604,34 +598,50 @@ function saveEditedActivity(planType, weekIdx, runIdx) {
     const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
     const activity = plan[weekIdx].allenamenti[runIdx];
     
-    // Controllo per riposo
-    if ((planType === 'local' ? activity.type : activity.tipo) === "Riposo") {
-        closeEditDialog();
-        return;
-    }
-
     // Recupero i nuovi valori dal modal
     const newType = document.getElementById("editType").value;
     const newDetails = document.getElementById("editDetails").value;
-    let newKm = parseFloat(document.getElementById("editKm").value);
-    let newAsc = parseInt(document.getElementById("editAsc").value);
-    let newDuration = parseInt(document.getElementById("editDuration").value);
+    let newKm = 0;
+    let newAsc = 0;
+    let newDuration = 0;
+    
+    const isPalestra = newType.includes("Palestra");
+    const isRiposo = newType.includes("Riposo");
+    
+    if (!isRiposo && !isPalestra) {
+        // È Corsa: recupera i valori e validali
+        newKm = parseFloat(document.getElementById("editKm").value);
+        newAsc = parseInt(document.getElementById("editAsc").value);
+        newDuration = parseInt(document.getElementById("editDuration").value);
 
-    // Gestione campi per Palestra
-    if (newType.includes("Palestra")) {
-        newKm = 0;
-        newAsc = 0;
-        if (isNaN(newDuration) || newDuration < 1) newDuration = 60;
-    } else {
         if (isNaN(newKm) || newKm < 0) newKm = 0;
         if (isNaN(newAsc) || newAsc < 0) newAsc = 0;
         if (isNaN(newDuration) || newDuration < 1) newDuration = 60;
+        
+    } else if (isPalestra) {
+        // È Palestra
+        newDuration = parseInt(document.getElementById("editDuration").value);
+        if (isNaN(newDuration) || newDuration < 1) newDuration = 60;
+        
+    } else if (isRiposo) {
+        // È Riposo: km, asc, duration sono 0
+        newKm = 0;
+        newAsc = 0;
+        newDuration = 0;
     }
     
     // Aggiornamento dello Stato
     if (planType === 'local') {
         activity.type = newType; 
-        activity.summary = newType.includes("Palestra") ? "🏋️ Palestra" : `🏃 ${newType} — ${newKm.toFixed(1)} km`; 
+        
+        if (isRiposo) {
+            activity.summary = "💤 Riposo";
+        } else if (isPalestra) {
+            activity.summary = "🏋️ Palestra";
+        } else {
+            activity.summary = `🏃 ${newType} — ${newKm.toFixed(1)} km`; 
+        }
+        
         activity.details.detailText = newDetails;
         activity.details.distance = newKm;
         activity.details.ascent = newAsc;
@@ -754,15 +764,13 @@ function renderExternalPlan(jsonString) {
                         const titleDisplay = a.tipo === "Palestra" ? '🏋️ Palestra' : a.tipo;
                         
                         let paceDisplay = '';
-                        // Correzione: Calcola il passo solo se è una corsa
+                        // Calcola il passo solo se è una corsa
                         if(isRun && a.km > 0 && a.durationMin > 0) {
                             const paceText = a.pace || calculatePace(a.km, a.durationMin);
                             paceDisplay = ` • Passo: ${paceText}`;
                         }
 
-                        let detContent = `<div class="muted">Obiettivo: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 'N/A'} min ${paceDisplay}</div>`;
-                        if (a.tipo === "Palestra") detContent = `<div class="muted">Durata stimata: ${a.durationMin || 60} min</div>`;
-                        if (a.tipo === "Riposo") detContent = '';
+                        let detContent = isRun ? `<div class="muted">Obiettivo: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 'N/A'} min ${paceDisplay}</div>` : (a.tipo === "Palestra" ? `<div class="muted">Durata stimata: ${a.durationMin || 60} min</div>` : '');
                         
                         let gpxSection = '';
                         if (isRun) { // Solo per la corsa
@@ -780,27 +788,15 @@ function renderExternalPlan(jsonString) {
                                     </button>
                                 `;
                             }
-                            
-                            // AGGIUNTA: Pulsante Modifica per le corse AI
-                            gpxSection += `
-                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
-                                    <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('ai', ${wIdx}, ${aIdx})">
-                                        ✏️ Modifica Dettagli
-                                    </button>
-                                </div>
-                            `;
+                            gpxSection += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;"></div>`;
                         }
                         
-                        // AGGIUNTA: Pulsante Modifica per la Palestra AI
-                        if (a.tipo === "Palestra") {
-                            gpxSection = `
-                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd;">
-                                    <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('ai', ${wIdx}, ${aIdx})">
-                                        ✏️ Modifica Dettagli
-                                    </button>
-                                </div>
-                            `;
-                        }
+                        // Pulsante Modifica per tutti i tipi
+                        gpxSection += `
+                            <button class="gpx-upload-btn" style="background: #39a3f2;" onclick="editAIActivity('ai', ${wIdx}, ${aIdx})">
+                                ✏️ Modifica Dettagli
+                            </button>
+                        `;
 
                         return `
                         <div class="day">
