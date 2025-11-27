@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v20.7 (PDF & Target Time)</title>
+<title>🏔️ TrailCoach AI v20.8 (PDF & Target Time)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -37,7 +37,7 @@
   
   .chk-btn {
     background:#f2f2f2; border-radius:8px; padding:8px; text-align:center;
-    cursor:pointer;
+  cursor:pointer;
   border:1px solid transparent; font-weight:700;
   }
   .chk-btn.active { background:#007aff; color:#fff; border-color:#0060d6; }
@@ -91,7 +91,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v20.7</h1>
+<h1>🏔️ TrailCoach AI v20.8</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -190,6 +190,34 @@ const CORSA_TYPES = [
     "Interval Training",
     "Tempo Run"
 ];
+
+// NUOVA FUNZIONE PER I DETTAGLI PREDEFINITI
+function getDefaultDetails(type) {
+    switch(type) {
+        case "Corsa Lenta":
+        case "Corsa Facile":
+            return "Corri a ritmo tranquillo (Z1/Z2), focus sulla resistenza e la tecnica base. Durata tipica: 1 ora.";
+        case "Lungo Lento":
+            return "Lungo a ritmo costante, mantieni un'intensità bassa per costruire l'endurance. Durata tipica: 1.5 - 3 ore.";
+        case "Corsa in Collina":
+            return "Ripetute in salita (5-8 volte 100-200m) per forza e potenza. Recupero scendendo.";
+        case "Ripetute Veloci":
+            return "Ripetute in piano (es. 6x400m o 4x800m) con recupero attivo. Lavora sulla VMA. Riscaldamento e defaticamento inclusi.";
+        case "Fartlek":
+            return "Gioco di velocità: alterna tratti veloci e lenti in modo spontaneo, su sentieri vari.";
+        case "Progressivo":
+            return "Inizia lento e aumenta il ritmo ogni 2-3 km, finendo a ritmo gara (Z3/Z4).";
+        case "Interval Training":
+            return "Lavoro strutturato con intervalli ad alta intensità seguiti da recupero programmato.";
+        case "Tempo Run":
+            return "Corsa a soglia (Z3) per 20-30 minuti, per migliorare la capacità di sostenere un ritmo elevato. Riscaldamento e defaticamento inclusi.";
+        case "Palestra":
+            return "Allenamento di Forza o Core, 45-60 min. Focus su gambe, schiena e stabilità. Evita gambe il giorno prima della corsa lunga.";
+        default:
+            return "Dettagli specifici per l'allenamento. Modifica liberamente.";
+    }
+}
+
 
 // --- FUNZIONI DI STATO E UTILITY PER LA DATA ---
 function paceByLevel(l){return l==="principiante"?6.2:l==="intermedio"?5.8:5.4;}
@@ -509,7 +537,7 @@ function showEditDialog(planType, weekIdx, runIdx, activity) {
     
     // 1. Dropdown per il tipo di allenamento
     let optionsHtml = CORSA_TYPES.map(t => 
-        `<option value="${t}" ${currentType === t ? 'selected' : ''}>${t}</option>`
+        `<option value="${t}" ${currentType === t || currentType.includes(t) ? 'selected' : ''}>${t}</option>`
     ).join('');
     // Aggiungi sempre l'opzione Palestra
     optionsHtml += `<option value="Palestra" ${currentType.includes("Palestra") ? 'selected' : ''}>🏋️ Palestra</option>`;
@@ -545,19 +573,30 @@ function showEditDialog(planType, weekIdx, runIdx, activity) {
     // Assegna l'handler di salvataggio
     document.getElementById("saveEditBtn").onclick = () => saveEditedActivity(planType, weekIdx, runIdx);
     
-    // Listener per abilitare/disabilitare i campi in base alla selezione del tipo
+    // Listener per abilitare/disabilitare i campi e AGGIORNARE I DETTAGLI
     document.getElementById("editType").onchange = function() {
         const runFields = document.getElementById("runFields");
-        const isPalestra = this.value.includes("Palestra");
+        const detailsInput = document.getElementById("editDetails");
+        const selectedType = this.value; 
+
+        const isPalestra = selectedType.includes("Palestra");
 
         if (isPalestra) {
             runFields.style.display = 'none';
         } else {
             runFields.style.display = 'block';
         }
+        
+        // **AGGIUNTO: Aggiorna il dettaglio con un testo standard**
+        detailsInput.value = getDefaultDetails(selectedType);
     };
-    // Eseguilo una volta all'apertura per gestire lo stato iniziale
-    document.getElementById("editType").dispatchEvent(new Event('change'));
+    
+    // INIZIALIZZAZIONE: Se il tipo iniziale è Palestra, nascondi i campi corsa all'apertura.
+    // I dettagli restano quelli salvati, a meno che l'utente non cambi tipo
+    const initialType = document.getElementById("editType").value;
+    if (initialType.includes("Palestra")) {
+         document.getElementById("runFields").style.display = 'none';
+    }
 }
 
 // NUOVA FUNZIONE PER SALVARE I DATI DAL MODAL
