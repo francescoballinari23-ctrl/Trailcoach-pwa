@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v20.4 (PDF & Target Time)</title>
+<title>🏔️ TrailCoach AI v21.2 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -91,7 +91,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v20.4</h1>
+<h1>🏔️ TrailCoach AI v21.2</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -462,10 +462,48 @@ Giorni di corsa: ${giorniCorsa.join(', ') || 'Nessuno'}. Giorni di palestra: ${g
   renderPiano();
 }
 
+// --- NUOVE FUNZIONI PER GESTIRE L'APERTURA DEGLI ACCORDION ---
+function saveAccordionState(containerId) {
+    const state = {};
+    document.querySelectorAll(`#${containerId} .accordion`).forEach(btn => {
+        // Usiamo il testo dell'accordion (es. "📅 Settimana 1...") come chiave
+        const weekKey = btn.textContent.split('—')[0].trim(); 
+        if (btn.classList.contains('active')) {
+            state[weekKey] = true;
+        }
+    });
+    return state;
+}
+
+function restoreAccordionState(containerId, savedState) {
+    if (Object.keys(savedState).length === 0) return; // Non fare nulla se non c'è stato
+
+    document.querySelectorAll(`#${containerId} .accordion`).forEach(btn => {
+        const weekKey = btn.textContent.split('—')[0].trim();
+        const panel = btn.nextElementSibling;
+        
+        if (savedState[weekKey]) {
+            btn.classList.add('active');
+            if (panel) {
+                panel.style.display = 'block';
+            }
+        } else {
+            btn.classList.remove('active');
+            if (panel) {
+                panel.style.display = 'none';
+            }
+        }
+    });
+}
+// --- FINE NUOVE FUNZIONI ---
+
 
 function renderPiano(){
   const c=document.getElementById("planView");
   if(!STATE.planData?.length){c.textContent="Nessun piano ancora generato.";return;}
+  
+  // 1. SALVA LO STATO CORRENTE PRIMA DI RIGENERARE
+  const savedState = saveAccordionState("planView");
   
   const descrizione_generale = STATE.settings.descrizione_generale || "Nessuna descrizione.";
   let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${descrizione_generale}</div></div>`;
@@ -538,7 +576,11 @@ function renderPiano(){
   c.innerHTML = htmlOutput;
   attachAccordionListeners("planView");
   attachDayDetailListeners();
+  
+  // 2. RIPRISTINA LO STATO SALVATO
+  restoreAccordionState("planView", savedState);
 }
+
 
 function calculatePace(km, durationMin) {
     if (km > 0 && durationMin > 0) {
@@ -723,6 +765,7 @@ function saveEditedActivity(planType, weekIdx, runIdx) {
     if (planType === 'local') {
         renderPiano();
     } else {
+        // Nota: Qui passiamo il piano AI salvato in STATE, non l'intera stringa JSON
         renderExternalPlan(JSON.stringify(STATE.planDataAI));
     }
     alert("Dettagli dell'allenamento aggiornati localmente!");
@@ -742,6 +785,10 @@ function editAIActivity(planType, weekIdx, runIdx) {
 function renderExternalPlan(jsonString) {
     const container = document.getElementById("piano-generato");
     const card = document.getElementById("aiPlanCard");
+    
+    // 1. SALVA LO STATO CORRENTE PRIMA DI RIGENERARE
+    const savedState = saveAccordionState("piano-generato"); 
+    
     container.innerHTML = "";
     
     let piano;
@@ -887,6 +934,9 @@ function renderExternalPlan(jsonString) {
     container.innerHTML = htmlOutput;
     attachAccordionListeners("piano-generato");
     attachDayDetailListeners();
+    
+    // 2. RIPRISTINA LO STATO SALVATO
+    restoreAccordionState("piano-generato", savedState);
 }
 
 function parseGPX(xmlString) {
@@ -1034,27 +1084,27 @@ async function generaPianoAI() {
     const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn[data-type='palestra'].active")).map(b => b.dataset.day);
     const giorniCorsa = Array.from(document.querySelectorAll(".chk-btn[data-type='corsa'].active")).map(b => b.dataset.day);
     const settimane = parseInt(document.getElementById("settimane").value);
-    const runsCount = giorniCorsa.length;
+    // runsCount non è più necessario nel payload, ma lo conserviamo come controllo
+    const runsCount = giorniCorsa.length; 
 
     const dataGara=document.getElementById("dataGara").value;
     const tempoObiettivo = parseFloat(document.getElementById("tempoObiettivo").value);
     if(!dataGara || !tempoObiettivo){alert("Inserisci la data della gara e il tempo obiettivo per generare un piano con l'AI.");return;} 
     if(runsCount === 0 && giorniPalestra.length === 0){alert("Seleziona almeno un giorno di Corsa o Palestra per generare il piano AI.");return;}
     
-    // ATTENZIONE: Il mock endpoint non è stato aggiornato per i nuovi campi, usiamo i vecchi per ora
-    // In un'applicazione reale, aggiorneresti il payload per includere giorniCorsa e giorniPalestra
-    
+    // PAYLOAD AGGIORNATO: Inviamo i dati grezzi e precisi
     const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         livello, 
-        km: obbKm, 
-        asc: obbAsc, 
-        allenTot: runsCount + (giorniPalestra.length > 0 ? 0.5 : 0), // STIMA per mantenere la retrocompatibilità del mock
+        km: obbKm, // obbKm
+        asc: obbAsc, // obbAsc
         settimane, 
-        palestra: giorniPalestra,
-        tempoObiettivo: tempoObiettivo 
+        dataGara, // Aggiunto per completezza
+        tempoObiettivo, 
+        giorniCorsa, // NUOVO: Array di giorni di corsa
+        giorniPalestra // NUOVO: Array di giorni di palestra
       })
     });
     rawText = await response.text(); 
