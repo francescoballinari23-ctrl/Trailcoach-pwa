@@ -326,6 +326,49 @@ document.getElementById("updatePlanBtn").addEventListener("click", async () => {
         return;
     }
 
+    const conferma = confirm("Vuoi aggiornare il piano per le settimane mancanti?");
+    if (!conferma) return;
+
+    try {
+        // Filtro solo le settimane mancanti
+        const today = new Date();
+        const settimaneMancanti = (STATE.planData || STATE.planDataAI.settimane).filter(settimana => {
+            const dataInizio = new Date(settimana.startDate);
+            return dataInizio >= today; // Solo settimane a partire da oggi
+        });
+
+        // Prepara i dati da inviare combinando le attività GPX esistenti
+        const datiAggiornamento = {
+            livello: STATE.settings.livello,
+            km: STATE.settings.obbKm,
+            asc: STATE.settings.obbAsc,
+            tempoObiettivo: STATE.settings.tempoObiettivo,
+            giorniCorsa: STATE.settings.giorniCorsa,
+            giorniPalestra: STATE.settings.giorniPalestra,
+            settimaneRestanti: settimaneMancanti, // Solo settimane future, inclusi dati reali GPX
+        };
+
+        // Invia la richiesta all'AI
+        const response = await fetch("URL_DEL_API_MODIFICA", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datiAggiornamento),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Errore HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const nuovoPiano = await response.json();
+        alert("Piano aggiornato con successo!");
+        renderExternalPlan(nuovoPiano); // Funzione che reinserisce il piano aggiornato
+    } catch (err) {
+        console.error(err);
+        alert("Errore durante l'aggiornamento del piano. Controlla la console per maggiori dettagli.");
+    }
+});
+
+
     const conferma = confirm("Sei sicuro di voler inviare una richiesta di aggiornamento per il piano?");
     if (!conferma) return;
 
