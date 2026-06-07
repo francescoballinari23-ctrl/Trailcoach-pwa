@@ -320,7 +320,33 @@ document.getElementById("toggleSettings").onclick=()=>{
   const card=document.getElementById("settingsCard");
   card.style.display=card.style.display==="none"?"block":"none";
 };
+document.getElementById("updatePlanBtn").addEventListener("click", async () => {
+    if (!STATE.planData && !STATE.planDataAI) {
+        alert("Non esiste un piano attuale da aggiornare.");
+        return;
+    }
 
+    const conferma = confirm("Sei sicuro di voler inviare una richiesta di aggiornamento per il piano?");
+    if (!conferma) return;
+
+    try {
+        const response = await fetch("URL_DEL_API_AGGIORNAMENTO", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(STATE),
+        });
+        if (!response.ok) {
+            throw new Error(`Errore HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const newPlan = await response.json();
+        alert("Piano aggiornato con successo!");
+        renderExternalPlan(newPlan); // Aggiorna il piano con il nuovo contenuto
+    } catch (err) {
+        console.error(err);
+        alert("Errore nell'aggiornamento del piano. Controlla la console per maggiori dettagli.");
+    }
+});
 // **FUNZIONE selectRunDays RIMOSSA**
 
 function creaDettagliAllenamento(type,weeklyKm,weeklyAsc,runsCount,livello,isExtra=false){
