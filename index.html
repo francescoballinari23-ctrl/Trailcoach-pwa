@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v21.5 (P)</title>
+<title>🏔️ TrailCoach AI v22.0 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -87,7 +87,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v21.5</h1>
+<h1>🏔️ TrailCoach AI v22.0</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -328,12 +328,69 @@ document.getElementById("updatePlanBtn").addEventListener("click", async () => {
         });
 
         if (!response.ok) throw new Error(`Errore HTTP ${response.status}`);
-        const nuovoPiano = await response.text();
-        alert("Piano aggiornato con successo!");
-        renderExternalPlan(nuovoPiano);
+        
+        const nuovoPianoTesto = await response.text();
+        
+        // 1. Convertiamo la risposta stringa dell'AI in un oggetto JSON manipolabile
+        let datiAI;
+        try {
+            let cleanText = nuovoPianoTesto;
+            if (nuovoPianoTesto.includes("```")) {
+                const match = nuovoPianoTesto.match(/```json([\s\S]*?)```/);
+                cleanText = match ? match[1] : nuovoPianoTesto.substring(nuovoPianoTesto.indexOf('{'), nuovoPianoTesto.lastIndexOf('}') + 1);
+            }
+            datiAI = JSON.parse(cleanText.trim());
+        } catch (e) {
+            console.error("Errore nel parsing del ricalcolo AI:", e);
+            throw new Error("La risposta dell'AI non è in un formato JSON valido.");
+        }
+
+        // 2. --- LOGICA DI UNIONE (MERGE) SICURA ---
+        if (!STATE.planDataAI || !STATE.planDataAI.settimane) {
+            // Se non c'era un piano precedente, usa direttamente quello nuovo
+            STATE.planDataAI = datiAI;
+        } else {
+            // Se esiste già un piano, sovrascriviamo solo le settimane ricalcolate, salvando i GPX
+            datiAI.settimane.forEach(nuovaSettimana => {
+                const indexEsistente = STATE.planDataAI.settimane.findIndex(w => w.numero === nuovaSettimana.numero);
+                
+                if (indexEsistente !== -1) {
+                    // Controlliamo i singoli giorni della settimana per proteggere i GPX completati
+                    nuovaSettimana.allenamenti.forEach((nuovoAllenamento, aIdx) => {
+                        const vecchioAllenamento = STATE.planDataAI.settimane[indexEsistente].allenamenti[aIdx];
+                        
+                        // Se c'è un GPX caricato nel vecchio piano, lo manteniamo intatto!
+                        if (vecchioAllenamento && vecchioAllenamento.completed && vecchioAllenamento.gpxData) {
+                            nuovoAllenamento.completed = true;
+                            nuovoAllenamento.gpxData = vecchioAllenamento.gpxData;
+                        }
+                    });
+                    
+                    // Sostituiamo la vecchia settimana con quella nuova aggiornata
+                    STATE.planDataAI.settimane[indexEsistente] = nuovaSettimana;
+                } else {
+                    // Se è una settimana nuova rimodulata in coda, la aggiungiamo
+                    STATE.planDataAI.settimane.push(nuovaSettimana);
+                }
+            });
+
+            // Aggiorniamo la descrizione generale del coach se presente
+            if (datiAI.descrizione_generale) {
+                STATE.planDataAI.descrizione_generale = datiAI.descrizione_generale;
+            }
+        }
+
+        // 3. Salviamo lo stato definitivo nel LocalStorage del browser
+        saveState();
+
+        // 4. Lanciamo il rendering passando l'intero piano unito (convertito in stringa)
+        renderExternalPlan(JSON.stringify(STATE.planDataAI));
+        
+        alert("Piano aggiornato con successo! Le settimane future sono state rimodulate mantenendo i tuoi GPX passati.");
+
     } catch (err) {
         console.error(err);
-        alert("Errore durante l'aggiornamento del piano.");
+        alert("Errore durante l'aggiornamento del piano: " + err.message);
     }
 });
 
