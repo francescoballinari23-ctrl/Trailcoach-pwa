@@ -763,22 +763,80 @@ function parseGPX(xmlString) {
 function uploadGPX(planType, weekIdx, runIdx) {
     const input = document.getElementById("hiddenFileInput");
     input.onchange = (e) => {
-        const file = e.target.files[0]; if (!file) return;
+        const file = e.target.files[0]; 
+        if (!file) return;
+        
         const reader = new FileReader();
         reader.onload = function(event) {
             const gpxData = parseGPX(event.target.result);
             if (!gpxData) { alert("File GPX non valido."); return; }
+            
             const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
+            const attivita = plan[weekIdx].allenamenti[runIdx];
+            
+            // 1. Recupero dei dati TARGET (Richiesti) in base al tipo di piano
+            let kmRichiesti = 0;
+            let dPlusRichiesto = 0;
+            let tempoRichiesto = 0;
             
             if (planType === 'local') {
-                plan[weekIdx].allenamenti[runIdx].details.gpxData = gpxData;
-                plan[weekIdx].allenamenti[runIdx].details.completed = true;
+                kmRichiesti = attivita.details.distance || 0;
+                dPlusRichiesto = attivita.details.ascent || 0;
+                tempoRichiesto = attivita.details.durationMin || 0;
+                
+                // Salvataggio dati reali nel piano locale
+                attivita.details.gpxData = gpxData;
+                attivita.details.completed = true;
             } else {
-                plan[weekIdx].allenamenti[runIdx].gpxData = gpxData;
-                plan[weekIdx].allenamenti[runIdx].completed = true;
+                kmRichiesti = attivita.km || 0;
+                dPlusRichiesto = attivita.asc || 0;
+                tempoRichiesto = attivita.durationMin || 0;
+                
+                // Salvataggio dati reali nel piano AI
+                attivita.gpxData = gpxData;
+                attivita.completed = true;
             }
-            saveState(); alert("GPX Caricato e verificato!");
-            if (planType === 'local') renderPiano(); else renderExternalPlan(JSON.stringify(STATE.planDataAI));
+            
+            // 2. Recupero dei dati REALI (Effettivi dal GPX)
+            const kmEffettivi = gpxData.distanceKm;
+            const dPlusEffettivo = gpxData.ascentMeters;
+            const tempoEffettivo = gpxData.durationMinutes;
+            
+            // 3. Calcolo degli scostamenti (Facoltativo, per dare un colpo d'occhio)
+            const diffKm = (kmEffettivi - kmRichiesti).toFixed(1);
+            const diffAsc = dPlusEffettivo - dPlusRichiesto;
+            
+            // 4. Costruzione del messaggio del Pop-up di controllo
+            const messaggioPopUp = `
+📊 VERIFICA ALLENAMENTO GPX
+
+🏃 CHILOMETRAGGIO:
+- Richiesto: ${kmRichiesti.toFixed(1)} km
+- Effettivo: ${kmEffettivi.toFixed(1)} km (${diffKm >= 0 ? '+' : ''}${diffKm} km)
+
+🏔️ DISLIVELLO (D+):
+- Richiesto: ${dPlusRichiesto} m
+- Effettivo: ${dPlusEffettivo} m (${diffAsc >= 0 ? '+' : ''}${diffAsc} m)
+
+⏱️ DURATA:
+- Richiesta: ${tempoRichiesto} min
+- Effettiva: ${tempoEffettivo} min
+
+✅ Allenamento salvato e verificato con successo nel piano!
+`;
+            
+            // Mostra il pop-up di confronto all'utente
+            alert(messaggioPopUp);
+            
+            // Salva lo stato nel localStorage
+            saveState(); 
+            
+            // Rinfresca la schermata per mostrare la spunta verde ✅ e i dati GPX sotto il giorno
+            if (planType === 'local') {
+                renderPiano(); 
+            } else {
+                renderExternalPlan(JSON.stringify(STATE.planDataAI));
+            }
         };
         reader.readAsText(file);
     };
