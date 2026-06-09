@@ -546,6 +546,13 @@ function renderPiano(){
   const descrizione_generale = STATE.settings.descrizione_generale || "Nessuna descrizione.";
   let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${descrizione_generale}</div></div>`;
   
+  // Dizionario per abbreviare i giorni nel piano locale
+  const nomiGiorniBrevi = {
+    "Lunedì": "Lun", "Martedì": "Mar", "Mercoledì": "Mer", 
+    "Giovedì": "Gio", "Venerdì": "Ven", "Sabato": "Sab", "Domenica": "Dom"
+  };
+  const ordineGiorni = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
+
   STATE.planData.forEach((w, wIdx) => {
     const totalKm = w.allenamenti.reduce((sum, a) => sum + (a.details?.distance || 0), 0).toFixed(1);
     const weekDisplayDate = w.startDate ? formatDate(w.startDate) : 'Data N/A';
@@ -562,6 +569,22 @@ function renderPiano(){
                     let detContent = isRun ? `<div class="muted">Obiettivo: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>` : (a.type === "Palestra" ? `<div class="muted">Durata stimata: ${d.durationMin} min</div>` : '');
                     let gpxSection = '';
                     
+                    // --- CALCOLO DATA COMPATTA (es. Lun 8.6) ---
+                    let dataGiornoDisplay = "";
+                    if (w.startDate && a.day) {
+                        const dataInizioSettimana = new Date(w.startDate);
+                        const offsetGiorni = ordineGiorni.indexOf(a.day);
+                        if (offsetGiorni !== -1) {
+                            const dataEsattaGiorno = addDays(dataInizioSettimana, offsetGiorni);
+                            const giornoMese = dataEsattaGiorno.getDate();
+                            const mese = dataEsattaGiorno.getMonth() + 1;
+                            const giornoBreve = nomiGiorniBrevi[a.day] || a.day;
+                            dataGiornoDisplay = `${giornoBreve} ${giornoMese}.${mese}`;
+                        }
+                    }
+                    if (!dataGiornoDisplay) dataGiornoDisplay = a.day || "";
+                    // --------------------------------------------
+
                     if (isRun) {
                         if (d.gpxData) {
                             gpxSection = `
@@ -583,7 +606,7 @@ function renderPiano(){
                     return `
                         <div class="day">
                             <div class="day-header" data-toggle-panel="local-${wIdx}-${aIdx}">
-                                <div><span class="day-status">${statusIcon}</span><strong>${a.day}</strong> — ${kmStr}</div>
+                                <div><span class="day-status">${statusIcon}</span><strong>${dataGiornoDisplay}</strong> — ${kmStr}</div>
                                 <div><span style="font-size:10px;">${d?.detailText || ''}</span></div>
                             </div>
                             <div class="day-details-panel" id="local-${wIdx}-${aIdx}">
@@ -598,6 +621,13 @@ function renderPiano(){
         </div>
     `;
   });
+  
+  c.innerHTML = htmlOutput;
+  attachAccordionListeners("planView");
+  attachDayDetailListeners();
+  restoreAccordionState("planView", savedState);
+}
+
 
   c.innerHTML = htmlOutput;
   attachAccordionListeners("planView");
