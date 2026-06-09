@@ -629,12 +629,6 @@ function renderPiano(){
 }
 
 
-  c.innerHTML = htmlOutput;
-  attachAccordionListeners("planView");
-  attachDayDetailListeners();
-  restoreAccordionState("planView", savedState);
-}
-
 function calculatePace(km, durationMin) {
     if (km > 0 && durationMin > 0) {
         const paceMin = durationMin / km;
