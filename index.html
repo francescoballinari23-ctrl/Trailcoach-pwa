@@ -242,14 +242,18 @@ function formatDate(date) {
 function calculatePlanDates(dataGara, settimane) {
     const raceDate = new Date(dataGara + 'T00:00:00');
     
-    // 1. Calcola la data teorica di inizio sottraendo le settimane
+    // 1. Calcola la data esatta di inizio sottraendo le settimane richieste
     const daysBeforeRace = settimane * 7;
     let startDate = addDays(raceDate, -daysBeforeRace); 
     
-    // 2. Allinea startDate al Lunedì di quella settimana
-    const dayOfWeek = startDate.getDay(); // 0 = Domenica, 1 = Lunedì, ecc.
-    const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    startDate = addDays(startDate, distanceToMonday);
+    // 2. Trova il Lunedì della settimana in cui cade startDate senza sfasamenti
+    const day = startDate.getDay();
+    // Trasformiamo la Domenica (0) in 7, così il Lunedì diventa 1, il Martedì 2, ecc.
+    const currentDayOfWeek = day === 0 ? 7 : day; 
+    
+    // Sottraiamo i giorni necessari per tornare al Lunedì corrente (Lun = 0 giorni da sottrarre)
+    const daysToSubtract = currentDayOfWeek - 1;
+    startDate = addDays(startDate, -daysToSubtract);
     
     return { startDate, raceDate };
 }
