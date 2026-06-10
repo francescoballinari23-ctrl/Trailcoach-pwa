@@ -1,9 +1,10 @@
+```html
 <!doctype html>
 <html lang="it">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v22.0 (P)</title>
+<title>🏔️ TrailCoach AI v22.1 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -47,9 +48,10 @@
   /* Stili per l'Accordion Settimanale */
   .accordion {
     background-color: #2a5d84; color: white; cursor: pointer;
-    padding: 12px; width: 93%; text-align: left; border: none; outline: none;
+    padding: 12px; width: 100%; text-align: left; border: none; outline: none;
     transition: background-color 0.2s ease; border-radius: 10px 10px 0 0;
     margin-top: 0; margin-bottom: 0; font-size: 16px; font-weight: 600;
+    box-sizing: border-box;
   }
   .accordion.active, .accordion:hover { background-color: #357ca0; }
   .days.panel {
@@ -87,7 +89,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v22.0</h1>
+<h1>🏔️ TrailCoach AI v22.1</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -178,9 +180,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
+
+```javascript
 const STORAGE_KEY="trailcoach_v17";
 let STATE={settings:{},planData:null, planDataAI:null};
 const GIORNI=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+
+const nomiGiorniBrevi = {
+  "Lunedì": "Lun", "Martedì": "Mar", "Mercoledì": "Mer", 
+  "Giovedì": "Gio", "Venerdì": "Ven", "Sabato": "Sab", "Domenica": "Dom"
+};
+const ordineGiorni = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
 const CORSA_TYPES = [
     "Corsa Lenta", "Corsa Facile", "Lungo Lento", "Corsa in Collina",
@@ -220,7 +230,7 @@ function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(STATE));}
 
 function addDays(date, days) {
     const result = new Date(date);
-    result.setUTCDate(result.getUTCDate() + days); 
+    result.setDate(result.getDate() + days); 
     return result;
 }
 
@@ -233,8 +243,7 @@ function formatDate(date) {
 }
 
 function calculatePlanDates(dataGara, settimane) {
-    const raceDate = new Date(dataGara);
-    raceDate.setHours(0, 0, 0, 0);
+    const raceDate = new Date(dataGara + 'T00:00:00');
     const daysBeforeRace = settimane * 7;
     const startDate = addDays(raceDate, -daysBeforeRace); 
     return { startDate, raceDate };
@@ -251,7 +260,7 @@ function loadState(){
             document.getElementById("obbKm").value = STATE.settings.obbKm || 42;
             document.getElementById("obbAsc").value = STATE.settings.obbAsc || 2000;
             document.getElementById("dataGara").value = STATE.settings.dataGara || '';
-            document.getElementById("tempoObiettivo").value = STATE.settings.tempoObiettivo || 6;
+            document.getElementById("tempoObiettivo").value = STATE.settings.tempoObiettivo || 5;
             document.getElementById("settimane").value = STATE.settings.settimane || 12;
             
             document.querySelectorAll(".chk-btn").forEach(btn => {
@@ -295,104 +304,6 @@ document.getElementById("toggleSettings").onclick=()=>{
   const card=document.getElementById("settingsCard");
   card.style.display=card.style.display==="none"?"block":"none";
 };
-
-document.getElementById("updatePlanBtn").addEventListener("click", async () => {
-    if (!STATE.planData && !STATE.planDataAI) {
-        alert("Non esiste un piano attuale da aggiornare.");
-        return;
-    }
-    const conferma = confirm("Vuoi aggiornare il piano per le settimane mancanti?");
-    if (!conferma) return;
-
-    try {
-        const today = new Date();
-        const settimaneMancanti = (STATE.planData || STATE.planDataAI.settimane).filter(settimana => {
-            const dataInizio = new Date(settimana.startDate);
-            return dataInizio >= today;
-        });
-
-        const datiAggiornamento = {
-            livello: STATE.settings.livello,
-            km: STATE.settings.obbKm,
-            asc: STATE.settings.obbAsc,
-            tempoObiettivo: STATE.settings.tempoObiettivo,
-            giorniCorsa: STATE.settings.giorniCorsa,
-            giorniPalestra: STATE.settings.giorniPalestra,
-            settimaneRestanti: settimaneMancanti,
-        };
-
-        const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...datiAggiornamento, azione: "update" }),
-        });
-
-        if (!response.ok) throw new Error(`Errore HTTP ${response.status}`);
-        
-        const nuovoPianoTesto = await response.text();
-        
-        // 1. Convertiamo la risposta stringa dell'AI in un oggetto JSON manipolabile
-        let datiAI;
-        try {
-            let cleanText = nuovoPianoTesto;
-            if (nuovoPianoTesto.includes("```")) {
-                const match = nuovoPianoTesto.match(/```json([\s\S]*?)```/);
-                cleanText = match ? match[1] : nuovoPianoTesto.substring(nuovoPianoTesto.indexOf('{'), nuovoPianoTesto.lastIndexOf('}') + 1);
-            }
-            datiAI = JSON.parse(cleanText.trim());
-        } catch (e) {
-            console.error("Errore nel parsing del ricalcolo AI:", e);
-            throw new Error("La risposta dell'AI non è in un formato JSON valido.");
-        }
-
-        // 2. --- LOGICA DI UNIONE (MERGE) SICURA ---
-        if (!STATE.planDataAI || !STATE.planDataAI.settimane) {
-            // Se non c'era un piano precedente, usa direttamente quello nuovo
-            STATE.planDataAI = datiAI;
-        } else {
-            // Se esiste già un piano, sovrascriviamo solo le settimane ricalcolate, salvando i GPX
-            datiAI.settimane.forEach(nuovaSettimana => {
-                const indexEsistente = STATE.planDataAI.settimane.findIndex(w => w.numero === nuovaSettimana.numero);
-                
-                if (indexEsistente !== -1) {
-                    // Controlliamo i singoli giorni della settimana per proteggere i GPX completati
-                    nuovaSettimana.allenamenti.forEach((nuovoAllenamento, aIdx) => {
-                        const vecchioAllenamento = STATE.planDataAI.settimane[indexEsistente].allenamenti[aIdx];
-                        
-                        // Se c'è un GPX caricato nel vecchio piano, lo manteniamo intatto!
-                        if (vecchioAllenamento && vecchioAllenamento.completed && vecchioAllenamento.gpxData) {
-                            nuovoAllenamento.completed = true;
-                            nuovoAllenamento.gpxData = vecchioAllenamento.gpxData;
-                        }
-                    });
-                    
-                    // Sostituiamo la vecchia settimana con quella nuova aggiornata
-                    STATE.planDataAI.settimane[indexEsistente] = nuovaSettimana;
-                } else {
-                    // Se è una settimana nuova rimodulata in coda, la aggiungiamo
-                    STATE.planDataAI.settimane.push(nuovaSettimana);
-                }
-            });
-
-            // Aggiorniamo la descrizione generale del coach se presente
-            if (datiAI.descrizione_generale) {
-                STATE.planDataAI.descrizione_generale = datiAI.descrizione_generale;
-            }
-        }
-
-        // 3. Salviamo lo stato definitivo nel LocalStorage del browser
-        saveState();
-
-        // 4. Lanciamo il rendering passando l'intero piano unito (convertito in stringa)
-        renderExternalPlan(JSON.stringify(STATE.planDataAI));
-        
-        alert("Piano aggiornato con successo! Le settimane future sono state rimodulate mantenendo i tuoi GPX passati.");
-
-    } catch (err) {
-        console.error(err);
-        alert("Errore durante l'aggiornamento del piano: " + err.message);
-    }
-});
 
 function creaDettagliAllenamento(type,weeklyKm,weeklyAsc,runsCount,livello,isExtra=false){
   if(runsCount === 0) return { distance: 0, ascent: 0, durationMin: 0, detailText: getDefaultDetails(type), completed: false, gpxData: null };
@@ -442,7 +353,7 @@ function generaPiano(){
   const baseVolumeCoeff = 0.6;
 
   for(let w=1;w<=settimane;w++){
-    const weekStartDate = addDays(startDate, (w - 1) * 7);
+    const weekStartDate = addDays(new Date(startDate), (w - 1) * 7);
     const w_mod = (w - 1) % 4;
     const w_cycle = Math.floor((w - 1) / 4);
     
@@ -545,13 +456,6 @@ function renderPiano(){
   const savedState = saveAccordionState("planView");
   const descrizione_generale = STATE.settings.descrizione_generale || "Nessuna descrizione.";
   let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${descrizione_generale}</div></div>`;
-  
-  // Dizionario per abbreviare i giorni nel piano locale
-  const nomiGiorniBrevi = {
-    "Lunedì": "Lun", "Martedì": "Mar", "Mercoledì": "Mer", 
-    "Giovedì": "Gio", "Venerdì": "Ven", "Sabato": "Sab", "Domenica": "Dom"
-  };
-  const ordineGiorni = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
   STATE.planData.forEach((w, wIdx) => {
     const totalKm = w.allenamenti.reduce((sum, a) => sum + (a.details?.distance || 0), 0).toFixed(1);
@@ -569,10 +473,9 @@ function renderPiano(){
                     let detContent = isRun ? `<div class="muted">Obiettivo: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>` : (a.type === "Palestra" ? `<div class="muted">Durata stimata: ${d.durationMin} min</div>` : '');
                     let gpxSection = '';
                     
-                    // --- CALCOLO DATA COMPATTA (es. Lun 8.6) ---
                     let dataGiornoDisplay = "";
                     if (w.startDate && a.day) {
-                        const dataInizioSettimana = new Date(w.startDate);
+                        const dataInizioSettimana = new Date(w.startDate + 'T00:00:00');
                         const offsetGiorni = ordineGiorni.indexOf(a.day);
                         if (offsetGiorni !== -1) {
                             const dataEsattaGiorno = addDays(dataInizioSettimana, offsetGiorni);
@@ -583,7 +486,6 @@ function renderPiano(){
                         }
                     }
                     if (!dataGiornoDisplay) dataGiornoDisplay = a.day || "";
-                    // --------------------------------------------
 
                     if (isRun) {
                         if (d.gpxData) {
@@ -628,6 +530,92 @@ function renderPiano(){
   restoreAccordionState("planView", savedState);
 }
 
+```javascript
+document.getElementById("updatePlanBtn").addEventListener("click", async () => {
+    if (!STATE.planData && !STATE.planDataAI) {
+        alert("Non esiste un piano attuale da aggiornare.");
+        return;
+    }
+    const conferma = confirm("Vuoi aggiornare il piano per le settimane mancanti?");
+    if (!conferma) return;
+
+    try {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        const settimaneEsistenti = STATE.planData || STATE.planDataAI?.settimane || [];
+        const settimaneMancanti = settimaneEsistenti.filter(settimana => {
+            const dataInizio = new Date(settimana.startDate + 'T00:00:00');
+            return dataInizio >= today;
+        });
+
+        const datiAggiornamento = {
+            livello: STATE.settings.livello,
+            km: STATE.settings.obbKm,
+            asc: STATE.settings.obbAsc,
+            tempoObiettivo: STATE.settings.tempoObiettivo,
+            giorniCorsa: STATE.settings.giorniCorsa,
+            giorniPalestra: STATE.settings.giorniPalestra,
+            settimaneRestanti: settimaneMancanti,
+        };
+
+        const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...datiAggiornamento, action: "update", azione: "update" }),
+        });
+
+        if (!response.ok) throw new Error(`Errore HTTP ${response.status}`);
+        
+        const nuovoPianoTesto = await response.text();
+        
+        let datiAI;
+        try {
+            let cleanText = nuovoPianoTesto;
+            if (nuovoPianoTesto.includes("```")) {
+                const match = nuovoPianoTesto.match(/```json([\s\S]*?)```/);
+                cleanText = match ? match[1] : nuovoPianoTesto.substring(nuovoPianoTesto.indexOf('{'), nuovoPianoTesto.lastIndexOf('}') + 1);
+            }
+            datiAI = JSON.parse(cleanText.trim());
+        } catch (e) {
+            console.error("Errore nel parsing del ricalcolo AI:", e);
+            throw new Error("La risposta dell'AI non è in un formato JSON valido.");
+        }
+
+        if (!STATE.planDataAI || !STATE.planDataAI.settimane) {
+            STATE.planDataAI = datiAI;
+        } else {
+            datiAI.settimane.forEach(nuovaSettimana => {
+                const indexEsistente = STATE.planDataAI.settimane.findIndex(w => w.numero === nuovaSettimana.numero);
+                
+                if (indexEsistente !== -1) {
+                    nuovaSettimana.allenamenti.forEach((nuovoAllenamento, aIdx) => {
+                        const vecchioAllenamento = STATE.planDataAI.settimane[indexEsistente].allenamenti[aIdx];
+                        if (vecchioAllenamento && vecchioAllenamento.completed && vecchioAllenamento.gpxData) {
+                            nuovoAllenamento.completed = true;
+                            nuovoAllenamento.gpxData = vecchioAllenamento.gpxData;
+                        }
+                    });
+                    STATE.planDataAI.settimane[indexEsistente] = nuovaSettimana;
+                } else {
+                    STATE.planDataAI.settimane.push(nuovaSettimana);
+                }
+            });
+
+            if (datiAI.descrizione_generale) {
+                STATE.planDataAI.descrizione_generale = datiAI.descrizione_generale;
+            }
+        }
+
+        saveState();
+        renderExternalPlan(JSON.stringify(STATE.planDataAI));
+        alert("Piano aggiornato con successo! Le settimane future sono state rimodulate mantenendo i tuoi GPX passati.");
+
+    } catch (err) {
+        console.error(err);
+        alert("Errore durante l'aggiornamento del piano: " + err.message);
+    }
+});
 
 function calculatePace(km, durationMin) {
     if (km > 0 && durationMin > 0) {
@@ -760,7 +748,7 @@ function renderExternalPlan(jsonString) {
     if (dataGara && piano.settimane.length > 0) {
         const { startDate } = calculatePlanDates(dataGara, piano.settimane.length);
         piano.settimane.forEach((w, index) => {
-            w.startDate = addDays(startDate, index * 7).toISOString().split('T')[0]; 
+            w.startDate = addDays(new Date(startDate), index * 7).toISOString().split('T')[0]; 
             w.allenamenti.forEach(a => {
                    a.completed = a.completed || false; a.gpxData = a.gpxData || null;
                    if (a.tipo === "Riposo") { a.km = 0; a.asc = 0; a.durationMin = 0; a.dettagli = a.dettagli || getDefaultDetails("Riposo"); }
@@ -775,6 +763,7 @@ function renderExternalPlan(jsonString) {
     let htmlOutput = `<div class="card"><label>Descrizione Generale</label><div class="muted">${piano.descrizione_generale || ""}</div></div>`;
     piano.settimane.forEach((w, wIdx) => {
         const totalKm = w.allenamenti ? w.allenamenti.reduce((sum, a) => sum + (a.km || 0), 0).toFixed(1) : 0;
+        
         htmlOutput += `
             <div class="week">
                 <div class="accordion">📅 Settimana ${w.numero} (dal ${formatDate(w.startDate)}) — ${w.focus || ""} (${totalKm} km)</div>
@@ -786,6 +775,22 @@ function renderExternalPlan(jsonString) {
                         let detContent = isRun ? `<div class="muted">Obiettivo: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 60} min ${paceDisplay}</div>` : (a.tipo === "Palestra" ? `<div class="muted">Durata: ${a.durationMin || 60} min</div>` : '');
                         let gpxSection = '';
                         
+                        // --- CALCOLO DATA COMPATTA (es. Lun 8.6) ---
+                        let dataGiornoDisplay = "";
+                        if (w.startDate && a.giorno) {
+                            const dataInizioSettimana = new Date(w.startDate + 'T00:00:00');
+                            const offsetGiorni = ordineGiorni.indexOf(a.giorno);
+                            if (offsetGiorni !== -1) {
+                                const dataEsattaGiorno = addDays(dataInizioSettimana, offsetGiorni);
+                                const giornoMese = dataEsattaGiorno.getDate();
+                                const mese = dataEsattaGiorno.getMonth() + 1;
+                                const giornoBreve = nomiGiorniBrevi[a.giorno] || a.giorno;
+                                dataGiornoDisplay = `${giornoBreve} ${giornoMese}.${mese}`;
+                            }
+                        }
+                        if (!dataGiornoDisplay) dataGiornoDisplay = a.giorno || "";
+                        // --------------------------------------------
+
                         if (isRun) {
                             gpxSection = a.gpxData ? `
                                 <div class="gpx-data"><strong>Caricato ✅:</strong><p class="muted">Km: ${a.gpxData.distanceKm.toFixed(2)} • D+: ${a.gpxData.ascentMeters}m</p></div>
@@ -797,7 +802,7 @@ function renderExternalPlan(jsonString) {
                         return `
                         <div class="day">
                             <div class="day-header" data-toggle-panel="ai-${wIdx}-${aIdx}">
-                                <div><span class="day-status">${statusIcon}</span><strong>${a.giorno || ''} ${a.tipo}</strong> — ${isRun ? a.km+' km' : a.tipo}</div>
+                                <div><span class="day-status">${statusIcon}</span><strong>${dataGiornoDisplay}</strong> — ${a.tipo} ${isRun ? '— ' + a.km+' km' : ''}</div>
                                 <div><span style="font-size:10px;">${a.dettagli || ''}</span></div>
                             </div>
                             <div class="day-details-panel" id="ai-${wIdx}-${aIdx}"><em>${a.dettagli || ''}</em>${detContent}${gpxSection}</div>
@@ -855,7 +860,6 @@ function uploadGPX(planType, weekIdx, runIdx) {
             const plan = planType === 'local' ? STATE.planData : STATE.planDataAI.settimane;
             const attivita = plan[weekIdx].allenamenti[runIdx];
             
-            // 1. Recupero dei dati TARGET (Richiesti) in base al tipo di piano
             let kmRichiesti = 0;
             let dPlusRichiesto = 0;
             let tempoRichiesto = 0;
@@ -865,7 +869,6 @@ function uploadGPX(planType, weekIdx, runIdx) {
                 dPlusRichiesto = attivita.details.ascent || 0;
                 tempoRichiesto = attivita.details.durationMin || 0;
                 
-                // Salvataggio dati reali nel piano locale
                 attivita.details.gpxData = gpxData;
                 attivita.details.completed = true;
             } else {
@@ -873,46 +876,21 @@ function uploadGPX(planType, weekIdx, runIdx) {
                 dPlusRichiesto = attivita.asc || 0;
                 tempoRichiesto = attivita.durationMin || 0;
                 
-                // Salvataggio dati reali nel piano AI
                 attivita.gpxData = gpxData;
                 attivita.completed = true;
             }
             
-            // 2. Recupero dei dati REALI (Effettivi dal GPX)
             const kmEffettivi = gpxData.distanceKm;
             const dPlusEffettivo = gpxData.ascentMeters;
             const tempoEffettivo = gpxData.durationMinutes;
-            
-            // 3. Calcolo degli scostamenti (Facoltativo, per dare un colpo d'occhio)
             const diffKm = (kmEffettivi - kmRichiesti).toFixed(1);
             const diffAsc = dPlusEffettivo - dPlusRichiesto;
             
-            // 4. Costruzione del messaggio del Pop-up di controllo
-            const messaggioPopUp = `
-📊 VERIFICA ALLENAMENTO GPX
-
-🏃 CHILOMETRAGGIO:
-- Richiesto: ${kmRichiesti.toFixed(1)} km
-- Effettivo: ${kmEffettivi.toFixed(1)} km (${diffKm >= 0 ? '+' : ''}${diffKm} km)
-
-🏔️ DISLIVELLO (D+):
-- Richiesto: ${dPlusRichiesto} m
-- Effettivo: ${dPlusEffettivo} m (${diffAsc >= 0 ? '+' : ''}${diffAsc} m)
-
-⏱️ DURATA:
-- Richiesta: ${tempoRichiesto} min
-- Effettiva: ${tempoEffettivo} min
-
-✅ Allenamento salvato e verificato con successo nel piano!
-`;
+            const messaggioPopUp = `📊 VERIFICA ALLENAMENTO GPX\n\n🏃 CHILOMETRAGGIO:\n- Richiesto: ${kmRichiesti.toFixed(1)} km\n- Effettivo: ${kmEffettivi.toFixed(1)} km (${diffKm >= 0 ? '+' : ''}${diffKm} km)\n\n🏔️ DISLIVELLO (D+):\n- Richiesto: ${dPlusRichiesto} m\n- Effettivo: ${dPlusEffettivo} m (${diffAsc >= 0 ? '+' : ''}${diffAsc} m)\n\n⏱️ DURATA:\n- Richiesta: ${tempoRichiesto} min\n- Effettiva: ${tempoEffettivo} min\n\n✅ Allenamento salvato e verificato con successo nel piano!`;
             
-            // Mostra il pop-up di confronto all'utente
             alert(messaggioPopUp);
-            
-            // Salva lo stato nel localStorage
             saveState(); 
             
-            // Rinfresca la schermata per mostrare la spunta verde ✅ e i dati GPX sotto il giorno
             if (planType === 'local') {
                 renderPiano(); 
             } else {
@@ -940,9 +918,9 @@ async function generaPianoAI() {
     const dataGara=document.getElementById("dataGara").value;
     const tempoObiettivo = parseFloat(document.getElementById("tempoObiettivo").value);
     
-    if(!dataGara){alert("Inserisci la data della gara!");return;} 
+    if(!dataGara){alert("Inserisci la data della gara!"); return;} 
     
-    const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
+    const response = await fetch("[https://eoakctnc24hsvp9.m.pipedream.net](https://eoakctnc24hsvp9.m.pipedream.net)", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ livello, km: obbKm, asc: obbAsc, settimane, dataGara, tempoObiettivo, giorniCorsa, giorniPalestra })
@@ -954,30 +932,46 @@ async function generaPianoAI() {
   }
 }
 
-function esportaInPDF(elementId) {
-    const { jsPDF } = window.jspdf; const container = document.getElementById(elementId);
-    let elementsToCapture = elementId === 'planView' ? [container] : [];
+async function esportaInPDF(elementId) {
+    const { jsPDF } = window.jspdf; 
+    const container = document.getElementById(elementId);
+    let elementsToCapture = [];
     
-    if (elementId === 'piano-generato') {
+    if (elementId === 'planView') {
+        elementsToCapture.push(container);
+    } else if (elementId === 'piano-generato') {
         container.querySelectorAll('.week').forEach(week => {
             const acc = week.querySelector('.accordion'), pan = week.querySelector('.days.panel');
-            if (acc?.classList.contains('active') && pan?.style.display === 'block') elementsToCapture.push(week);
+            if (acc?.classList.contains('active') && pan && pan.style.display === 'block') {
+                elementsToCapture.push(week);
+            }
         });
     }
-    if (elementsToCapture.length === 0) { alert("Apri le sezioni da esportare."); return; }
+    
+    if (elementsToCapture.length === 0) { 
+        alert("Apri le sezioni da esportare prima di procedere."); 
+        return; 
+    }
 
-    const pdf = new jsPDF('p', 'mm', 'a4'); let position = 0;
+    const pdf = new jsPDF('p', 'mm', 'a4'); 
+    let position = 0;
 
-    const capturePromises = elementsToCapture.map(el => html2canvas(el, { scale: 2, useCORS: true }));
-    Promise.all(capturePromises).then(canvases => {
-        canvases.forEach(canvas => {
+    for (let i = 0; i < elementsToCapture.length; i++) {
+        try {
+            const canvas = await html2canvas(elementsToCapture[i], { scale: 2, useCORS: true });
             const imgHeight = (canvas.height * 210 / canvas.width);
-            if (position + imgHeight > 297 && position !== 0) { pdf.addPage(); position = 0; }
+            
+            if (position + imgHeight > 297 && position !== 0) { 
+                pdf.addPage(); 
+                position = 0; 
+            }
             pdf.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, position, 210, imgHeight);
             position += imgHeight;
-        });
-        pdf.save("TrailCoach_Piano.pdf");
-    });
+        } catch (e) {
+            console.error("Errore nell'esportazione di un elemento del PDF:", e);
+        }
+    }
+    pdf.save("TrailCoach_Piano.pdf");
 }
 
 function attachAccordionListeners(containerId) {
@@ -985,7 +979,9 @@ function attachAccordionListeners(containerId) {
         btn.onclick = function() {
             this.classList.toggle("active");
             const panel = this.nextElementSibling;
-            panel.style.display = panel.style.display === "block" ? "none" : "block"; 
+            if (panel) {
+                panel.style.display = panel.style.display === "block" ? "none" : "block"; 
+            }
         };
     });
 }
