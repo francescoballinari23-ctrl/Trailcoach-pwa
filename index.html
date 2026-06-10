@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v22.0 (P)</title>
+<title>🏔️ TrailCoach AI v23.0 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -88,7 +88,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v22.0</h1>
+<h1>🏔️ TrailCoach AI v23.0</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -722,20 +722,35 @@ function renderExternalPlan(jsonString) {
     const savedState = saveAccordionState("piano-generato"); 
     
     container.innerHTML = "";
-    let piano, cleanText = jsonString;
-    card.style.display = 'block';
-    document.getElementById("planView").style.display = 'none';
-    document.getElementById("PlandCard").style.display = 'none';
+    let piano;
+let cleanText = jsonString;
 
-    try {
-        const match = jsonString.match(/```json([\s\S]*?)```/);
-        cleanText = match ? match[1] : jsonString.substring(jsonString.indexOf('{'), jsonString.lastIndexOf('}') + 1);
-        cleanText = cleanText.replace(/\\n/g, "").replace(/\n/g, "").replace(/\r/g, "").trim();
-        piano = JSON.parse(cleanText);
-    } catch (e) {
-        container.innerHTML = `<p style="color:red;">❌ Errore nel formato JSON: ${e.message}</p>`;
-        return;
+try {
+    if (cleanText.includes("```json")) {
+        const match = cleanText.match(/```json([\s\S]*?)```/);
+        if (match) {
+            cleanText = match[1];
+        }
     }
+    const firstBrace = cleanText.indexOf("{");
+    const lastBrace = cleanText.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+    }
+    cleanText = cleanText
+        .replace(/\r/g, "")
+        .trim();
+    piano = JSON.parse(cleanText);
+} catch (e) {
+    console.error("JSON ricevuto:", cleanText);
+    container.innerHTML = `
+        <p style="color:red;">
+            ❌ Errore nel formato JSON:<br>
+            ${e.message}
+        </p>
+    `;
+    return;
+}
 
     if (!piano.settimane || !Array.isArray(piano.settimane)) return;
     
@@ -915,32 +930,85 @@ function uploadGPX(planType, weekIdx, runIdx) {
 }
   
 async function generaPianoAI() {
+
   const container = document.getElementById("piano-generato");
-  container.innerHTML = "<p>⏳ Generazione piano AI in corso…</p>";
-  document.getElementById("aiPlanCard").style.display = 'block';
-  document.getElementById("planView").style.display = 'none';
+
+  container.innerHTML = "<p>⏳ Generazione piano AI in corso...</p>";
+
+  document.getElementById("aiPlanCard").style.display = "block";
+  document.getElementById("planView").style.display = "none";
+  document.getElementById("PlandCard").style.display = "none";
 
   try {
+
     const livello = document.getElementById("livello").value;
     const obbKm = parseFloat(document.getElementById("obbKm").value);
     const obbAsc = parseFloat(document.getElementById("obbAsc").value);
-    const giorniPalestra = Array.from(document.querySelectorAll(".chk-btn[data-type='palestra'].active")).map(b => b.dataset.day);
-    const giorniCorsa = Array.from(document.querySelectorAll(".chk-btn[data-type='corsa'].active")).map(b => b.dataset.day);
     const settimane = parseInt(document.getElementById("settimane").value);
-    const dataGara=document.getElementById("dataGara").value;
+    const dataGara = document.getElementById("dataGara").value;
     const tempoObiettivo = parseFloat(document.getElementById("tempoObiettivo").value);
-    
-    if(!dataGara){alert("Inserisci la data della gara!"); return;} 
-    
-    const response = await fetch("[https://eoakctnc24hsvp9.m.pipedream.net](https://eoakctnc24hsvp9.m.pipedream.net)", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ livello, km: obbKm, asc: obbAsc, settimane, dataGara, tempoObiettivo, giorniCorsa, giorniPalestra })
-    });
-    const rawText = await response.text(); 
-    renderExternalPlan(rawText); 
+
+    const giorniPalestra = Array.from(
+      document.querySelectorAll(".chk-btn[data-type='palestra'].active")
+    ).map(b => b.dataset.day);
+
+    const giorniCorsa = Array.from(
+      document.querySelectorAll(".chk-btn[data-type='corsa'].active")
+    ).map(b => b.dataset.day);
+
+    if (!dataGara) {
+      alert("Inserisci la data della gara");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 180000);
+
+    const response = await fetch(
+      "https://eoakctnc24hsvp9.m.pipedream.net",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          livello,
+          km: obbKm,
+          asc: obbAsc,
+          settimane,
+          dataGara,
+          tempoObiettivo,
+          giorniCorsa,
+          giorniPalestra
+        })
+      }
+    );
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      throw new Error(`Errore HTTP ${response.status}`);
+    }
+
+    const rawText = await response.text();
+
+    renderExternalPlan(rawText);
+
   } catch (err) {
-    container.innerHTML = `<p style="color:red;">❌ Errore durante la generazione AI</p>`;
+
+    console.error(err);
+
+    if (err.name === "AbortError") {
+      container.innerHTML =
+        "<p style='color:red;'>❌ Timeout: il workflow AI impiega troppo tempo a rispondere.</p>";
+    } else {
+      container.innerHTML =
+        `<p style='color:red;'>❌ ${err.message}</p>`;
+    }
   }
 }
 
