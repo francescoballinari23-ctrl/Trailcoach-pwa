@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v22.2 (P)</title>
+<title>🏔️ TrailCoach AI v22.3 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -88,7 +88,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v22.2</h1>
+<h1>🏔️ TrailCoach AI v22.3</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -752,19 +752,25 @@ function renderExternalPlan(jsonString) {
     if (!piano.settimane || !Array.isArray(piano.settimane)) return;
     
     const dataGara = document.getElementById("dataGara").value;
-   if (dataGara && piano.settimane.length > 0) {
+  if (dataGara && piano.settimane.length > 0) {
+    // Richiama la nuova funzione blindata che restituisce il Lunedì corretto
     const { startDate } = calculatePlanDates(dataGara, piano.settimane.length);
+    
     piano.settimane.forEach((w, index) => {
-        // Ora startDate è garantito essere un Lunedì
-        w.startDate = addDays(new Date(startDate), index * 7).toISOString().split('T')[0]; 
+        // Applica il timestamp 'T00:00:00' per evitare che i fusi orari europei sfasino di un giorno
+        const dataCorrenteData = new Date(startDate.getTime());
+        dataCorrenteData.setDate(startDate.getDate() + (index * 7));
+        
+        w.startDate = dataCorrenteData.toISOString().split('T')[0]; 
+        
         w.allenamenti.forEach(a => {
-               a.completed = a.completed || false; a.gpxData = a.gpxData || null;
+               a.completed = a.completed || false; 
+               a.gpxData = a.gpxData || null;
                if (a.tipo === "Riposo") { a.km = 0; a.asc = 0; a.durationMin = 0; a.dettagli = a.dettagli || getDefaultDetails("Riposo"); }
                if (a.tipo === "Palestra" && a.durationMin === undefined) { a.durationMin = 60; a.km = 0; a.asc = 0; a.dettagli = a.dettagli || getDefaultDetails("Palestra"); }
         });
     });
 }
-
     STATE = { settings: { descrizione_generale: piano.descrizione_generale || 'Piano AI', ...STATE.settings }, planData: null, planDataAI: piano };
     saveState();
 
