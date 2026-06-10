@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v22.0 (P)</title>
+<title>🏔️ TrailCoach AI v22.2 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -88,7 +88,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v22.0</h1>
+<h1>🏔️ TrailCoach AI v22.2</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -241,8 +241,16 @@ function formatDate(date) {
 
 function calculatePlanDates(dataGara, settimane) {
     const raceDate = new Date(dataGara + 'T00:00:00');
+    
+    // 1. Calcola la data teorica di inizio sottraendo le settimane
     const daysBeforeRace = settimane * 7;
-    const startDate = addDays(raceDate, -daysBeforeRace); 
+    let startDate = addDays(raceDate, -daysBeforeRace); 
+    
+    // 2. Allinea startDate al Lunedì di quella settimana
+    const dayOfWeek = startDate.getDay(); // 0 = Domenica, 1 = Lunedì, ecc.
+    const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    startDate = addDays(startDate, distanceToMonday);
+    
     return { startDate, raceDate };
 }
 
@@ -740,17 +748,18 @@ function renderExternalPlan(jsonString) {
     if (!piano.settimane || !Array.isArray(piano.settimane)) return;
     
     const dataGara = document.getElementById("dataGara").value;
-    if (dataGara && piano.settimane.length > 0) {
-        const { startDate } = calculatePlanDates(dataGara, piano.settimane.length);
-        piano.settimane.forEach((w, index) => {
-            w.startDate = addDays(new Date(startDate), index * 7).toISOString().split('T')[0]; 
-            w.allenamenti.forEach(a => {
-                   a.completed = a.completed || false; a.gpxData = a.gpxData || null;
-                   if (a.tipo === "Riposo") { a.km = 0; a.asc = 0; a.durationMin = 0; a.dettagli = a.dettagli || getDefaultDetails("Riposo"); }
-                   if (a.tipo === "Palestra" && a.durationMin === undefined) { a.durationMin = 60; a.km = 0; a.asc = 0; a.dettagli = a.dettagli || getDefaultDetails("Palestra"); }
-            });
+   if (dataGara && piano.settimane.length > 0) {
+    const { startDate } = calculatePlanDates(dataGara, piano.settimane.length);
+    piano.settimane.forEach((w, index) => {
+        // Ora startDate è garantito essere un Lunedì
+        w.startDate = addDays(new Date(startDate), index * 7).toISOString().split('T')[0]; 
+        w.allenamenti.forEach(a => {
+               a.completed = a.completed || false; a.gpxData = a.gpxData || null;
+               if (a.tipo === "Riposo") { a.km = 0; a.asc = 0; a.durationMin = 0; a.dettagli = a.dettagli || getDefaultDetails("Riposo"); }
+               if (a.tipo === "Palestra" && a.durationMin === undefined) { a.durationMin = 60; a.km = 0; a.asc = 0; a.dettagli = a.dettagli || getDefaultDetails("Palestra"); }
         });
-    }
+    });
+}
 
     STATE = { settings: { descrizione_generale: piano.descrizione_generale || 'Piano AI', ...STATE.settings }, planData: null, planDataAI: piano };
     saveState();
