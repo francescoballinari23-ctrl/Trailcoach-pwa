@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v23.1 (P)</title>
+<title>🏔️ TrailCoach AI v23.2 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -88,7 +88,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v23.1</h1>
+<h1>🏔️ TrailCoach AI v23.2</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -222,7 +222,7 @@ function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(STATE));}
 
 function addDays(date, days) {
     const result = new Date(date);
-    result.setUTCDate(result.getUTCDate() + days); 
+    result.setDate(result.getDate() + days); 
     return result;
 }
 
@@ -235,8 +235,10 @@ function formatDate(date) {
 }
 
 function calculatePlanDates(dataGara, settimane) {
-    const raceDate = new Date(dataGara);
+    const parts = dataGara.split('-');
+    const raceDate = new Date(parts[0], parts[1] - 1, parts[2]); 
     raceDate.setHours(0, 0, 0, 0);
+    
     const daysBeforeRace = settimane * 7;
     const startDate = addDays(raceDate, -daysBeforeRace); 
     return { startDate, raceDate };
@@ -481,10 +483,9 @@ function generaPiano(){
         settimana.push({day,type:"Riposo",summary:"Riposo",details:{detailText:getDefaultDetails("Riposo"), distance: 0, ascent: 0, durationMin: 0, completed: false, gpxData: null}});
       }
     }
-    
-    plan.push({
+       plan.push({
         settimana:w,
-        startDate: weekStartDate.toISOString().split('T')[0], 
+        startDate: `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`, 
         targetKm:+totalKm.toFixed(1),targetAsc:Math.round(totalAsc),
         allenamenti:settimana,isScarico, 
         focus: isScarico ? "Settimana di scarico e recupero attivo" : "Costruzione volume e resistenza"
@@ -748,11 +749,12 @@ function renderExternalPlan(jsonString) {
 
     if (!piano.settimane || !Array.isArray(piano.settimane)) return;
     
-    const dataGara = document.getElementById("dataGara").value;
+        const dataGara = document.getElementById("dataGara").value;
     if (dataGara && piano.settimane.length > 0) {
         const { startDate } = calculatePlanDates(dataGara, piano.settimane.length);
         piano.settimane.forEach((w, index) => {
-            w.startDate = addDays(startDate, index * 7).toISOString().split('T')[0]; 
+            const calculatedTargetDate = addDays(startDate, index * 7);
+            w.startDate = w.startDate || `${calculatedTargetDate.getFullYear()}-${String(calculatedTargetDate.getMonth() + 1).padStart(2, '0')}-${String(calculatedTargetDate.getDate()).padStart(2, '0')}`; 
             w.allenamenti.forEach(a => {
                    a.completed = a.completed || false; a.gpxData = a.gpxData || null;
                    if (a.tipo === "Riposo") { a.km = 0; a.asc = 0; a.durationMin = 0; a.dettagli = a.dettagli || getDefaultDetails("Riposo"); }
