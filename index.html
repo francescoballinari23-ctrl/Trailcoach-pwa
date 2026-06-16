@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v23.0 (P)</title>
+<title>🏔️ TrailCoach AI v23.1 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -88,7 +88,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v23.0</h1>
+<h1>🏔️ TrailCoach AI v23.1</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -151,7 +151,7 @@
   </div>
 </div>
   
-<div class="card" id="PlandCard">
+<div class="card" id="PlandCard" style="display: none;">
   <label>Piano settimanale (Locale)</label>
   <div id="planView" class="muted">Nessun piano ancora generato.</div>
   <button onclick="esportaInPDF('planView')" class="btn-action" style="background:#ef802e;">📄 Esporta Piano Locale in PDF</button>
@@ -492,6 +492,8 @@ function generaPiano(){
   }
 
   const descrizione_generale = `Piano generato localmente per ${livello} su ${settimane} settimane, che termina il ${formatDate(raceDate)}. Target: ${obbKm} km, +${obbAsc}m D+.`;
+  
+  // FIX: Salvataggio coerente e reset esplicito dell'AI quando si sovrascrive localmente
   STATE={settings:{livello,obbKm,obbAsc,settimane,giorniPalestra,giorniCorsa,dataGara,tempoObiettivo,descrizione_generale},planData:plan, planDataAI: null}; 
   saveState(); 
   document.getElementById("settingsCard").style.display="none";
@@ -705,7 +707,6 @@ function saveEditedActivity(planType, weekIdx, runIdx) {
     if (planType === 'local') {
         renderPiano();
     } else {
-        // Renderizzazione sicura locale dell'AI senza passare dal parsing di stringhe stringificate
         renderExternalPlan(JSON.stringify(STATE.planDataAI));
     }
     alert("Allenamento aggiornato!");
@@ -723,34 +724,27 @@ function renderExternalPlan(jsonString) {
     
     container.innerHTML = "";
     let piano;
-let cleanText = jsonString;
+    let cleanText = jsonString;
 
-try {
-    if (cleanText.includes("```json")) {
-        const match = cleanText.match(/```json([\s\S]*?)```/);
-        if (match) {
-            cleanText = match[1];
+    try {
+        if (cleanText.includes("```json")) {
+            const match = cleanText.match(/```json([\s\S]*?)```/);
+            if (match) {
+                cleanText = match[1];
+            }
         }
+        const firstBrace = cleanText.indexOf("{");
+        const lastBrace = cleanText.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace !== -1) {
+            cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+        }
+        cleanText = cleanText.replace(/\r/g, "").trim();
+        piano = JSON.parse(cleanText);
+    } catch (e) {
+        console.error("JSON ricevuto:", cleanText);
+        container.innerHTML = `<p style="color:red;">❌ Errore nel formato JSON:<br>${e.message}</p>`;
+        return;
     }
-    const firstBrace = cleanText.indexOf("{");
-    const lastBrace = cleanText.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1) {
-        cleanText = cleanText.substring(firstBrace, lastBrace + 1);
-    }
-    cleanText = cleanText
-        .replace(/\r/g, "")
-        .trim();
-    piano = JSON.parse(cleanText);
-} catch (e) {
-    console.error("JSON ricevuto:", cleanText);
-    container.innerHTML = `
-        <p style="color:red;">
-            ❌ Errore nel formato JSON:<br>
-            ${e.message}
-        </p>
-    `;
-    return;
-}
 
     if (!piano.settimane || !Array.isArray(piano.settimane)) return;
     
@@ -930,9 +924,7 @@ function uploadGPX(planType, weekIdx, runIdx) {
 }
   
 async function generaPianoAI() {
-
   const container = document.getElementById("piano-generato");
-
   container.innerHTML = "<p>⏳ Generazione piano AI in corso...</p>";
 
   document.getElementById("aiPlanCard").style.display = "block";
@@ -940,7 +932,6 @@ async function generaPianoAI() {
   document.getElementById("PlandCard").style.display = "none";
 
   try {
-
     const livello = document.getElementById("livello").value;
     const obbKm = parseFloat(document.getElementById("obbKm").value);
     const obbAsc = parseFloat(document.getElementById("obbAsc").value);
@@ -962,52 +953,32 @@ async function generaPianoAI() {
     }
 
     const controller = new AbortController();
-
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 180000);
+    const timeout = setTimeout(() => { controller.abort(); }, 180000);
 
     const response = await fetch(
       "https://eoakctnc24hsvp9.m.pipedream.net",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          livello,
-          km: obbKm,
-          asc: obbAsc,
-          settimane,
-          dataGara,
-          tempoObiettivo,
-          giorniCorsa,
-          giorniPalestra
+          livello, km: obbKm, asc: obbAsc, settimane, dataGara, tempoObiettivo, giorniCorsa, giorniPalestra
         })
       }
     );
 
     clearTimeout(timeout);
-
-    if (!response.ok) {
-      throw new Error(`Errore HTTP ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Errore HTTP ${response.status}`);
 
     const rawText = await response.text();
-
     renderExternalPlan(rawText);
 
   } catch (err) {
-
     console.error(err);
-
     if (err.name === "AbortError") {
-      container.innerHTML =
-        "<p style='color:red;'>❌ Timeout: il workflow AI impiega troppo tempo a rispondere.</p>";
+      container.innerHTML = "<p style='color:red;'>❌ Timeout: il workflow AI impiega troppo tempo a rispondere.</p>";
     } else {
-      container.innerHTML =
-        `<p style='color:red;'>❌ ${err.message}</p>`;
+      container.innerHTML = `<p style='color:red;'>❌ ${err.message}</p>`;
     }
   }
 }
@@ -1061,11 +1032,16 @@ document.getElementById("genLocal").onclick = generaPiano;
 document.getElementById("genAI").onclick = generaPianoAI;
 document.getElementById("resetData").onclick = resetApplicationData; 
 
+// FIX: Ripristino completo dello stato e gestione della visibilità dei moduli all'avvio
 document.addEventListener('DOMContentLoaded', () => {
     loadState();
     if(STATE.planDataAI){
+        document.getElementById("aiPlanCard").style.display = 'block';
+        document.getElementById("PlandCard").style.display = 'none';
         renderExternalPlan(JSON.stringify(STATE.planDataAI)); 
     } else if(STATE.planData){ 
+        document.getElementById("aiPlanCard").style.display = 'none';
+        document.getElementById("PlandCard").style.display = 'block';
         renderPiano();
     }
 });
