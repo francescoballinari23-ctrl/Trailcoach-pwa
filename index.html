@@ -1,179 +1,217 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v23.4 (P)</title>
-<meta name="theme-color" content="#000000">
-<style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
-    background:#fafafa; color:#111; margin:12px;
-  }
-  h1 { text-align:center; font-size:22px; margin:6px 0; }
-  .card {
-    background:#fff; border-radius:10px; padding:12px; margin:10px 0;
-    box-shadow:0 1px 6px rgba(0,0,0,.06);
-  }
-  label { display:block; margin:8px 0 6px; font-weight:600; }
-  input, select {
-    width:100%; padding:8px; border:1px solid #ddd; border-radius:8px;
-    font-size:15px; box-sizing:border-box;
-  }
-  button {
-    background:#007aff; color:#fff; border:none; padding:9px 14px;
-    border-radius:8px; font-weight:600; cursor:pointer; font-size:14px;
-  }
-  button:hover { background:#005fd6; }
-  button.reset { background:#ff3b30; margin-left:6px; }
-  .btn-action { margin-top: 10px; width: 100%; box-sizing: border-box; }
-  
-  .week { 
-    background:#f7f9ff; border-radius:10px; margin:8px 0;
-  }
-  .days { padding: 0 10px 10px 10px; } 
-  .day { padding:6px 0; border-bottom:1px solid #eee; }
-  .day:last-child { border-bottom: none; }
-  
-  .chk-btn {
-    background:#f2f2f2; border-radius:8px; padding:8px; text-align:center;
-    cursor:pointer; border:1px solid transparent; font-weight:700;
-  }
-  .chk-btn.active { background:#007aff; color:#fff; border-color:#0060d6; }
-  .checkbox-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px; }
-  .checkbox-grid-bottom { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
-  .muted { color:#666; font-size:13px; }
-
-  /* Stili per l'Accordion Settimanale */
-  .accordion {
-    background-color: #2a5d84; color: white; cursor: pointer;
-    padding: 12px; width: 100%; text-align: left; border: none; outline: none;
-    transition: background-color 0.2s ease; border-radius: 10px 10px 0 0;
-    margin-top: 0; margin-bottom: 0; font-size: 16px; font-weight: 600;
-    box-sizing: border-box;
-  }
-  .accordion.active, .accordion:hover { background-color: #357ca0; }
-  .days.panel {
-    background-color: #fcfcfc; overflow: hidden; padding-top: 10px;
-    border-radius: 0 0 10px 10px; border: 1px solid #eee; border-top: none;
-    display: none; 
-  }
-  /* Stili per il Dettaglio/GPX Accordion */
-  .day-header {
-    display: flex; justify-content: space-between; align-items: center;
-    cursor: pointer; padding: 4px 0;
-  }
-  .day-status { font-size: 18px; margin-right: 8px; }
-  .day-details-panel {
-    background: #fff; border-radius: 8px; padding: 8px 10px; margin: 6px 0;
-    border: 1px solid #eee; display: none;
-  }
-  .gpx-data { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; }
-  .gpx-data p { margin: 4px 0; }
-  .gpx-upload-btn {
-    background:#34c759; color:#fff; padding:6px 10px; border-radius:6px;
-    font-size:13px; margin-top: 6px; border: none;
-  }
-  .gpx-upload-btn:hover { background: #2f9a4b; }
-  
-  /* Modal di modifica */
-  .modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); display: none; z-index: 1000;
-    justify-content: center; align-items: center;
-  }
-  .modal-content {
-    width: 90%; max-width: 400px; padding: 20px;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrailCoach App V0.1</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary-color: #2c3e50;
+            --accent-color: #27ae60;
+            --text-color: #333333;
+            --muted-color: #7f8c8d;
+            --border-color: #e2e8f0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            line-height: 1.5;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; color: var(--primary-color); font-size: 24px; margin-bottom: 20px; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--primary-color); font-size: 14px; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-accent { background-color: var(--accent-color); color: white; }
+        .btn-danger { background-color: #c0392b; color: white; }
+        .week-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+        .chk-btn {
+            padding: 10px 5px;
+            border: 1px solid var(--border-color);
+            background: #fff;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 500;
+        }
+        .chk-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        .chk-btn[data-type="palestra"].active {
+            background-color: #8e44ad;
+            border-color: #8e44ad;
+        }
+        .accordion {
+            background-color: #eef2f5;
+            color: var(--primary-color);
+            padding: 15px;
+            width: 100%;
+            text-align: left;
+            border: none;
+            outline: none;
+            font-weight: 600;
+            font-size: 15px;
+            border-radius: 8px;
+            margin-top: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .accordion.active { background-color: #dfe6e9; }
+        .panel { padding: 10px 5px; display: none; background-color: white; overflow: hidden; }
+        .day {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .day:last-child { border-bottom: none; }
+        .day-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .day-status { margin-right: 8px; }
+        .day-details-panel { display: none; padding: 10px; background: #f9f9f9; border-radius: 6px; margin-top: 8px; font-size: 14px; }
+        .muted { color: var(--muted-color); font-size: 13px; margin-top: 4px; }
+        .gpx-upload-btn {
+            background: var(--accent-color);
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            display: inline-block;
+            width: auto;
+            flex: none;
+        }
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v23.4</h1>
 
-<div style="text-align:center; margin-bottom:8px;">
-  <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
-</div>
+<div class="container">
+    <h1>🏔️ TrailCoach v0.1</h1>
 
-<div class="card" id="settingsCard" style="display: none;">
-  <label>Livello atleta</label>
-  <select id="livello">
-    <option value="principiante">Principiante</option>
-    <option value="intermedio">Intermedio</option>
-    <option value="avanzato">Avanzato</option>
-  </select>
-
-  <label>Obiettivo distanza gara (km)</label>
-  <input id="obbKm" type="number" value="42" />
-
-  <label>Obiettivo dislivello gara (m)</label>
-  <input id="obbAsc" type="number" value="1800" />
-  
-  <label>Data della gara</label>
-  <input id="dataGara" type="date" />
-  
-  <label>Tempo Obiettivo Gara (Ore)</label>
-  <input id="tempoObiettivo" type="number" value="5" min="1" step="0.5" />
-  
-  <label>Durata piano (settimane)</label>
-  <input id="settimane" type="number" value="12" min="1" max="52" />
-  
-  <label>Giorni di Corsa</label>
-  <div id="checkbox-grid-corsa-top" class="checkbox-grid">
-    <div class="chk-btn" data-day="Lunedì" data-type="corsa">Lun</div>
-    <div class="chk-btn" data-day="Martedì" data-type="corsa">Mar</div>
-    <div class="chk-btn" data-day="Mercoledì" data-type="corsa">Mer</div>
-  </div>
-  <div id="checkbox-grid-corsa-bottom" class="checkbox-grid-bottom">
-    <div class="chk-btn" data-day="Giovedì" data-type="corsa">Gio</div>
-    <div class="chk-btn" data-day="Venerdì" data-type="corsa">Ven</div>
-    <div class="chk-btn" data-day="Sabato" data-type="corsa">Sab</div>
-    <div class="chk-btn" data-day="Domenica" data-type="corsa">Dom</div>
-  </div>
-  
-  <label>Giorni palestra</label>
-  <div id="checkbox-grid-palestra-top" class="checkbox-grid">
-    <div class="chk-btn" data-day="Lunedì" data-type="palestra">Lun</div>
-    <div class="chk-btn" data-day="Martedì" data-type="palestra">Mar</div>
-    <div class="chk-btn" data-day="Mercoledì" data-type="palestra">Mer</div>
-  </div>
-  <div id="checkbox-grid-palestra-bottom" class="checkbox-grid-bottom">
-    <div class="chk-btn" data-day="Giovedì" data-type="palestra">Gio</div>
-    <div class="chk-btn" data-day="Venerdì" data-type="palestra">Ven</div>
-    <div class="chk-btn" data-day="Sabato" data-type="palestra">Sab</div>
-    <div class="chk-btn" data-day="Domenica" data-type="palestra">Dom</div>
-  </div>
-
-  <div style="margin-top:10px;">
-    <button id="genLocal">⚙️ Genera piano</button>
-    <button id="genAI">🤖 Genera con AI</button>
-    <button id="resetData" class="reset">🗑️ Reset</button>
-    <button id="updatePlanBtn" style="background:#fcba03; color:#000;">🔄 Aggiorna Piano</button>
-  </div>
-</div>
-  
-<div class="card" id="PlandCard" style="display: none;">
-  <label>Piano settimanale (Locale)</label>
-  <div id="planView" class="muted">Nessun piano ancora generato.</div>
-  <button onclick="esportaInPDF('planView')" class="btn-action" style="background:#ef802e;">📄 Esporta Piano Locale in PDF</button>
-</div>
-
-<div class="card" id="aiPlanCard" style="display: none;">
-  <h2><label>📋 Piano Generato (AI)</label></h2>
-  <div id="piano-generato"></div>
-  <button onclick="esportaInPDF('piano-generato')" class="btn-action" style="background:#ef802e;">📄 Esporta Piano AI in PDF (Solo Sezioni Aperte)</button>
-</div>
-
-<input id="hiddenFileInput" type="file" accept=".gpx" style="display:none" />
-
-<div id="editModal" class="modal-overlay">
-  <div class="modal-content card">
-    <h3>Modifica Allenamento</h3>
-    <div id="modalForm"></div>
-    <div style="margin-top: 15px; text-align: right;">
-        <button onclick="closeEditDialog()" style="background:#8e8e93;">Annulla</button>
-        <button id="saveEditBtn" style="background:#34c759; margin-left: 8px;">Salva Modifiche</button>
+    <div class="btn-group">
+        <button id="toggleSettings" class="btn-primary">⚙️ Impostazioni Piano</button>
+        <button id="updatePlanBtn" class="btn-accent" style="background-color: #d35400;">🔄 Aggiorna Settimane Future</button>
+        <button id="resetData" class="btn-danger">🗑️ Resetta Tutto</button>
     </div>
-  </div>
+
+    <div class="card" id="settingsCard">
+        <label for="livello">Livello Atleta</label>
+        <select id="livello">
+            <option value="principiante">Principiante (Passo base ~6:12/km)</option>
+            <option value="intermedio" selected>Intermedio (Passo base ~5:48/km)</option>
+            <option value="avanzato">Avanzato (Passo base ~5:24/km)</option>
+        </select>
+
+        <label for="obbKm">Obiettivo Chilometri Settimanali Massimi (km)</label>
+        <input type="number" id="obbKm" value="50" min="10">
+
+        <label for="obbAsc">Obiettivo Dislivello Settimanale Massimo (m D+)</label>
+        <input type="number" id="obbAsc" value="2000" min="100">
+
+        <label for="settimane">Durata del Piano (Settimane)</label>
+        <input type="number" id="settimane" value="12" min="4" max="24">
+
+        <label for="dataGara">Data della Gara (Domenica finale)</label>
+        <input type="date" id="dataGara">
+
+        <label for="tempoObiettivo">Tempo Obiettivo Gara (Ore totali stimate)</label>
+        <input type="number" id="tempoObiettivo" value="6" step="0.5">
+
+        <label>Giorni Disponibili per la Corsa 🏃</label>
+        <div class="week-selector">
+            <div class="chk-btn" data-day="Lunedì" data-type="corsa">Lun</div>
+            <div class="chk-btn" data-day="Martedì" data-type="corsa">Mar</div>
+            <div class="chk-btn" data-day="Mercoledì" data-type="corsa">Mer</div>
+            <div class="chk-btn" data-day="Giovedì" data-type="corsa">Gio</div>
+            <div class="chk-btn" data-day="Venerdì" data-type="corsa">Ven</div>
+            <div class="chk-btn" data-day="Sabato" data-type="corsa" class="active">Sab</div>
+            <div class="chk-btn" data-day="Domenica" data-type="corsa">Dom</div>
+        </div>
+
+        <label>Giorni Disponibili per la Palestra 🏋️</label>
+        <div class="week-selector">
+            <div class="chk-btn" data-day="Lunedì" data-type="palestra">Lun</div>
+            <div class="chk-btn" data-day="Martedì" data-type="palestra">Mar</div>
+            <div class="chk-btn" data-day="Mercoledì" data-type="palestra">Mer</div>
+            <div class="chk-btn" data-day="Giovedì" data-type="palestra">Gio</div>
+            <div class="chk-btn" data-day="Venerdì" data-type="palestra">Ven</div>
+            <div class="chk-btn" data-day="Sabato" data-type="palestra">Sab</div>
+            <div class="chk-btn" data-day="Domenica" data-type="palestra">Dom</div>
+        </div>
+
+        <div class="btn-group">
+            <button id="genLocal" class="btn-primary">⚙️ Genera Piano Locale</button>
+            <button id="genAI" class="btn-accent">🧠 Genera con Intelligenza Artificiale</button>
+        </div>
+    </div>
+
+    <div class="card" id="PlandCard" style="display:none;">
+        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; color:var(--primary-color);">📋 Il tuo Piano di Allenamento</h3>
+            <button onclick="esportaInPDF('planView')" class="btn-accent" style="padding: 6px 12px; font-size:12px; flex:none;">📄 Esporta PDF</button>
+        </div>
+        <div id="planView"></div>
+    </div>
+
+    <div class="card" id="aiPlanCard" style="display:none;">
+        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; color:#8e44ad;">🧠 Piano Ottimizzato dall'AI</h3>
+            <button onclick="esportaInPDF('piano-generato')" class="btn-accent" style="background:#8e44ad; padding: 6px 12px; font-size:12px; flex:none;">📄 Esporta PDF</button>
+        </div>
+        <div id="piano-generato"></div>
+    </div>
+</div>
+
+<input type="file" id="hiddenFileInput" accept=".gpx" style="display: none;" />
+
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color:var(--primary-color);">✏️ Modifica Allenamento</h3>
+        <div id="modalForm"></div>
+        <div class="btn-group" style="margin-top:15px;">
+            <button id="saveEditBtn" class="btn-accent">Salva</button>
+            <button onclick="closeEditDialog()" class="btn-primary" style="background:#7f8c8d;">Annulla</button>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -242,7 +280,7 @@ function calculatePlanDates(dataGara, settimane) {
     const daysBeforeRace = settimane * 7;
     let startDate = addDays(raceDate, -daysBeforeRace); 
     
-    // Trova il lunedì della settimana di partenza
+    // Forza la data di inizio a cadere di Lunedì
     const dayOfWeek = startDate.getDay(); 
     if (dayOfWeek === 0) {
         startDate = addDays(startDate, -6);
@@ -250,10 +288,12 @@ function calculatePlanDates(dataGara, settimane) {
         startDate = addDays(startDate, -(dayOfWeek - 1));
     }
     
-    // Calcoliamo quante settimane intere passano dal lunedì di partenza alla domenica della gara
-    const diffTime = Math.abs(raceDate - startDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const settimaneReali = Math.ceil(diffDays / 7);
+    // Controlliamo in modo sicuro se serve una settimana in più per includere la gara
+    const fineRangeStandard = addDays(startDate, settimane * 7);
+    let settimaneReali = settimane;
+    if (raceDate >= fineRangeStandard) {
+        settimaneReali = settimane + 1;
+    }
     
     return { startDate, raceDate, settimaneReali };
 }
@@ -324,25 +364,30 @@ document.getElementById("updatePlanBtn").addEventListener("click", async () => {
 
     try {
         const today = new Date();
-        const settimaneMancanti = (STATE.planData || STATE.planDataAI.settimane).filter(settimana => {
+        const settimaneEsistenti = STATE.planDataAI?.settimane || STATE.planData || [];
+        
+        const settimaneMancanti = settimaneEsistenti.filter(settimana => {
             const dataInizio = new Date(settimana.startDate);
             return dataInizio >= today;
         });
 
         const datiAggiornamento = {
-            livello: STATE.settings.livello,
-            km: STATE.settings.obbKm,
-            asc: STATE.settings.obbAsc,
-            tempoObiettivo: STATE.settings.tempoObiettivo,
-            giorniCorsa: STATE.settings.giorniCorsa,
-            giorniPalestra: STATE.settings.giorniPalestra,
-            settimaneRestanti: settimaneMancanti,
+            azione: "update",
+            livello: STATE.settings.livello || document.getElementById("livello").value,
+            km: parseFloat(STATE.settings.obbKm || document.getElementById("obbKm").value),
+            asc: parseInt(STATE.settings.obbAsc || document.getElementById("obbAsc").value),
+            settimane: parseInt(STATE.settings.settimane || document.getElementById("settimane").value),
+            dataGara: STATE.settings.dataGara || document.getElementById("dataGara").value,
+            tempoObiettivo: parseFloat(STATE.settings.tempoObiettivo || document.getElementById("tempoObiettivo").value),
+            giorniCorsa: STATE.settings.giorniCorsa || [...document.querySelectorAll(".chk-btn[data-type='corsa'].active")].map(b=>b.dataset.day),
+            giorniPalestra: STATE.settings.giorniPalestra || [...document.querySelectorAll(".chk-btn[data-type='palestra'].active")].map(b=>b.dataset.day),
+            settimaneRestanti: settimaneMancanti
         };
 
         const response = await fetch("https://eoakctnc24hsvp9.m.pipedream.net", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...datiAggiornamento, azione: "update" }),
+            body: JSON.stringify(datiAggiornamento),
         });
 
         if (!response.ok) throw new Error(`Errore HTTP ${response.status}`);
@@ -440,18 +485,11 @@ function generaPiano(){
   if(obbKm<=0||obbAsc<=0||!dataGara){alert("Inserisci valori validi e la data della gara!");return;}
   if(runsCount === 0 && giorniPalestra.length === 0){alert("Seleziona almeno un giorno di Corsa o Palestra!");return;}
 
-  // Prendiamo anche settimaneReali dal calcolo
   const { startDate, raceDate, settimaneReali } = calculatePlanDates(dataGara, settimane);
   const plan=[]; 
   const baseVolumeCoeff = 0.6;
 
-  // Il ciclo ora gira fino a settimaneReali (quindi farà ad esempio 13 settimane invece di 12 per includere la gara)
-  for(let w=1;w<=settimaneReali;w++){
-    const weekStartDate = addDays(startDate, (w - 1) * 7);
-    const w_mod = (w - 1) % 4;
-    const w_cycle = Math.floor((w - 1) / 4);
-
-  for(let w=1;w<=settimane;w++){
+  for(let w=1; w<=settimaneReali; w++){
     const weekStartDate = addDays(startDate, (w - 1) * 7);
     const w_mod = (w - 1) % 4;
     const w_cycle = Math.floor((w - 1) / 4);
@@ -504,7 +542,8 @@ function generaPiano(){
         settimana.push({day,type:"Riposo",summary:"Riposo",details:{detailText:getDefaultDetails("Riposo"), distance: 0, ascent: 0, durationMin: 0, completed: false, gpxData: null}});
       }
     }
-       plan.push({
+    
+    plan.push({
         settimana:w,
         startDate: `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`, 
         targetKm:+totalKm.toFixed(1),targetAsc:Math.round(totalAsc),
@@ -515,7 +554,6 @@ function generaPiano(){
 
   const descrizione_generale = `Piano generato localmente per ${livello} su ${settimane} settimane, che termina il ${formatDate(raceDate)}. Target: ${obbKm} km, +${obbAsc}m D+.`;
   
-  // FIX: Salvataggio coerente e reset esplicito dell'AI quando si sovrascrive localmente
   STATE={settings:{livello,obbKm,obbAsc,settimane,giorniPalestra,giorniCorsa,dataGara,tempoObiettivo,descrizione_generale},planData:plan, planDataAI: null}; 
   saveState(); 
   document.getElementById("settingsCard").style.display="none";
@@ -741,7 +779,6 @@ function editAIActivity(planType, weekIdx, runIdx) {
 
 function renderExternalPlan(jsonString) {
     const container = document.getElementById("piano-generato");
-    const card = document.getElementById("aiPlanCard");
     const savedState = saveAccordionState("piano-generato"); 
     
     container.innerHTML = "";
@@ -770,7 +807,7 @@ function renderExternalPlan(jsonString) {
 
     if (!piano.settimane || !Array.isArray(piano.settimane)) return;
     
-        const dataGara = document.getElementById("dataGara").value;
+    const dataGara = document.getElementById("dataGara").value;
     if (dataGara && piano.settimane.length > 0) {
         const { startDate } = calculatePlanDates(dataGara, piano.settimane.length);
         piano.settimane.forEach((w, index) => {
@@ -972,8 +1009,11 @@ async function generaPianoAI() {
 
     if (!dataGara) {
       alert("Inserisci la data della gara");
+      container.innerHTML = "<p style='color:red;'>❌ Inserisci la data della gara nelle impostazioni.</p>";
       return;
     }
+
+    STATE.settings = { livello, obbKm, obbAsc, settimane, dataGara, tempoObiettivo, giorniCorsa, giorniPalestra };
 
     const controller = new AbortController();
     const timeout = setTimeout(() => { controller.abort(); }, 180000);
@@ -985,7 +1025,15 @@ async function generaPianoAI() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          livello, km: obbKm, asc: obbAsc, settimane, dataGara, tempoObiettivo, giorniCorsa, giorniPalestra
+          azione: "generate", 
+          livello, 
+          km: obbKm, 
+          asc: obbAsc, 
+          settimane, 
+          dataGara, 
+          tempoObiettivo, 
+          giorniCorsa, 
+          giorniPalestra
         })
       }
     );
@@ -1001,7 +1049,7 @@ async function generaPianoAI() {
     if (err.name === "AbortError") {
       container.innerHTML = "<p style='color:red;'>❌ Timeout: il workflow AI impiega troppo tempo a rispondere.</p>";
     } else {
-      container.innerHTML = `<p style='color:red;'>❌ ${err.message}</p>`;
+      container.innerHTML = `<p style='color:red;'>❌ Errore (${err.message}). Controlla i dati inviati.</p>`;
     }
   }
 }
@@ -1055,7 +1103,6 @@ document.getElementById("genLocal").onclick = generaPiano;
 document.getElementById("genAI").onclick = generaPianoAI;
 document.getElementById("resetData").onclick = resetApplicationData; 
 
-// FIX: Ripristino completo dello stato e gestione della visibilità dei moduli all'avvio
 document.addEventListener('DOMContentLoaded', () => {
     loadState();
     if(STATE.planDataAI){
