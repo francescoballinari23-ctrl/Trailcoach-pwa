@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v23.3 (P)</title>
+<title>🏔️ TrailCoach AI v23.4 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -88,7 +88,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v23.3</h1>
+<h1>🏔️ TrailCoach AI v23.4</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -242,20 +242,21 @@ function calculatePlanDates(dataGara, settimane) {
     const daysBeforeRace = settimane * 7;
     let startDate = addDays(raceDate, -daysBeforeRace); 
     
-    // FISSA: Forza la data di inizio a cadere di Lunedì
-    // In JS: 0 = Domenica, 1 = Lunedì, 2 = Martedì, ecc.
+    // Trova il lunedì della settimana di partenza
     const dayOfWeek = startDate.getDay(); 
     if (dayOfWeek === 0) {
-        // Se cade di domenica, sottrai 6 giorni per tornare al lunedì precedente
         startDate = addDays(startDate, -6);
     } else if (dayOfWeek > 1) {
-        // Se cade tra martedì (2) e sabato (6), sottrai i giorni necessari per tornare a lunedì (1)
         startDate = addDays(startDate, -(dayOfWeek - 1));
     }
     
-    return { startDate, raceDate };
+    // Calcoliamo quante settimane intere passano dal lunedì di partenza alla domenica della gara
+    const diffTime = Math.abs(raceDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const settimaneReali = Math.ceil(diffDays / 7);
+    
+    return { startDate, raceDate, settimaneReali };
 }
-
 
 function loadState(){
     const r=localStorage.getItem(STORAGE_KEY);
@@ -439,9 +440,16 @@ function generaPiano(){
   if(obbKm<=0||obbAsc<=0||!dataGara){alert("Inserisci valori validi e la data della gara!");return;}
   if(runsCount === 0 && giorniPalestra.length === 0){alert("Seleziona almeno un giorno di Corsa o Palestra!");return;}
 
-  const { startDate, raceDate } = calculatePlanDates(dataGara, settimane);
+  // Prendiamo anche settimaneReali dal calcolo
+  const { startDate, raceDate, settimaneReali } = calculatePlanDates(dataGara, settimane);
   const plan=[]; 
   const baseVolumeCoeff = 0.6;
+
+  // Il ciclo ora gira fino a settimaneReali (quindi farà ad esempio 13 settimane invece di 12 per includere la gara)
+  for(let w=1;w<=settimaneReali;w++){
+    const weekStartDate = addDays(startDate, (w - 1) * 7);
+    const w_mod = (w - 1) % 4;
+    const w_cycle = Math.floor((w - 1) / 4);
 
   for(let w=1;w<=settimane;w++){
     const weekStartDate = addDays(startDate, (w - 1) * 7);
