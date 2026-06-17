@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrailCoach App V0.1</title>
+    <title>TrailCoach App v0.2</title>
     <style>
         :root {
             --bg-color: #f4f7f6;
@@ -125,7 +125,7 @@
 <body>
 
 <div class="container">
-    <h1>🏔️ TrailCoach v0.1</h1>
+    <h1>🏔️ TrailCoach v0.2</h1>
 
     <div class="btn-group">
         <button id="toggleSettings" class="btn-primary">⚙️ Impostazioni Piano</button>
@@ -133,6 +133,7 @@
         <button id="resetData" class="btn-danger">🗑️ Resetta Tutto</button>
     </div>
 
+    <!-- CARD IMPOSTAZIONI -->
     <div class="card" id="settingsCard">
         <label for="livello">Livello Atleta</label>
         <select id="livello">
@@ -184,6 +185,7 @@
         </div>
     </div>
 
+    <!-- CONTAINER VISUALIZZAZIONE PIANO LOCALE -->
     <div class="card" id="PlandCard" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
             <h3 style="margin:0; color:var(--primary-color);">📋 Il tuo Piano di Allenamento</h3>
@@ -192,6 +194,7 @@
         <div id="planView"></div>
     </div>
 
+    <!-- CONTAINER VISUALIZZAZIONE PIANO AI -->
     <div class="card" id="aiPlanCard" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
             <h3 style="margin:0; color:#8e44ad;">🧠 Piano Ottimizzato dall'AI</h3>
@@ -201,8 +204,10 @@
     </div>
 </div>
 
+<!-- INPUT INVISIBILE PER CARICAMENTO GPX -->
 <input type="file" id="hiddenFileInput" accept=".gpx" style="display: none;" />
 
+<!-- MODALE DI MODIFICA ATTIVITÀ -->
 <div class="modal" id="editModal">
     <div class="modal-content">
         <h3 style="margin-top:0; color:var(--primary-color);">✏️ Modifica Allenamento</h3>
@@ -214,6 +219,7 @@
     </div>
 </div>
 
+<!-- LOGICA DI SCRIPT INTERNA -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -224,7 +230,7 @@ const nomiGiorniBrevi = { "Lunedì": "Lun", "Martedì": "Mar", "Mercoledì": "Me
 
 const CORSA_TYPES = [
     "Corsa Lenta", "Corsa Facile", "Lungo Lento", "Corsa in Collina",
-    "Ripetute Veloci", "Fartlek", "Progressivo", "Interval Training", "Tempo Run"
+    "Ripetute Veloci", "Fartlek", "Progressivo", "Interval Training", "Tempo Run", "GARA 🎉"
 ];
 
 function getDefaultDetails(type) {
@@ -250,6 +256,8 @@ function getDefaultDetails(type) {
             return "Allenamento di Forza o Core, 45-60 min. Focus su gambe, schiena e stabilità. Evita gambe il giorno prima della corsa lunga.";
         case "Riposo":
             return "Giorno di recupero completo. Ideale per stretching, mobilità o riposo passivo.";
+        case "GARA 🎉":
+            return "Giorno dell'obiettivo finale! Gestisci il ritmo iniziale, alimentati con precisione e goditi il trail.";
         default:
             return "Dettagli specifici per l'allenamento. Modifica liberamente.";
     }
@@ -280,7 +288,6 @@ function calculatePlanDates(dataGara, settimane) {
     const daysBeforeRace = settimane * 7;
     let startDate = addDays(raceDate, -daysBeforeRace); 
     
-    // Forza la data di inizio a cadere di Lunedì
     const dayOfWeek = startDate.getDay(); 
     if (dayOfWeek === 0) {
         startDate = addDays(startDate, -6);
@@ -288,7 +295,6 @@ function calculatePlanDates(dataGara, settimane) {
         startDate = addDays(startDate, -(dayOfWeek - 1));
     }
     
-    // Controlliamo in modo sicuro se serve una settimana in più per includere la gara
     const fineRangeStandard = addDays(startDate, settimane * 7);
     let settimaneReali = settimane;
     if (raceDate >= fineRangeStandard) {
@@ -398,7 +404,8 @@ document.getElementById("updatePlanBtn").addEventListener("click", async () => {
         try {
             let cleanText = nuovoPianoTesto;
             if (nuovoPianoTesto.includes("```")) {
-                const match = nuovoPianoTesto.match(/```json([\s\S]*?)```/);
+                const match = nuovoPianoTesto.match(/
+```json([\s\S]*?)```/);
                 cleanText = match ? match[1] : nuovoPianoTesto.substring(nuovoPianoTesto.indexOf('{'), nuovoPianoTesto.lastIndexOf('}') + 1);
             }
             datiAI = JSON.parse(cleanText.trim());
@@ -491,6 +498,8 @@ function generaPiano(){
 
   for(let w=1; w<=settimaneReali; w++){
     const weekStartDate = addDays(startDate, (w - 1) * 7);
+    const isUltimaSettimana = (w === settimaneReali);
+    
     const w_mod = (w - 1) % 4;
     const w_cycle = Math.floor((w - 1) / 4);
     
@@ -501,8 +510,8 @@ function generaPiano(){
     if (w_mod === 1) weeklyCoeff *= 1.10;
     else if (w_mod === 2) weeklyCoeff *= 1.20;
 
-    const isScarico = (w_mod === 3);
-    const moltiplicatoreScarico = isScarico ? 0.7 : 1;
+    const isScarico = (w_mod === 3 || isUltimaSettimana);
+    const moltiplicatoreScarico = isUltimaSettimana ? 0.4 : (isScarico ? 0.7 : 1);
     const finalCoeff = weeklyCoeff * moltiplicatoreScarico;
     
     const baseKm = obbKm * finalCoeff;
@@ -513,29 +522,56 @@ function generaPiano(){
     const runDaysCopy = [...giorniCorsa];
     let runAssignments = {};
     
-    if (runDaysCopy.includes("Sabato")) {
-        runAssignments["Sabato"] = "Lungo trail";
-        runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
-    } else if (runDaysCopy.includes("Domenica")) {
-        runAssignments["Domenica"] = "Lungo trail";
-        runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
+    if (isUltimaSettimana) {
+        // Tapering finale: Domenica c'è la Gara
+        runAssignments["Domenica"] = "GARA 🎉";
+        if (runDaysCopy.includes("Domenica")) runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
+        if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1); // Solitamente riposo pre-gara
+        
+        // I restanti giorni di corsa diventano attivazioni leggerissime di scarico
+        runDaysCopy.forEach(day => { runAssignments[day] = "Corsa Facile"; });
+    } else {
+        if (runDaysCopy.includes("Sabato")) {
+            runAssignments["Sabato"] = "Lungo trail";
+            runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
+        } else if (runDaysCopy.includes("Domenica")) {
+            runAssignments["Domenica"] = "Lungo trail";
+            runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
+        }
+        
+        if (runDaysCopy.length > 0) {
+            runAssignments[runDaysCopy[0]] = "Ripetute collinari";
+            runDaysCopy.splice(0, 1);
+        }
+        runDaysCopy.forEach(day => { runAssignments[day] = "Fondo lento"; });
     }
-    
-    if (runDaysCopy.length > 0) {
-        runAssignments[runDaysCopy[0]] = "Ripetute collinari";
-        runDaysCopy.splice(0, 1);
-    }
-    runDaysCopy.forEach(day => { runAssignments[day] = "Fondo lento"; });
 
     for(const day of GIORNI){
-      if(giorniPalestra.includes(day)){
+      if(isUltimaSettimana && giorniPalestra.includes(day)){
+        // Niente palestra pesante nell'ultima settimana (solo scarico/riposo)
+        settimana.push({day,type:"Riposo",summary:"Riposo pre-gara",details:{detailText:"Niente pesi questa settimana. Solo mobilità leggera.", distance: 0, ascent: 0, durationMin: 0, completed: false, gpxData: null}});
+      } else if(giorniPalestra.includes(day)){
         settimana.push({
             day,type:"Palestra",summary:"🏋️ Palestra",
             details:{detailText:getDefaultDetails("Palestra"), distance: 0, ascent: 0, durationMin: 60, completed: false, gpxData: null}
         });
-      } else if(giorniCorsa.includes(day)){
-        const type = runAssignments[day] || "Fondo lento";
-        const det=creaDettagliAllenamento(type,baseKm,baseAsc,runsCount,livello,false);
+      } else if(runAssignments[day] === "GARA 🎉" || (day === "Domenica" && isUltimaSettimana)) {
+         // Logica Gara Finale
+         const det = {
+            distance: obbKm, // La gara riprende il picco massimo chilometrico inserito come target
+            ascent: obbAsc,
+            durationMin: Math.round(tempoObiettivo * 60),
+            detailText: getDefaultDetails("GARA 🎉"), completed: false, gpxData: null
+         };
+         totalKm+=det.distance; totalAsc+=det.ascent;
+         settimana.push({day,type:"GARA 🎉",summary:`🏁 GIORNO DELLA GARA — ${det.distance} km`,details:det});
+      } else if(giorniCorsa.includes(day) && runAssignments[day]){
+        const type = runAssignments[day];
+        // Se è l'ultima settimana, riduciamo ulteriormente le sessioni di attivazione
+        const det = isUltimaSettimana ? 
+            { distance: +(obbKm * 0.12).toFixed(1), ascent: 0, durationMin: Math.round((obbKm * 0.12) * paceByLevel(livello)), detailText: "Attivazione pre-gara controllata. Mantieni i muscoli svegli senza affaticare.", completed: false, gpxData: null } :
+            creaDettagliAllenamento(type,baseKm,baseAsc,runsCount,livello,false);
+            
         totalKm+=det.distance; totalAsc+=det.ascent;
         settimana.push({day,type,summary:`🏃 ${type} — ${det.distance} km`,details:det});
       } else {
@@ -548,7 +584,7 @@ function generaPiano(){
         startDate: `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`, 
         targetKm:+totalKm.toFixed(1),targetAsc:Math.round(totalAsc),
         allenamenti:settimana,isScarico, 
-        focus: isScarico ? "Settimana di scarico e recupero attivo" : "Costruzione volume e resistenza"
+        focus: isUltimaSettimana ? "🏁 Tapering Finale e GARA!" : (isScarico ? "Settimana di scarico e recupero attivo" : "Costruzione volume e resistenza")
     });
   }
 
@@ -608,7 +644,8 @@ function renderPiano(){
                 ${w.allenamenti.map((a, aIdx) => {
                     const d = a.details;
                     const isRun = a.type !== "Riposo" && a.type !== "Palestra";
-                    const statusIcon = d.completed ? '✅' : (a.type === "Riposo" ? '💤' : (a.type === "Palestra" ? '💪' : '⭕'));
+                    const isGara = a.type === "GARA 🎉";
+                    const statusIcon = d.completed ? '✅' : (isGara ? '🏁' : (a.type === "Riposo" ? '💤' : (a.type === "Palestra" ? '💪' : '⭕')));
                     const kmStr = a.type === "Palestra" || a.type === "Riposo" ? a.summary : a.type + ' — ' + (d?.distance !== undefined ? d.distance + ' km' : 'N/A');
                     let detContent = isRun ? `<div class="muted">Obiettivo: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>` : (a.type === "Palestra" ? `<div class="muted">Durata stimata: ${d.durationMin} min</div>` : '');
                     let gpxSection = '';
@@ -787,7 +824,8 @@ function renderExternalPlan(jsonString) {
 
     try {
         if (cleanText.includes("```json")) {
-            const match = cleanText.match(/```json([\s\S]*?)```/);
+            const match = cleanText.match(/
+```json([\s\S]*?)```/);
             if (match) {
                 cleanText = match[1];
             }
@@ -836,7 +874,8 @@ function renderExternalPlan(jsonString) {
                 <div class="days panel">
                     ${w.allenamenti.map((a, aIdx) => {
                         const isRun = a.tipo !== "Riposo" && a.tipo !== "Palestra";
-                        const statusIcon = a.completed ? '✅' : (a.tipo === "Riposo" ? '💤' : (a.tipo === "Palestra" ? '💪' : '⭕'));
+                        const isGara = a.tipo.includes("GARA");
+                        const statusIcon = a.completed ? '✅' : (isGara ? '🏁' : (a.tipo === "Riposo" ? '💤' : (a.tipo === "Palestra" ? '💪' : '⭕')));
                         let paceDisplay = (isRun && a.km > 0 && a.durationMin > 0) ? ` • Passo: ${a.pace || calculatePace(a.km, a.durationMin)}` : '';
                         let detContent = isRun ? `<div class="muted">Obiettivo: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 60} min ${paceDisplay}</div>` : (a.tipo === "Palestra" ? `<div class="muted">Durata: ${a.durationMin || 60} min</div>` : '');
                         let gpxSection = '';
