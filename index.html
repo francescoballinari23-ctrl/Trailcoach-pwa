@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>🏔️ TrailCoach AI v23.2 (P)</title>
+<title>🏔️ TrailCoach AI v23.3 (P)</title>
 <meta name="theme-color" content="#000000">
 <style>
   body {
@@ -88,7 +88,7 @@
 </style>
 </head>
 <body>
-<h1>🏔️ TrailCoach AI v23.2</h1>
+<h1>🏔️ TrailCoach AI v23.3</h1>
 
 <div style="text-align:center; margin-bottom:8px;">
   <button id="toggleSettings" style="background:#34c759;">⚙️ Impostazioni</button> 
@@ -240,9 +240,22 @@ function calculatePlanDates(dataGara, settimane) {
     raceDate.setHours(0, 0, 0, 0);
     
     const daysBeforeRace = settimane * 7;
-    const startDate = addDays(raceDate, -daysBeforeRace); 
+    let startDate = addDays(raceDate, -daysBeforeRace); 
+    
+    // FISSA: Forza la data di inizio a cadere di Lunedì
+    // In JS: 0 = Domenica, 1 = Lunedì, 2 = Martedì, ecc.
+    const dayOfWeek = startDate.getDay(); 
+    if (dayOfWeek === 0) {
+        // Se cade di domenica, sottrai 6 giorni per tornare al lunedì precedente
+        startDate = addDays(startDate, -6);
+    } else if (dayOfWeek > 1) {
+        // Se cade tra martedì (2) e sabato (6), sottrai i giorni necessari per tornare a lunedì (1)
+        startDate = addDays(startDate, -(dayOfWeek - 1));
+    }
+    
     return { startDate, raceDate };
 }
+
 
 function loadState(){
     const r=localStorage.getItem(STORAGE_KEY);
