@@ -408,8 +408,138 @@ function rimuoviPopup() {
     if (modal) modal.remove();
 }
 
-async function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
-    console.log("Inizio ricalcolo per piano tipo:", tipoPiano, "Dati storici:", report);
-    // Qui sotto andremo a scrivere la funzione matematica o la chiamata AI per ricalcolare il futuro
-    alert("Aggiornamento futuro attivato con successo! Pronto per la logica di calcolo.");
+function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
+    console.log("Apertura selezione modalità di ricalcolo per:", tipoPiano);
+
+    // Catturiamo al volo le impostazioni attualmente presenti a schermo 
+    const nuoveImpostazioni = catturaImpostazioniSchermo();
+
+    const modalSceltaHtml = `
+        <div id="custom-choice-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10001; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+            <div style="background: #ffffff; width: 90%; max-width: 400px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center;">
+                
+                <h3 style="margin-top: 0; color: #333;">⚙️ Scegli Metodo di Ricalcolo</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Come vuoi rimodulare i carichi delle settimane future rimaste?</p>
+                
+                <button id="btn-scelta-locale" style="width: 100%; padding: 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; text-align: left; margin-bottom: 10px; cursor: pointer;">
+                    <div style="font-weight: bold; color: #2c3e50; font-size: 13px;">🧮 Ricalcolo Matematico (Locale)</div>
+                    <div style="font-size: 11px; color: #666; margin-top: 3px;">Riscala i km futuri in modo lineare basandoti solo sullo scostamento attuale (${report.scostamentoKmPercentuale}%). Istantaneo e offline.</div>
+                </button>
+
+                <button id="btn-scelta-ai" style="width: 100%; padding: 12px; background: #f0f7ff; border: 1px solid #b3d7ff; border-radius: 8px; text-align: left; margin-bottom: 10px; cursor: pointer;">
+                    <div style="font-weight: bold; color: #0061c9; font-size: 13px;">🤖 Ottimizzazione AI (Solo Storico)</div>
+                    <div style="font-size: 11px; color: #555; margin-top: 3px;">Mantiene i tuoi obiettivi attuali ma usa Gemini per riadattare i carichi futuri in base ai GPX passati.</div>
+                </button>
+
+                <button id="btn-scelta-full-cambio" style="width: 100%; padding: 12px; background: #f5f6fa; border: 1px solid #4cd137; border-radius: 8px; text-align: left; margin-bottom: 20px; cursor: pointer;">
+                    <div style="font-weight: bold; color: #44bd32; font-size: 13px;">🔄 AI + Nuove Impostazioni / Obiettivi</div>
+                    <div style="font-size: 11px; color: #555; margin-top: 3px;">Ricalcola il futuro applicando i nuovi parametri inseriti a schermo (Data gara: ${nuoveImpostazioni.dataGara || 'Invariata'}, Target: ${nuoveImpostazioni.obbKm}km), salvando comunque i GPX passati.</div>
+                </button>
+
+                <button id="btn-scelta-chiudi" style="width: 100%; padding: 10px; background: #eee; border: none; border-radius: 6px; font-weight: bold; color: #666; cursor: pointer;">Annulla</button>
+
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalSceltaHtml);
+
+    document.getElementById("btn-scelta-chiudi").onclick = () => rimuoviPopupScelta();
+
+    document.getElementById("btn-scelta-locale").onclick = () => {
+        rimuoviPopupScelta();
+        avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni);
+    };
+
+    document.getElementById("btn-scelta-ai").onclick = () => {
+        rimuoviPopupScelta();
+        avviaRimodulazioneAI(tipoPiano, report, false, nuoveImpostazioni);
+    };
+
+    document.getElementById("btn-scelta-full-cambio").onclick = () => {
+        rimuoviPopupScelta();
+        avviaRimodulazioneAI(tipoPiano, report, true, nuoveImpostazioni);
+    };
 }
+
+function rimuoviPopupScelta() {
+    const modalScelta = document.getElementById("custom-choice-modal");
+    if (modalScelta) modalScelta.remove();
+}
+
+// --- LOGICA DI RIMODULAZIONE DEFINITIVA ---
+
+function avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni) {
+    console.log("Esecuzione ricalcolo locale...", report, nuoveImpostazioni);
+    alert(`Ricalcolo locale avviato!\nApplicherò una variazione del ${report.scostamentoKmPercentuale}% basandomi sulle impostazioni attuali.`);
+}
+
+async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni, nuoveImpostazioni) {
+    if (!STATE.planData && !STATE.planDataAI) { 
+        alert("Nessun piano attivo da rimodulare."); 
+        return; 
+    }
+
+    const aiContainer = document.getElementById("piano-generato");
+    if (aiContainer) {
+        aiContainer.innerHTML = "<p>⏳ L'AI sta analizzando lo storico dei tuoi GPX e rimodulando le settimane future... Attendi...</p>";
+    }
+    
+    try {
+        const oggi = new Date();
+        oggi.setHours(0, 0, 0, 0);
+
+        const settimaneAttuali = STATE.planDataAI?.settimane || STATE.planData || [];
+
+        const settimanePassate = settimaneAttuali.filter(w => {
+            const dataSettimana = new Date(w.startDate);
+            const haCompletati = w.allenamenti.some(a => a.completed || (a.details && a.details.completed));
+            return dataSettimana < oggi || haCompletati;
+        });
+
+        const settimaneFuture = settimaneAttuali.filter(w => !settimanePassate.includes(w));
+
+        if (settimaneFuture.length === 0) {
+            alert("Non ci sono settimane future rimaste nel piano da poter rimodulare!");
+            return;
+        }
+
+        const settingsDaUsare = applicaNuoveImpostazioni ? nuoveImpostazioni : STATE.settings;
+
+        if (applicaNuoveImpostazioni) {
+            STATE.settings = nuoveImpostazioni;
+        }
+
+        console.log("Inviando all'AI. Settimane future:", settimaneFuture.length, "Impostazioni:", settingsDaUsare);
+
+        const settingsArricchiti = {
+            ...settingsDaUsare,
+            scostamentoStoricoPercentuale: report.scostamentoKmPercentuale,
+            kmRealiCorsiNelPassato: report.kmReali,
+            dislivelloRealeNelPassato: report.ascentReale
+        };
+
+        const rispostaRicalcolo = await ricalcolaSettimaneFutureAI(settingsArricchiti, settimaneFuture);
+        const nuoveSettimaneRicalcolate = pulisciEParseJSONAI(rispostaRicalcolo);
+
+        const pianoConsolidato = {
+            descrizione_generale: `Piano rimodulato via AI il ${new Date().toLocaleDateString('it-IT')}. Target finale: ${settingsDaUsare.obbKm}km.`,
+            settimane: [...settimanePassate, ...nuoveSettimaneRicalcolate.settimane]
+        };
+
+        STATE.planDataAI = pianoConsolidato;
+        STATE.planData = null;
+        
+        saveState();
+        mostraCardPiano('ai');
+        renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
+        
+        alert("🎯 Il piano futuro è stato riadattato con successo! Le settimane passate e i tuoi GPX inseriti sono stati preservati.");
+
+    } catch (err) {
+        console.error("Errore durante la rimodulazione AI:", err);
+        alert("Impossibile completare la rimodulazione AI: " + err.message);
+        if (STATE.planDataAI) renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
+    }
+}
+
