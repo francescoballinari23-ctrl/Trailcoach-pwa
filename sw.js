@@ -1,12 +1,18 @@
-const CACHE_NAME = 'trailcoach-cache-v1';
-const FILES_TO_CACHE = [
-  './index.html',
-  './manifest.json',
-  './sw.js',
-  './icon-192.png',
-  './icon-512.png'
-  // aggiungi qui eventuali JS esterni e CSS
+const CACHE_NAME = 'trailcoach-v0.0'; // <- Incrementa il numero della versione (es. da v17 a v18) per forzare l'iPhone a scaricare i file nuovi
+
+const assets = [
+  '/',
+  '/index.html',
+  '/app.js',
+  '/piano-locale.js',
+  '/piano-ai.js',
+  '/ui.js',
+  '/manifest.json',
+  '/icon-192.png.jpeg',
+  '/icon-512.png.jpeg'
 ];
+
+// ... resto del tuo codice del service worker ...
 
 self.addEventListener('install', evt => {
   evt.waitUntil(
