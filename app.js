@@ -78,11 +78,29 @@ function agganciaBottoniStatici() {
         card.style.display = (card.style.display === "none" || card.style.display === "") ? "block" : "none";
     };
 
-    // Reset Applicazione
-    document.getElementById("resetData").onclick = () => {
-        if (confirm("Vuoi cancellare definitivamente tutti i dati del piano e i GPX salvati?")) {
+    // Reset Applicazione Totale + Svuotamento Cache Profonda
+    document.getElementById("resetData").onclick = async () => {
+        if (confirm("Vuoi cancellare definitivamente i dati, svuotare la cache e forzare il riavvio dell'app?")) {
+            
+            // 1. Cancella i dati del piano e delle impostazioni
             localStorage.removeItem(STORAGE_KEY);
-            location.reload();
+            
+            // 2. Forza l'eliminazione di tutte le cache del Service Worker
+            if ('caches' in window) {
+                try {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    );
+                    console.log("Tutte le cache del Service Worker sono state eliminate.");
+                } catch (err) {
+                    console.error("Errore durante lo svuotamento della cache:", err);
+                }
+            }
+
+            // 3. Riavvia l'applicazione forzando il download dei file freschi dal server
+            // l'argomento 'true' dice al browser di bypassare completamente la cache locale
+            window.location.reload(true);
         }
     };
 
