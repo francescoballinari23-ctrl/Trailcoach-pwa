@@ -9,6 +9,31 @@ function formatDate(dateStr) {
     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
+// Funzione di supporto interna per generare il box grafico dei dati reali GPX
+function generaHtmlBoxGPX(gpxData) {
+    if (!gpxData) return '';
+    
+    // Calcoliamo ore e minuti reali
+    let stringaTempoReale = "--";
+    if (gpxData.durationMin) {
+        const ore = Math.floor(gpxData.durationMin / 60);
+        const minuti = gpxData.durationMin % 60;
+        stringaTempoReale = ore > 0 ? `${ore}h ${minuti}m` : `${minuti}m`;
+    }
+
+    return `
+        <div class="gpx-data" style="background-color: #f1f8e9; border-left: 4px solid #7cb342; padding: 10px; margin-top: 8px; border-radius: 4px; font-size: 12px; text-align: left;">
+            <strong style="color: #558b2f; display: block; margin-bottom: 6px;">📊 Rilevato da GPX ✅:</strong>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #333;">
+                <div>🏁 <strong>Distanza:</strong> ${gpxData.distanceKm.toFixed(2)} km</div>
+                <div>⛰️ <strong>Dislivello:</strong> +${gpxData.ascentMeters} m</div>
+                <div>⏱️ <strong>Tempo:</strong> ${stringaTempoReale}</div>
+                <div>⚡ <strong>Passo:</strong> ${gpxData.paceStr || '--:--'} /km</div>
+            </div>
+        </div>
+    `;
+}
+
 export function renderPianoLocale(planData, descrizioneGenerale, onGpxUpload, onEditClick) {
     const container = document.getElementById("planView");
     if (!planData?.length) { container.textContent = "Nessun piano ancora generato."; return; }
@@ -43,9 +68,11 @@ export function renderPianoLocale(planData, descrizioneGenerale, onGpxUpload, on
                                     <div class="muted" style="font-size:11px;">${d?.detailText || ''}</div>
                                 </div>
                                 <div class="day-details-panel" id="local-${wIdx}-${aIdx}" style="display:none;">
-                                    ${isRun ? `<div class="muted">Obiettivo: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>` : ''}
-                                    ${d.gpxData ? `<div class="gpx-data"><strong>GPX Verificato ✅:</strong><p class="muted">${d.gpxData.distanceKm.toFixed(2)} km • +${d.gpxData.ascentMeters}m</p></div>` : isRun ? `<button class="gpx-upload-btn btn-gpx-up" data-w="${wIdx}" data-a="${aIdx}">Carica GPX</button>` : ''}
-                                    <button class="gpx-upload-btn btn-edit-act" style="background:#39a3f2;" data-w="${wIdx}" data-a="${aIdx}">✏️ Modifica</button>
+                                    ${isRun ? `<div class="muted" style="margin-bottom:6px;">Obiettivo target: ${d.distance} km • +${d.ascent} m • ${d.durationMin} min</div>` : ''}
+                                    
+                                    ${d.gpxData ? generaHtmlBoxGPX(d.gpxData) : isRun ? `<button class="gpx-upload-btn btn-gpx-up" data-w="${wIdx}" data-a="${aIdx}">Carica GPX</button>` : ''}
+                                    
+                                    <button class="gpx-upload-btn btn-edit-act" style="background:#39a3f2; margin-top:6px;" data-w="${wIdx}" data-a="${aIdx}">✏️ Modifica</button>
                                 </div>
                             </div>`;
                     }).join("")}
@@ -90,9 +117,11 @@ export function renderPianoAI(pianoAI, onGpxUpload, onEditClick) {
                                     <div class="muted" style="font-size:11px;">${a.dettagli || ''}</div>
                                 </div>
                                 <div class="day-details-panel" id="ai-${wIdx}-${aIdx}" style="display:none;">
-                                    ${isRun ? `<div class="muted">Obiettivo: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 60} min</div>` : ''}
-                                    ${a.gpxData ? `<div class="gpx-data"><strong>GPX Verificato ✅:</strong><p class="muted">${a.gpxData.distanceKm.toFixed(2)} km</p></div>` : isRun ? `<button class="gpx-upload-btn btn-gpx-up" data-w="${wIdx}" data-a="${aIdx}">Carica GPX</button>` : ''}
-                                    <button class="gpx-upload-btn btn-edit-act" style="background:#39a3f2;" data-w="${wIdx}" data-a="${aIdx}">✏️ Modifica</button>
+                                    ${isRun ? `<div class="muted" style="margin-bottom:6px;">Obiettivo target: ${a.km} km • +${a.asc || 0} m • ${a.durationMin || 60} min</div>` : ''}
+                                    
+                                    ${a.gpxData ? generaHtmlBoxGPX(a.gpxData) : isRun ? `<button class="gpx-upload-btn btn-gpx-up" data-w="${wIdx}" data-a="${aIdx}">Carica GPX</button>` : ''}
+                                    
+                                    <button class="gpx-upload-btn btn-edit-act" style="background:#39a3f2; margin-top:6px;" data-w="${wIdx}" data-a="${aIdx}">✏️ Modifica</button>
                                 </div>
                             </div>`;
                     }).join("")}
