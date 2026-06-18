@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trailcoach-v0.0'; // <- Incrementa il numero della versione (es. da v17 a v18) per forzare l'iPhone a scaricare i file nuovi
+const CACHE_NAME = 'trailcoach-v0.1'; // <- Incrementa il numero della versione (es. da v17 a v18) per forzare l'iPhone a scaricare i file nuovi
 
 const assets = [
   '/',
