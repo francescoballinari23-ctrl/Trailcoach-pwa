@@ -411,7 +411,7 @@ function rimuoviPopup() {
 function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
     console.log("Apertura selezione modalità di ricalcolo per:", tipoPiano);
 
-    // Catturiamo al volo le impostazioni attualmente presenti a schermo 
+    // Catturiamo le impostazioni attualmente presenti a schermo per mostrarle nei bottoni
     const nuoveImpostazioni = catturaImpostazioniSchermo();
 
     const modalSceltaHtml = `
@@ -421,19 +421,14 @@ function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
                 <h3 style="margin-top: 0; color: #333;">⚙️ Scegli Metodo di Ricalcolo</h3>
                 <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Come vuoi rimodulare i carichi delle settimane future rimaste?</p>
                 
-                <button id="btn-scelta-locale" style="width: 100%; padding: 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; text-align: left; margin-bottom: 10px; cursor: pointer;">
-                    <div style="font-weight: bold; color: #2c3e50; font-size: 13px;">🧮 Ricalcolo Matematico (Locale)</div>
-                    <div style="font-size: 11px; color: #666; margin-top: 3px;">Riscala i km futuri in modo lineare basandoti solo sullo scostamento attuale (${report.scostamentoKmPercentuale}%). Istantaneo e offline.</div>
+                <button id="btn-scelta-locale" style="width: 100%; padding: 14px; background: #f0f7ff; border: 1px solid #b3d7ff; border-radius: 8px; text-align: left; margin-bottom: 12px; cursor: pointer;">
+                    <div style="font-weight: bold; color: #0061c9; font-size: 14px;">🧮 Ricalcolo Matematico (Locale)</div>
+                    <div style="font-size: 11px; color: #555; margin-top: 4px;">Ricalcola il futuro applicando i nuovi parametri inseriti a schermo (Data gara: ${nuoveImpostazioni.dataGara || 'Invariata'}, Target: ${nuoveImpostazioni.obbKm}km), basandosi sullo scostamento attuale (${report.scostamentoKmPercentuale}%). Istantaneo e offline.</div>
                 </button>
 
-                <button id="btn-scelta-ai" style="width: 100%; padding: 12px; background: #f0f7ff; border: 1px solid #b3d7ff; border-radius: 8px; text-align: left; margin-bottom: 10px; cursor: pointer;">
-                    <div style="font-weight: bold; color: #0061c9; font-size: 13px;">🤖 Ottimizzazione AI (Solo Storico)</div>
-                    <div style="font-size: 11px; color: #555; margin-top: 3px;">Mantiene i tuoi obiettivi attuali ma usa Gemini per riadattare i carichi futuri in base ai GPX passati.</div>
-                </button>
-
-                <button id="btn-scelta-full-cambio" style="width: 100%; padding: 12px; background: #f5f6fa; border: 1px solid #4cd137; border-radius: 8px; text-align: left; margin-bottom: 20px; cursor: pointer;">
-                    <div style="font-weight: bold; color: #44bd32; font-size: 13px;">🔄 AI + Nuove Impostazioni / Obiettivi</div>
-                    <div style="font-size: 11px; color: #555; margin-top: 3px;">Ricalcola il futuro applicando i nuovi parametri inseriti a schermo (Data gara: ${nuoveImpostazioni.dataGara || 'Invariata'}, Target: ${nuoveImpostazioni.obbKm}km), salvando comunque i GPX passati.</div>
+                <button id="btn-scelta-ai" style="width: 100%; padding: 14px; background: #f0f7ff; border: 1px solid #b3d7ff; border-radius: 8px; text-align: left; margin-bottom: 20px; cursor: pointer;">
+                    <div style="font-weight: bold; color: #0061c9; font-size: 14px;">🤖 Ottimizzazione Avanzata AI</div>
+                    <div style="font-size: 11px; color: #555; margin-top: 4px;">Ricalcola il futuro applicando i nuovi parametri inseriti a schermo (Data gara: ${nuoveImpostazioni.dataGara || 'Invariata'}, Target: ${nuoveImpostazioni.obbKm}km). Invia lo storico a Gemini per una progressione smart del carico.</div>
                 </button>
 
                 <button id="btn-scelta-chiudi" style="width: 100%; padding: 10px; background: #eee; border: none; border-radius: 6px; font-weight: bold; color: #666; cursor: pointer;">Annulla</button>
@@ -444,6 +439,7 @@ function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
 
     document.body.insertAdjacentHTML('beforeend', modalSceltaHtml);
 
+    // Gestione dei Click
     document.getElementById("btn-scelta-chiudi").onclick = () => rimuoviPopupScelta();
 
     document.getElementById("btn-scelta-locale").onclick = () => {
@@ -453,12 +449,7 @@ function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
 
     document.getElementById("btn-scelta-ai").onclick = () => {
         rimuoviPopupScelta();
-        avviaRimodulazioneAI(tipoPiano, report, false, nuoveImpostazioni);
-    };
-
-    document.getElementById("btn-scelta-full-cambio").onclick = () => {
-        rimuoviPopupScelta();
-        avviaRimodulazioneAI(tipoPiano, report, true, nuoveImpostazioni);
+        avviaRimodulazioneAI(tipoPiano, report, true, nuoveImpostazioni); // true = applica sempre le nuove impostazioni dello schermo
     };
 }
 
@@ -471,7 +462,7 @@ function rimuoviPopupScelta() {
 
 function avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni) {
     console.log("Esecuzione ricalcolo locale...", report, nuoveImpostazioni);
-    alert(`Ricalcolo locale avviato!\nApplicherò una variazione del ${report.scostamentoKmPercentuale}% basandomi sulle impostazioni attuali.`);
+    alert(`Ricalcolo locale avviato!\nApplicherò i nuovi obiettivi dello schermo e riproporzionerò il futuro matematicamente (Scostamento: ${report.scostamentoKmPercentuale}%).`);
 }
 
 async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni, nuoveImpostazioni) {
@@ -542,4 +533,5 @@ async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni,
         if (STATE.planDataAI) renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
     }
 }
+
 
