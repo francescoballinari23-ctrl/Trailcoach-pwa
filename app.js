@@ -334,6 +334,17 @@ function estraiDatiDaStringaGPX(xmlString) {
         const punti = xml.querySelectorAll("trkpt");
         if (punti.length < 2) return null;
 
+        // --- NUOVO: REPERIMENTO DEL TEMPO DI ATTIVITÀ ---
+        const primoTempoStr = punti[0].querySelector("time")?.textContent;
+        const ultimoTempoStr = punti[punti.length - 1].querySelector("time")?.textContent;
+        
+        let durataMinuti = 0;
+        if (primoTempoStr && ultimoTempoStr) {
+            const dataInizio = new Date(primoTempoStr);
+            const dataFine = new Date(ultimoTempoStr);
+            durataMinuti = Math.round((dataFine - dataInizio) / 1000 / 60);
+        }
+
         let km = 0, dPlus = 0;
         for (let i = 1; i < punti.length; i++) {
             const lat1 = parseFloat(punti[i-1].getAttribute("lat")), lon1 = parseFloat(punti[i-1].getAttribute("lon"));
@@ -349,6 +360,22 @@ function estraiDatiDaStringaGPX(xmlString) {
             const ele2 = punti[i].querySelector("ele") ? parseFloat(punti[i].querySelector("ele").textContent) : null;
             if (ele1 !== null && ele2 !== null && ele2 > ele1) dPlus += (ele2 - ele1);
         }
-        return { distanceKm: km, ascentMeters: Math.round(dPlus) };
+
+        // --- NUOVO: CALCOLO DEL PASSO MEDIO REALE ---
+        let stringaPassoMedio = "--:--";
+        if (km > 0 && durataMinuti > 0) {
+            const passoDecimale = durataMinuti / km; 
+            const min = Math.floor(passoDecimale);
+            const sec = Math.round((passoDecimale - min) * 60);
+            stringaPassoMedio = min + ":" + String(sec).padStart(2, '0');
+        }
+
+        // Restituiamo l'oggetto arricchito con i nuovi dati
+        return { 
+            distanceKm: +km.toFixed(2), 
+            ascentMeters: Math.round(dPlus),
+            durationMin: durataMinuti,         // <-- Nuovo dato
+            paceStr: stringaPassoMedio          // <-- Nuovo dato
+        };
     } catch { return null; }
 }
