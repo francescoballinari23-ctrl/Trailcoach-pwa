@@ -3,6 +3,7 @@
 import { generaPianoLogico, CORSA_TYPES, getDefaultDetails, calculatePlanDates } from './piano-locale.js';
 import { generaPianoAI, ricalcolaSettimaneFutureAI, pulisciEParseJSONAI } from './piano-ai.js';
 import { renderPianoLocale, renderPianoAI } from './ui.js';
+import { analizzaStatoPiano } from './piano-aggiornamento.js';
 
 const STORAGE_KEY = "trailcoach_v17_modular";
 let STATE = { settings: {}, planData: null, planDataAI: null };
@@ -81,25 +82,16 @@ function agganciaBottoniStatici() {
     // Reset Applicazione Totale + Svuotamento Cache Profonda
     document.getElementById("resetData").onclick = async () => {
         if (confirm("Vuoi cancellare definitivamente i dati, svuotare la cache e forzare il riavvio dell'app?")) {
-            
-            // 1. Cancella i dati del piano e delle impostazioni
             localStorage.removeItem(STORAGE_KEY);
-            
-            // 2. Forza l'eliminazione di tutte le cache del Service Worker
             if ('caches' in window) {
                 try {
                     const cacheNames = await caches.keys();
-                    await Promise.all(
-                        cacheNames.map(cacheName => caches.delete(cacheName))
-                    );
+                    await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
                     console.log("Tutte le cache del Service Worker sono state eliminate.");
                 } catch (err) {
                     console.error("Errore durante lo svuotamento della cache:", err);
                 }
             }
-
-            // 3. Riavvia l'applicazione forzando il download dei file freschi dal server
-            // l'argomento 'true' dice al browser di bypassare completamente la cache locale
             window.location.reload(true);
         }
     };
@@ -115,7 +107,7 @@ function agganciaBottoniStatici() {
 
         STATE.settings = settings;
         STATE.planData = generaPianoLogico(settings);
-        STATE.planDataAI = null; // Sovrascrive eventuale piano AI vecchio
+        STATE.planDataAI = null;
 
         saveState();
         document.getElementById("settingsCard").style.display = "none";
@@ -139,7 +131,7 @@ function agganciaBottoniStatici() {
             const oggettoPianoAI = pulisciEParseJSONAI(rispostaTesto);
 
             STATE.planDataAI = oggettoPianoAI;
-            STATE.planData = null; // cancella piano locale vecchio
+            STATE.planData = null;
             saveState();
 
             renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
@@ -149,47 +141,11 @@ function agganciaBottoniStatici() {
         }
     };
 
-    // Aggiorna / Rimodula settimane future
-    document.getElementById("updatePlanBtn").onclick = async () => {
-        if (!STATE.planData && !STATE.planDataAI) { alert("Nessun piano attivo da rimodulare."); return; }
-        if (!confirm("Ricalcolare le settimane future in base alle nuove impostazioni mantenendo lo storico dei GPX?")) return;
-
-        try {
-            const oggi = new Date();
-            const settimaneAttuali = STATE.planDataAI?.settimane || STATE.planData || [];
-            
-            // Isola le settimane future che non sono ancora iniziate
-            const settimaneDaRimodulare = settimaneAttuali.filter(w => new Date(w.startDate) >= oggi);
-            const settings = catturaImpostazioniSchermo();
-
-            const rispostaRicalcolo = await ricalcolaSettimaneFutureAI(settings, settimaneDaRimodulare);
-            const nuoveSettimaneAI = pulisciEParseJSONAI(rispostaRicalcolo);
-
-            if (!STATE.planDataAI) {
-                STATE.planDataAI = nuoveSettimaneAI;
-            } else {
-                nuoveSettimaneAI.settimane.forEach(nuovaW => {
-                    const idx = STATE.planDataAI.settimane.findIndex(w => w.numero === nuovaW.numero);
-                    if (idx !== -1) {
-                        // Preserva i dati GPX verificati se l'utente li ha già completati
-                        nuovaW.allenamenti.forEach((nuovoA, aIdx) => {
-                            const vecchioA = STATE.planDataAI.settimane[idx].allenamenti[aIdx];
-                            if (vecchioA?.completed && vecchioA?.gpxData) {
-                                nuovoA.completed = true; nuovoA.gpxData = vecchioA.gpxData;
-                            }
-                        });
-                        STATE.planDataAI.settimane[idx] = nuovaW;
-                    }
-                });
-            }
-            STATE.planData = null;
-            saveState();
-            mostraCardPiano('ai');
-            renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
-            alert("Piano aggiornato! Le settimane future sono state rimodulate in modo bilanciato.");
-        } catch (err) {
-            alert("Errore nell'aggiornamento: " + err.message);
-        }
+    // Intercettiamo il tuo vecchio bottone "Update" per aprire il nuovo Pop-up di riepilogo grafico
+    document.getElementById("updatePlanBtn").onclick = () => {
+        if (!STATE.planData && !STATE.planDataAI) { alert("Nessun piano attivo da analizzare."); return; }
+        const tipoAttivo = STATE.planDataAI ? 'ai' : 'local';
+        mostraPopupAndamento(tipoAttivo);
     };
 }
 
@@ -198,8 +154,6 @@ function inizializzaInterfacciaDinamica() {
     document.getElementById("settingsCard").addEventListener("click", (e) => {
         if (e.target.classList.contains("chk-btn")) {
             const { day, type } = e.target.dataset;
-            
-            // Impedisce di selezionare lo stesso giorno sia per Corsa che per Palestra
             if (type === 'corsa' && !e.target.classList.contains('active')) {
                 document.querySelector(`.chk-btn[data-day="${day}"][data-type="palestra"]`)?.classList.remove('active');
             } else if (type === 'palestra' && !e.target.classList.contains('active')) {
@@ -250,8 +204,6 @@ function apriModaleModifica(tipoPiano, wIdx, aIdx) {
         document.getElementById("editDetails").value = getDefaultDetails(val);
     };
     if (cType === "Palestra" || cType === "Riposo") runFields.style.display = "none";
-
-    // Chiudi modali all'esterno o sul tasto annulla è gestito via inline nell'HTML originale
 }
 
 document.getElementById("saveEditBtn").onclick = () => {
@@ -334,7 +286,6 @@ function estraiDatiDaStringaGPX(xmlString) {
         const punti = xml.querySelectorAll("trkpt");
         if (punti.length < 2) return null;
 
-        // --- NUOVO: REPERIMENTO DEL TEMPO DI ATTIVITÀ ---
         const primoTempoStr = punti[0].querySelector("time")?.textContent;
         const ultimoTempoStr = punti[punti.length - 1].querySelector("time")?.textContent;
         
@@ -350,7 +301,6 @@ function estraiDatiDaStringaGPX(xmlString) {
             const lat1 = parseFloat(punti[i-1].getAttribute("lat")), lon1 = parseFloat(punti[i-1].getAttribute("lon"));
             const lat2 = parseFloat(punti[i].getAttribute("lat")), lon2 = parseFloat(punti[i].getAttribute("lon"));
             
-            // Formula di Haversine per distanza geodetica
             const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
@@ -361,7 +311,6 @@ function estraiDatiDaStringaGPX(xmlString) {
             if (ele1 !== null && ele2 !== null && ele2 > ele1) dPlus += (ele2 - ele1);
         }
 
-        // --- NUOVO: CALCOLO DEL PASSO MEDIO REALE ---
         let stringaPassoMedio = "--:--";
         if (km > 0 && durataMinuti > 0) {
             const passoDecimale = durataMinuti / km; 
@@ -370,12 +319,97 @@ function estraiDatiDaStringaGPX(xmlString) {
             stringaPassoMedio = min + ":" + String(sec).padStart(2, '0');
         }
 
-        // Restituiamo l'oggetto arricchito con i nuovi dati
         return { 
             distanceKm: +km.toFixed(2), 
             ascentMeters: Math.round(dPlus),
-            durationMin: durataMinuti,         // <-- Nuovo dato
-            paceStr: stringaPassoMedio          // <-- Nuovo dato
+            durationMin: durataMinuti,
+            paceStr: stringaPassoMedio
         };
     } catch { return null; }
+}
+
+// --- LOGICA INTERFACCIA ED ESTRAZIONE MODALE POP-UP ---
+export function mostraPopupAndamento(tipoPiano) {
+    // Estrae i dati direttamente dallo stato in esecuzione dell'app
+    const pianoLogico = tipoPiano === 'local' ? STATE.planData : STATE.planDataAI?.settimane;
+    
+    if (!pianoLogico) {
+        alert("Nessun dato disponibile per analizzare questo piano.");
+        return;
+    }
+
+    const report = analizzaStatoPiano(pianoLogico);
+    if (!report) return;
+
+    const oreReali = Math.floor(report.minutiTotaliReali / 60);
+    const minutiReali = report.minutiTotaliReali % 60;
+    const stringaTempoReale = oreReali > 0 ? `${oreReali}h ${minutiReali}m` : `${minutiReali}m`;
+
+    const coloreDelta = Math.abs(report.scostamentoKmPercentuale) > 20 ? "#e53935" : "#43a047";
+    const segnoDelta = report.scostamentoKmPercentuale > 0 ? "+" : "";
+
+    const modalHtml = `
+        <div id="custom-progress-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+            <div style="background: #ffffff; width: 90%; max-width: 400px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center;">
+                <h3 style="margin-top: 0; color: #333;">📊 Resoconto Andamento</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Confronto tra gli obiettivi passati del piano e le tue attività reali caricate (GPX / Manuali).</p>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 14px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 12px;">
+                            <th style="padding: 8px; text-align: left;">Metrica</th>
+                            <th style="padding: 8px; text-align: right;">Previsto</th>
+                            <th style="padding: 8px; text-align: right; color: #2e7d32;">Effettivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #f5f5f5;">
+                            <td style="padding: 10px; text-align: left;">🏃 <strong>Distanza</strong></td>
+                            <td style="padding: 10px; text-align: right; color:#777;">${report.kmTeorici} km</td>
+                            <td style="padding: 10px; text-align: right; font-weight: bold;">${report.kmReali} km</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f5f5f5;">
+                            <td style="padding: 10px; text-align: left;">⛰️ <strong>Dislivello</strong></td>
+                            <td style="padding: 10px; text-align: right; color:#777;">+${report.ascentTeorica} m</td>
+                            <td style="padding: 10px; text-align: right; font-weight: bold;">+${report.ascentReale} m</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f5f5f5;">
+                            <td style="padding: 10px; text-align: left;">⏱️ <strong>Tempo Mov.</strong></td>
+                            <td style="padding: 10px; text-align: right; color:#777;">--</td>
+                            <td style="padding: 10px; text-align: right; font-weight: bold;">${stringaTempoReale}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: #444;">
+                    Stato chilometrico: <span style="color: ${coloreDelta}; font-weight: bold;">${segnoDelta}${report.scostamentoKmPercentuale}%</span><br>
+                    <small style="color:#888;">Allenamenti chiusi: ${report.completati} | Saltati: ${report.saltati}</small>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-modal-annulla" style="flex: 1; padding: 12px; background: #eee; border: none; border-radius: 6px; font-weight: bold; color: #555; cursor: pointer;">Annulla</button>
+                    <button id="btn-modal-aggiorna" style="flex: 1; padding: 12px; background: #2ed573; border: none; border-radius: 6px; font-weight: bold; color: white; cursor: pointer;">Aggiorna Piano</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById("btn-modal-annulla").onclick = () => { rimuoviPopup(); };
+    document.getElementById("btn-modal-aggiorna").onclick = () => {
+        rimuoviPopup();
+        eseguiRicalcoloPianoFuturo(tipoPiano, report);
+    };
+}
+
+function rimuoviPopup() {
+    const modal = document.getElementById("custom-progress-modal");
+    if (modal) modal.remove();
+}
+
+async function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
+    console.log("Inizio ricalcolo per piano tipo:", tipoPiano, "Dati storici:", report);
+    // Qui sotto andremo a scrivere la funzione matematica o la chiamata AI per ricalcolare il futuro
+    alert("Aggiornamento futuro attivato con successo! Pronto per la logica di calcolo.");
 }
