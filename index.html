@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrailCoach App v0.2</title>
+    <title>TrailCoach App</title>
     <style>
         :root {
             --bg-color: #f4f7f6;
@@ -125,7 +125,7 @@
 <body>
 
 <div class="container">
-    <h1>🏔️ TrailCoach v0.2</h1>
+    <h1>🏔️ TrailCoach v1.7.2</h1>
 
     <div class="btn-group">
         <button id="toggleSettings" class="btn-primary">⚙️ Impostazioni Piano</button>
@@ -133,7 +133,6 @@
         <button id="resetData" class="btn-danger">🗑️ Resetta Tutto</button>
     </div>
 
-    <!-- CARD IMPOSTAZIONI -->
     <div class="card" id="settingsCard">
         <label for="livello">Livello Atleta</label>
         <select id="livello">
@@ -164,7 +163,7 @@
             <div class="chk-btn" data-day="Mercoledì" data-type="corsa">Mer</div>
             <div class="chk-btn" data-day="Giovedì" data-type="corsa">Gio</div>
             <div class="chk-btn" data-day="Venerdì" data-type="corsa">Ven</div>
-            <div class="chk-btn" data-day="Sabato" data-type="corsa" class="active">Sab</div>
+            <div class="chk-btn" data-day="Sabato" data-type="corsa">Sab</div>
             <div class="chk-btn" data-day="Domenica" data-type="corsa">Dom</div>
         </div>
 
@@ -185,7 +184,6 @@
         </div>
     </div>
 
-    <!-- CONTAINER VISUALIZZAZIONE PIANO LOCALE -->
     <div class="card" id="PlandCard" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
             <h3 style="margin:0; color:var(--primary-color);">📋 Il tuo Piano di Allenamento</h3>
@@ -194,7 +192,6 @@
         <div id="planView"></div>
     </div>
 
-    <!-- CONTAINER VISUALIZZAZIONE PIANO AI -->
     <div class="card" id="aiPlanCard" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
             <h3 style="margin:0; color:#8e44ad;">🧠 Piano Ottimizzato dall'AI</h3>
@@ -204,10 +201,8 @@
     </div>
 </div>
 
-<!-- INPUT INVISIBILE PER CARICAMENTO GPX -->
 <input type="file" id="hiddenFileInput" accept=".gpx" style="display: none;" />
 
-<!-- MODALE DI MODIFICA ATTIVITÀ -->
 <div class="modal" id="editModal">
     <div class="modal-content">
         <h3 style="margin-top:0; color:var(--primary-color);">✏️ Modifica Allenamento</h3>
@@ -219,7 +214,6 @@
     </div>
 </div>
 
-<!-- LOGICA DI SCRIPT INTERNA -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -312,7 +306,7 @@ function loadState(){
         if (!STATE.planDataAI || Object.keys(STATE.planDataAI).length === 0) STATE.planDataAI = null;
         if (STATE.settings) {
             document.getElementById("livello").value = STATE.settings.livello || 'principiante';
-            document.getElementById("obbKm").value = STATE.settings.obbKm || 42;
+            document.getElementById("obbKm").value = STATE.settings.obbKm || 50;
             document.getElementById("obbAsc").value = STATE.settings.obbAsc || 2000;
             document.getElementById("dataGara").value = STATE.settings.dataGara || '';
             document.getElementById("tempoObiettivo").value = STATE.settings.tempoObiettivo || 6;
@@ -339,25 +333,29 @@ function resetApplicationData() {
     location.reload();
 }
 
-document.getElementById("settingsCard").addEventListener("click",e=>{
-  if(e.target.classList.contains("chk-btn")) {
-      const day = e.target.dataset.day;
-      const type = e.target.dataset.type;
-      
-      if (type === 'corsa' && e.target.classList.contains('active')) {
-          // No Action
-      } else if (type === 'corsa' && !e.target.classList.contains('active')) {
-          document.querySelector(`.chk-btn[data-day="${day}"][data-type="palestra"]`)?.classList.remove('active');
-      } else if (type === 'palestra' && !e.target.classList.contains('active')) {
-          document.querySelector(`.chk-btn[data-day="${day}"][data-type="corsa"]`)?.classList.remove('active');
-      }
-      e.target.classList.toggle("active");
-  }
+// GESTIONE SELEZIONE GIORNI (CORSA E PALESTRA)
+document.getElementById("settingsCard").addEventListener("click", (e) => {
+    if (e.target.classList.contains("chk-btn")) {
+        const day = e.target.dataset.day;
+        const type = e.target.dataset.type;
+        
+        if (type === 'corsa' && !e.target.classList.contains('active')) {
+            document.querySelector(`.chk-btn[data-day="${day}"][data-type="palestra"]`)?.classList.remove('active');
+        } else if (type === 'palestra' && !e.target.classList.contains('active')) {
+            document.querySelector(`.chk-btn[data-day="${day}"][data-type="corsa"]`)?.classList.remove('active');
+        }
+        e.target.classList.toggle("active");
+    }
 });
 
-document.getElementById("toggleSettings").onclick=()=>{
-  const card=document.getElementById("settingsCard");
-  card.style.display=card.style.display==="none"?"block":"none";
+// APERTURA/CHIUSURA PANNELLO IMPOSTAZIONI
+document.getElementById("toggleSettings").onclick = () => {
+    const card = document.getElementById("settingsCard");
+    if (card.style.display === "none" || card.style.display === "") {
+        card.style.display = "block";
+    } else {
+        card.style.display = "none";
+    }
 };
 
 document.getElementById("updatePlanBtn").addEventListener("click", async () => {
@@ -404,8 +402,7 @@ document.getElementById("updatePlanBtn").addEventListener("click", async () => {
         try {
             let cleanText = nuovoPianoTesto;
             if (nuovoPianoTesto.includes("```")) {
-                const match = nuovoPianoTesto.match(/
-```json([\s\S]*?)```/);
+                const match = nuovoPianoTesto.match(/```json([\s\S]*?)```/);
                 cleanText = match ? match[1] : nuovoPianoTesto.substring(nuovoPianoTesto.indexOf('{'), nuovoPianoTesto.lastIndexOf('}') + 1);
             }
             datiAI = JSON.parse(cleanText.trim());
@@ -523,12 +520,9 @@ function generaPiano(){
     let runAssignments = {};
     
     if (isUltimaSettimana) {
-        // Tapering finale: Domenica c'è la Gara
         runAssignments["Domenica"] = "GARA 🎉";
         if (runDaysCopy.includes("Domenica")) runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
-        if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1); // Solitamente riposo pre-gara
-        
-        // I restanti giorni di corsa diventano attivazioni leggerissime di scarico
+        if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
         runDaysCopy.forEach(day => { runAssignments[day] = "Corsa Facile"; });
     } else {
         if (runDaysCopy.includes("Sabato")) {
@@ -538,7 +532,6 @@ function generaPiano(){
             runAssignments["Domenica"] = "Lungo trail";
             runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
         }
-        
         if (runDaysCopy.length > 0) {
             runAssignments[runDaysCopy[0]] = "Ripetute collinari";
             runDaysCopy.splice(0, 1);
@@ -548,7 +541,6 @@ function generaPiano(){
 
     for(const day of GIORNI){
       if(isUltimaSettimana && giorniPalestra.includes(day)){
-        // Niente palestra pesante nell'ultima settimana (solo scarico/riposo)
         settimana.push({day,type:"Riposo",summary:"Riposo pre-gara",details:{detailText:"Niente pesi questa settimana. Solo mobilità leggera.", distance: 0, ascent: 0, durationMin: 0, completed: false, gpxData: null}});
       } else if(giorniPalestra.includes(day)){
         settimana.push({
@@ -556,9 +548,8 @@ function generaPiano(){
             details:{detailText:getDefaultDetails("Palestra"), distance: 0, ascent: 0, durationMin: 60, completed: false, gpxData: null}
         });
       } else if(runAssignments[day] === "GARA 🎉" || (day === "Domenica" && isUltimaSettimana)) {
-         // Logica Gara Finale
          const det = {
-            distance: obbKm, // La gara riprende il picco massimo chilometrico inserito come target
+            distance: obbKm, 
             ascent: obbAsc,
             durationMin: Math.round(tempoObiettivo * 60),
             detailText: getDefaultDetails("GARA 🎉"), completed: false, gpxData: null
@@ -567,7 +558,6 @@ function generaPiano(){
          settimana.push({day,type:"GARA 🎉",summary:`🏁 GIORNO DELLA GARA — ${det.distance} km`,details:det});
       } else if(giorniCorsa.includes(day) && runAssignments[day]){
         const type = runAssignments[day];
-        // Se è l'ultima settimana, riduciamo ulteriormente le sessioni di attivazione
         const det = isUltimaSettimana ? 
             { distance: +(obbKm * 0.12).toFixed(1), ascent: 0, durationMin: Math.round((obbKm * 0.12) * paceByLevel(livello)), detailText: "Attivazione pre-gara controllata. Mantieni i muscoli svegli senza affaticare.", completed: false, gpxData: null } :
             creaDettagliAllenamento(type,baseKm,baseAsc,runsCount,livello,false);
@@ -824,8 +814,7 @@ function renderExternalPlan(jsonString) {
 
     try {
         if (cleanText.includes("```json")) {
-            const match = cleanText.match(/
-```json([\s\S]*?)```/);
+            const match = cleanText.match(/```json([\s\S]*?)```/);
             if (match) {
                 cleanText = match[1];
             }
@@ -1138,6 +1127,7 @@ function attachDayDetailListeners() {
     });
 }
 
+// INIZIALIZZAZIONE ASSEGNAZIONE EVENTI AI BOTTONI COMPONENTI STATICI
 document.getElementById("genLocal").onclick = generaPiano;
 document.getElementById("genAI").onclick = generaPianoAI;
 document.getElementById("resetData").onclick = resetApplicationData; 
