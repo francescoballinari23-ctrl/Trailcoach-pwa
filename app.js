@@ -4,6 +4,7 @@ import { generaPianoLogico, CORSA_TYPES, getDefaultDetails, calculatePlanDates }
 import { generaPianoAI, ricalcolaSettimaneFutureAI, pulisciEParseJSONAI } from './piano-ai.js';
 import { renderPianoLocale, renderPianoAI } from './ui.js';
 import { analizzaStatoPiano } from './piano-aggiornamento.js';
+import { eseguiRimodulazioneMatematicaLocale } from './piano-aggiornamento.js';
 
 const STORAGE_KEY = "trailcoach_v17_modular";
 let STATE = { settings: {}, planData: null, planDataAI: null };
@@ -533,5 +534,14 @@ async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni,
         if (STATE.planDataAI) renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
     }
 }
-
+function avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni) {
+    eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpostazioni, STATE, {
+        saveState,
+        mostraCardPiano,
+        renderPianoAI,
+        renderPianoLocale, // <-- ATTENZIONE: controlla che in app.js la tua funzione locale si chiami così
+        avviaCaricamentoGPX,
+        apriModaleModifica
+    });
+}
 
