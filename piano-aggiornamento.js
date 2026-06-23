@@ -1,9 +1,7 @@
-// piano-aggiornamento.js - Analisi dello storico ed elaborazione dei dati reali
+// piano-aggiornamento.js - Analisi dello storico e rimodulazione basata sulla progressione del Lungo
 
 /**
  * Analizza il piano attuale e calcola il volume reale completato rispetto al teorico.
- * @param {Array} pianoAttuale - Il piano di allenamento memorizzato nel localStorage
- * @returns {Object} Un oggetto contenente i dati consolidati del passato e le metriche di scostamento
  */
 export function analizzaStatoPiano(pianoAttuale) {
     if (!pianoAttuale || pianoAttuale.length === 0) return null;
@@ -22,9 +20,6 @@ export function analizzaStatoPiano(pianoAttuale) {
 
     pianoAttuale.forEach(settimana => {
         const dataSettimana = new Date(settimana.startDate);
-        
-        // Consideriamo "passate" o correnti le settimane la cui data di inizio è precedente a oggi + 7 giorni
-        // o che contengono almeno un allenamento completato
         let haAllenamentiCompletati = settimana.allenamenti.some(a => a.details && a.details.completed);
         
         if (dataSettimana < oggi || haAllenamentiCompletati) {
@@ -37,16 +32,11 @@ export function analizzaStatoPiano(pianoAttuale) {
 
                 if (all.type !== "Riposo" && all.type !== "Palestra") {
                     kmTotaliTeoriciPassati += kmPianificati;
-                    metatriAscesaTeoriciPassati = (metriAscesaTeoriciPassati || 0) + ascesaPianificata; // Corretto fallback di sicurezza
-
-                    // Usiamo la variabile cumulativa corretta della tua funzione originale
-                    metriAscesaTeoriciPassati = metriAscesaTeoriciPassati + ascesaPianificata - ascesaPianificata; 
                     metriAscesaTeoriciPassati += ascesaPianificata;
 
                     if (det.completed) {
                         allenamentiCompletatiConteggio++;
                         
-                        // Se c'è un GPX prende i dati reali, altrimenti si fida del target impostato a mano
                         const kmEffettivi = det.gpxData ? det.gpxData.distanceKm : kmPianificati;
                         const ascesaEffettiva = det.gpxData ? det.gpxData.ascentMeters : ascesaPianificata;
                         const minutiEffettivi = det.gpxData ? (det.gpxData.durationMin || det.durationMin || 0) : (det.durationMin || 0);
@@ -55,7 +45,6 @@ export function analizzaStatoPiano(pianoAttuale) {
                         metriAscesaRealiPassati += ascesaEffettiva;
                         minutiTotaliRealiPassati += minutiEffettivi;
                     } else if (dataSettimana < oggi) {
-                        // Se la settimana è passata e l'allenamento non è completato, è saltato
                         allenamentiSaltatiConteggio++;
                     }
                 }
@@ -63,7 +52,6 @@ export function analizzaStatoPiano(pianoAttuale) {
         }
     });
 
-    // Calcolo dello scostamento percentuale sui chilometri
     let deltaPercentualeKm = 0;
     if (kmTotaliTeoriciPassati > 0) {
         deltaPercentualeKm = ((kmTotaliRealiPassati - kmTotaliTeoriciPassati) / kmTotaliTeoriciPassati) * 100;
@@ -77,16 +65,15 @@ export function analizzaStatoPiano(pianoAttuale) {
         minutiTotaliReali: minutiTotaliRealiPassati,
         completati: allenamentiCompletatiConteggio,
         saltati: allenamentiSaltatiConteggio,
-        scostamentoKmPercentuale: +deltaPercentualeKm.toFixed(1) // Es: -15.5 significa sei sotto del 15%
+        scostamentoKmPercentuale: +deltaPercentualeKm.toFixed(1)
     };
 }
 
 /**
- * Ricalcolo Matematico Locale delle settimane future
- * Basato sul nuovo target di chilometri inserito a schermo e sullo storico reale.
+ * Ricalcolo Matematico Locale basato sulla Progressione Biologica del Lungo
  */
 export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpostazioni, STATE, funzioniCallback) {
-    console.log("Avvio ricalcolo locale matematico isolato...", report, nuoveImpostazioni);
+    console.log("Avvio ricalcolo locale basato sulla progressione del lungo...", report, nuoveImpostazioni);
 
     const { saveState, mostraCardPiano, renderPianoAI, renderPianoLocale, avviaCaricamentoGPX, apriModaleModifica } = funzioniCallback;
 
@@ -94,7 +81,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         const oggi = new Date();
         oggi.setHours(0, 0, 0, 0);
 
-        // 1. Recuperiamo le settimane attuali coerentemente con lo stato globale
+        // 1. Isoliamo lo storico dal futuro
         const settimaneAttuali = STATE.planDataAI?.settimane || STATE.planData || [];
 
         const settimanePassate = settimaneAttuali.filter(w => {
@@ -110,64 +97,100 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
             return;
         }
 
-        // 2. Calcoliamo quanti km mancano per raggiungere il NUOVO obiettivo a schermo
-        const nuovoTargetTotale = parseFloat(nuoveImpostazioni.obbKm) || 0;
-        const kmGiaCorsi = report.kmReali; 
-        const kmRimanentiDaCoprire = Math.max(0, nuovoTargetTotale - kmGiaCorsi);
+        // 2. Troviamo l'ultimo lungo reale eseguito nel passato per agganciare la curva
+        let ultimoLungoReale = 14; // Default minimo di sicurezza
+        let ultimoDplusReale = 600;
 
-        // 3. Calcoliamo quanti km erano previsti originariamente nel blocco futuro
-        let kmFuturiTeoriciOriginali = 0;
-        settimaneFuture.forEach(w => {
-            w.allenamenti.forEach(a => {
-                if (a.type !== "Riposo" && a.type !== "Palestra") {
-                    const kmAll = parseFloat(a.details?.distance || 0);
-                    kmFuturiTeoriciOriginali += kmAll;
-                }
-            });
-        });
+        // Scansioniamo all'indietro lo storico per trovare l'ultimo lungo fatto (o pianificato se manca il GPX)
+        for (let i = settimanePassate.length - 1; i >= 0; i--) {
+            const lungoDomenica = settimanePassate[i].allenamenti.find(a => a.type === "Lungo" || a.tipo?.toLowerCase().includes("lungo"));
+            if (lungoLungoDomenica && lungoDomenica.details?.completed) {
+                ultimoLungoReale = lungoDomenica.details.gpxData ? lungoDomenica.details.gpxData.distanceKm : (lungoLungoDomenica.details.distance || 16);
+                ultimoDplusReale = lungoDomenica.details.gpxData ? lungoDomenica.details.gpxData.ascentMeters : (lungoLungoDomenica.details.ascent || 700);
+                break;
+            }
+        }
 
-        // 4. Determiniamo il fattore di scala lineare per i volumi futuri rimanenti
-        const fattoreScala = kmFuturiTeoriciOriginali > 0 ? (kmRimanentiDaCoprire / kmFuturiTeoriciOriginali) : 1;
-        console.log(`Fattore di scala lineare applicato alle sessioni future: ${fattoreScala}`);
+        // 3. Definiamo i vincoli della progressione (Target di picco basati sulla gara dello schermo)
+        const kmGara = parseFloat(nuoveImpostazioni.obbKm) || 42;
+        const dplusGara = parseFloat(nuoveImpostazioni.dislivelloGara) || 2000; // Se presente a schermo, altrimenti stimato
+        
+        const lungoPiccoTarget = Math.round(kmGara * 0.70); // Il picco ideale è il 70% della gara
+        const dplusPiccoTarget = Math.round(lungoPiccoTarget * (dplusGara / kmGara)); // Dislivello proporzionale
 
-        // 5. Ricalibriamo ogni singola settimana futura
-        const settimaneFutureRicalcolate = settimaneFuture.map(settimana => {
+        // Impostiamo il tasso di crescita settimanale ottimale (es. +10%), bloccato al max al 12%
+        const fattoreCrescitaKm = 1.10; 
+        const fattoreCrescitaDplus = 1.12; 
+
+        let kmCorrentiLungo = ultimoLungoReale;
+        let dplusCorrenteLungo = ultimoDplusReale;
+
+        // 4. Ricalcoliamo la griglia dei Lunghi Futuri
+        const settimaneFutureRicalcolate = settimaneFuture.map((settimana, indice) => {
             const nuovaSettimana = JSON.parse(JSON.stringify(settimana));
+            
+            // Verifichiamo se è una settimana di scarico (es. ogni 4 settimane o le ultime 2 prima della gara)
+            // Usiamo l'indice o i metadati esistenti per capire se era concepita come scarico
+            const isScaricoFisso = nuovaSettimana.details?.isScarico || (indice % 4 === 3);
+            const isTaperingFinale = (settimaneFuture.length - indice) <= 2; // Le ultime due prima della gara
+
+            if (isScaricoFisso && !isTaperingFinale) {
+                // Settimana di scarico relativo: -20% rispetto al livello corrente raggiunto
+                kmCorrentiLungo = Math.round((kmCorrentiLungo * 0.8) * 10) / 10;
+                dplusCorrenteLungo = Math.round(dplusCorrenteLungo * 0.8);
+            } else if (!isTaperingFinale) {
+                // Settimana di carico: incrementiamo l'ultimo valore, senza superare il picco massimo target
+                kmCorrentiLungo = Math.min(lungoPiccoTarget, Math.round((kmCorrentiLungo * fattoreCrescitaKm) * 10) / 10);
+                dplusCorrenteLungo = Math.min(dplusPiccoTarget, Math.round(dplusCorrenteLungo * fattoreCrescitaDplus));
+            } else {
+                // Tapering pre-gara (ultime 2 settimane): calo drastico programmato
+                const settimaneMancantiAllaGara = settimaneFuture.length - indice; 
+                if (settimaneMancantiAllaGara === 2) {
+                    kmCorrentiLungo = Math.round(lungoPiccoTarget * 0.7); // 70% del picco
+                    dplusCorrenteLungo = Math.round(dplusPiccoTarget * 0.6);
+                } else {
+                    kmCorrentiLungo = Math.round(lungoPiccoTarget * 0.4); // 40% del picco (rifinitura)
+                    dplusCorrenteLungo = Math.round(dplusPiccoTarget * 0.3);
+                }
+            }
+
             let totaleKmSettimanale = 0;
             let totaleDplusSettimanale = 0;
 
+            // 5. Applichiamo la cascata percentuale infrasettimanale basandoci sul Lungo appena calcolato
             nuovaSettimana.allenamenti = nuovaSettimana.allenamenti.map(all => {
                 if (!all.details) return all;
+                if (all.details.completed) return all; // Preserva sessioni future già marcate completate per errore
 
-                const isCompleted = all.details.completed;
-                if (!isCompleted && all.type !== "Riposo" && all.type !== "Palestra") {
-                    const kmOriginali = parseFloat(all.details.distance || 0);
-                    const dplusOriginale = parseFloat(all.details.ascent || 0);
-
-                    // Applichiamo la riscalatura lineare arrotondata
-                    const nuoviKm = Math.round((kmOriginali * fattoreScala) * 10) / 10;
-                    const nuovoDplus = Math.round(dplusOriginale * fattoreScala);
-
-                    all.details.distance = nuoviKm;
-                    all.details.ascent = nuovoDplus;
-                    
-                    // Se l'allenamento ha una stringa descrittiva (es. nei piani AI), aggiorniamo il testo visivo
-                    if (all.tipo || all.descrizione) {
-                        const targetTesto = all.tipo ? 'tipo' : 'descrizione';
-                        all[targetTesto] = all[targetTesto].replace(/(\d+(\.\d+)?)\s*km/gi, `${nuoviKm} km`);
-                        all[targetTesto] = all[targetTesto].replace(/\+(\d+)\s*m/gi, `+${nuovoDplus} m`);
-                    }
+                if (all.type === "Lungo" || all.tipo?.toLowerCase().includes("lungo")) {
+                    all.details.distance = kmCorrentiLungo;
+                    all.details.ascent = dplusCorrenteLungo;
+                } else if (all.type === "Ripetute" || all.type === "Qualità" || all.type?.toLowerCase().includes("ripetute")) {
+                    // La qualità infrasettimanale è rigida al 40% del lungo della stessa settimana
+                    all.details.distance = Math.round((kmCorrentiLungo * 0.4) * 10) / 10;
+                    all.details.ascent = Math.round(dplusCorrenteLungo * 0.3); // Meno dislivello per fare velocità
+                } else if (all.type === "Lento" || all.type?.toLowerCase().includes("lento")) {
+                    // Il lento rigenerante è rigido al 50% del lungo
+                    all.details.distance = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
+                    all.details.ascent = Math.round(dplusCorrenteLungo * 0.4);
                 }
 
-                // Sommiamo i progressivi per la card della settimana
+                // Aggiorniamo le stringhe di testo visive nelle card
+                if (all.tipo || all.descrizione) {
+                    const targetProp = all.tipo ? 'tipo' : 'descrizione';
+                    all[targetProp] = all[targetProp].replace(/(\d+(\.\d+)?)\s*km/gi, `${all.details.distance} km`);
+                    all[targetProp] = all[targetProp].replace(/\+(\d+)\s*m/gi, `+${all.details.ascent} m`);
+                }
+
                 if (all.type !== "Riposo" && all.type !== "Palestra") {
-                    totaleKmSettimanale += parseFloat(all.details.distance || 0);
-                    totaleDplusSettimanale += parseFloat(all.details.ascent || 0);
+                    totaleKmSettimanale += all.details.distance || 0;
+                    totaleDplusSettimanale += all.details.ascent || 0;
                 }
+
                 return all;
             });
 
-            // Aggiorniamo i metadati complessivi della settimana
+            // Aggiorniamo i calcoli globali della card settimanale
             if (nuovaSettimana.details) {
                 nuovaSettimana.details.totaleKm = Math.round(totaleKmSettimanale * 10) / 10;
                 nuovaSettimana.details.totaleDplus = totaleDplusSettimanale;
@@ -179,13 +202,13 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
             return nuovaSettimana;
         });
 
-        // 6. Uniamo lo storico intatto (con i vecchi GPX) con il futuro ricalcolato matematicamente
+        // 6. Consolidamento finale del piano
         const pianoConsolidatoLocale = {
-            descrizione_generale: `Piano ricalcolato localmente (Matematico) il ${new Date().toLocaleDateString('it-IT')}. Nuovo Target: ${nuovoTargetTotale}km.`,
+            descrizione_generale: `Piano ricalcolato localmente (Progressione Lunghi) il ${new Date().toLocaleDateString('it-IT')}. Target: ${kmGara}km.`,
             settimane: [...settimanePassate, ...settimaneFutureRicalcolate]
         };
 
-        // 7. Aggiorniamo lo STATO e rinfreschiamo l'interfaccia usando i callback dedicati
+        // 7. Aggiornamento dello stato globale e rendering grafico della UI
         if (STATE.planDataAI) {
             STATE.planDataAI = pianoConsolidatoLocale;
             mostraCardPiano('ai');
@@ -197,10 +220,10 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         }
 
         saveState();
-        alert(`🧮 Ricalcolo Matematico completato con successo! Il carico futuro si è adattato alle nuove specifiche dello schermo.`);
+        alert(`🎯 Ricalcolo basato sulla progressione dei Lunghi completato! Le settimane future sono state riadattate partendo dai tuoi 16 km reali.`);
 
     } catch (error) {
-        console.error("Errore nel ricalcolo matematico locale:", error);
-        alert("Impossibile completare il ricalcolo locale: " + error.message);
+        console.error("Errore nel ricalcolo locale dei lunghi:", error);
+        alert("Impossibile completare il ricalcolo basato sui lunghi: " + error.message);
     }
 }
