@@ -102,7 +102,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         }
 
         // 2. Troviamo l'ultimo lungo reale eseguito nel passato per agganciare la curva
-        let ultimoLungoReale = 16; // Agganciato ai tuoi 16 km reali di partenza
+        let ultimoLungoReale = 16; 
         let ultimoDplusReale = 700;
 
         for (let i = settimanePassate.length - 1; i >= 0; i--) {
@@ -131,6 +131,9 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
 
         let kmCorrentiLungo = ultimoLungoReale;
         let dplusCorrenteLungo = ultimoDplusReale;
+
+        // Recuperiamo il passo del test sui 10km (es. 5.8 per 5:48/km)
+        const passo10k = parseFloat(nuoveImpostazioni.passoBasePianura) || 5.8;
 
         // 4. Ricalcoliamo la griglia dei Lunghi Futuri
         const settimaneFutureRicalcolate = settimaneFuture.map((settimana, indice) => {
@@ -171,37 +174,43 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                 }
 
                 const tagTipo = (all.type || all.tipo || "").toLowerCase();
+                let passoSpecificoPianura = passo10k; // Di default ritmo soglia 10k
 
                 if (tagTipo.includes("lungo")) {
                     all.details.distance = kmCorrentiLungo;
                     all.details.ascent = dplusCorrenteLungo;
-                    if (all.km !== undefined) all.km = kmCorrentiLungo;
-                    if (all.asc !== undefined) all.asc = dplusCorrenteLungo;
+                    passoSpecificoPianura = passo10k * 1.15; // Z2 aerobica: +15% rispetto ai 10k
                 } else if (tagTipo.includes("ripetute") || tagTipo.includes("qualità") || tagTipo.includes("qualita")) {
                     all.details.distance = Math.round((kmCorrentiLungo * 0.4) * 10) / 10;
                     all.details.ascent = Math.round(dplusCorrenteLungo * 0.3);
-                    if (all.km !== undefined) all.km = all.details.distance;
-                    if (all.asc !== undefined) all.asc = all.details.ascent;
+                    passoSpecificoPianura = passo10k; // Ritmo 10k (Soglia)
                 } else if (tagTipo.includes("lento")) {
                     all.details.distance = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
                     all.details.ascent = Math.round(dplusCorrenteLungo * 0.4);
-                    if (all.km !== undefined) all.km = all.details.distance;
-                    if (all.asc !== undefined) all.asc = all.details.ascent;
+                    passoSpecificoPianura = passo10k * 1.15; // Z2 Fondo Lento: +15% rispetto ai 10k
                 }
 
-                // Sincronizziamo i testi delle descrizioni grafiche
+                if (all.km !== undefined) all.km = all.details.distance;
+                if (all.asc !== undefined) all.asc = all.details.ascent;
+
+                // Calcolo durata compensando il dislivello con la regola di Naismith
+                const tipoPuro = all.type || all.tipo || "";
+                if (tipoPuro !== "Riposo" && tipoPuro !== "Palestra") {
+                    const kmEquivalenti = all.details.distance + (all.details.ascent / 100);
+                    all.details.durationMin = Math.round(kmEquivalenti * passoSpecificoPianura);
+                    if (all.durationMin !== undefined) all.durationMin = all.details.durationMin;
+                    
+                    totaleKmSettimanale += all.details.distance;
+                    totaleDplusSettimanale += all.details.ascent;
+                }
+
+                // Sincronizziamo i testi delle descrizioni grafiche nelle card
                 const kmRiferimento = all.details.distance || all.km || 0;
                 const ascRiferimento = all.details.ascent || all.asc || 0;
 
                 if (all.summary) all.summary = all.summary.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`);
                 if (all.dettagli) all.dettagli = all.dettagli.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
                 if (all.details.detailText) all.details.detailText = all.details.detailText.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
-
-                const tipoPuro = all.type || all.tipo || "";
-                if (tipoPuro !== "Riposo" && tipoPuro !== "Palestra") {
-                    totaleKmSettimanale += kmRiferimento;
-                    totaleDplusSettimanale += ascRiferimento;
-                }
 
                 return all;
             });
