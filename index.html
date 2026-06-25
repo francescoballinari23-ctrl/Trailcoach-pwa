@@ -134,12 +134,14 @@
     </div>
 
     <div class="card" id="settingsCard">
-        <label for="livello">Livello Atleta</label>
-        <select id="livello">
-            <option value="principiante">Principiante (Passo base ~6:12/km)</option>
-            <option value="intermedio" selected>Intermedio (Passo base ~5:48/km)</option>
-            <option value="avanzato">Avanzato (Passo base ~5:24/km)</option>
-        </select>
+       <label for="livello">Il tuo Record attuale sui 10km su strada</label>
+<select id="livello">
+    <option value="5.8" selected>Intermedio (10k in ~58 min | Passo ~5:48/km)</option>
+    <option value="6.5">Principiante (10k in ~1h 05m | Passo ~6:30/km)</option>
+    <option value="5.0">Avanzato (10k in ~50 min | Passo ~5:00/km)</option>
+    <option value="4.2">Elite (10k in ~42 min | Passo ~4:12/km)</option>
+</select>
+
 
         <label for="obbKm">Obiettivo Chilometri Settimanali Massimi (km)</label>
         <input type="number" id="obbKm" value="50" min="10">
