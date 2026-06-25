@@ -461,11 +461,6 @@ function rimuoviPopupScelta() {
 
 // --- LOGICA DI RIMODULAZIONE DEFINITIVA ---
 
-function avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni) {
-    console.log("Esecuzione ricalcolo locale...", report, nuoveImpostazioni);
-    alert(`Ricalcolo locale avviato!\nApplicherò i nuovi obiettivi dello schermo e riproporzionerò il futuro matematicamente (Scostamento: ${report.scostamentoKmPercentuale}%).`);
-}
-
 async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni, nuoveImpostazioni) {
     if (!STATE.planData && !STATE.planDataAI) { 
         alert("Nessun piano attivo da rimodulare."); 
@@ -534,12 +529,22 @@ async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni,
         if (STATE.planDataAI) renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
     }
 }
+
+// UNICA DICHIARAZIONE CORRETTA: Raccordo verso l'algoritmo geometrico dei Lunghi
 function avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni) {
+    // Generiamo al volo la stringa descrittiva per il piano locale se l'utente ha cambiato i parametri a schermo
+    const dataFormattata = nuoveImpostazioni.dataGara ? new Date(nuoveImpostazioni.dataGara).toLocaleDateString('it-IT') : '';
+    const nuovaDescrizione = `Piano locale ricalcolato, termina il ${dataFormattata}. Target picco: ${nuoveImpostazioni.obbKm} km, +${nuoveImpostazioni.dislivelloGara || nuoveImpostazioni.obbAsc}m D+.`;
+    
+    // Aggiorniamo la descrizione nello stato prima del rendering
+    STATE.settings.descrizione_generale = nuovaDescrizione;
+
     eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpostazioni, STATE, {
         saveState,
         mostraCardPiano,
         renderPianoAI,
-        renderPianoLocale, // <-- ATTENZIONE: controlla che in app.js la tua funzione locale si chiami così
+        // Iniettiamo una funzione wrapper per allineare i parametri che la UI si aspetta per il piano locale
+        renderPianoLocale: (pData, gpxCall, modCall) => renderPianoLocale(pData, STATE.settings.descrizione_generale, gpxCall, modCall),
         avviaCaricamentoGPX,
         apriModaleModifica
     });
