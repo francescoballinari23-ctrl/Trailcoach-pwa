@@ -174,43 +174,101 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                 }
 
                 const tagTipo = (all.type || all.tipo || "").toLowerCase();
-                let passoSpecificoPianura = passo10k; // Di default ritmo soglia 10k
+                const dicituraDettagli = (all.dettagli || all.summary || "").toLowerCase();
+                
+                const isCorsa = tagTipo.includes("corsa") || tagTipo.includes("lungo") || tagTipo.includes("lento") || tagTipo.includes("ripetute") || tagTipo.includes("qualit");
+                const isPalestraORiposo = tagTipo.includes("palestra") || tagTipo.includes("riposo");
 
-                if (tagTipo.includes("lungo")) {
-                    all.details.distance = kmCorrentiLungo;
-                    all.details.ascent = dplusCorrenteLungo;
-                    passoSpecificoPianura = passo10k * 1.15; // Z2 aerobica: +15% rispetto ai 10k
-                } else if (tagTipo.includes("ripetute") || tagTipo.includes("qualità") || tagTipo.includes("qualita")) {
-                    all.details.distance = Math.round((kmCorrentiLungo * 0.4) * 10) / 10;
-                    all.details.ascent = Math.round(dplusCorrenteLungo * 0.3);
-                    passoSpecificoPianura = passo10k; // Ritmo 10k (Soglia)
-                } else if (tagTipo.includes("lento")) {
-                    all.details.distance = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
-                    all.details.ascent = Math.round(dplusCorrenteLungo * 0.4);
-                    passoSpecificoPianura = passo10k * 1.15; // Z2 Fondo Lento: +15% rispetto ai 10k
-                }
+                if (isCorsa && !isPalestraORiposo) {
+                    let passoSpecificoPianura = passo10k;
+                    let skipNaismithDovutoATempoFisso = false;
 
-                if (all.km !== undefined) all.km = all.details.distance;
-                if (all.asc !== undefined) all.asc = all.details.ascent;
+                    const formattaPasso = (passoDecimale) => {
+                        const m = Math.floor(passoDecimale);
+                        const s = Math.round((passoDecimale - m) * 60).toString().padStart(2, '0');
+                        return `${m}:${s}`;
+                    };
 
-                // Calcolo durata compensando il dislivello con la regola di Naismith
-                const tipoPuro = all.type || all.tipo || "";
-                if (tipoPuro !== "Riposo" && tipoPuro !== "Palestra") {
-                    const kmEquivalenti = all.details.distance + (all.details.ascent / 100);
-                    all.details.durationMin = Math.round(kmEquivalenti * passoSpecificoPianura);
+                    if (tagTipo.includes("lungo") || dicituraDettagli.includes("lungo")) {
+                        all.details.distance = kmCorrentiLungo;
+                        all.details.ascent = dplusCorrenteLungo;
+                        passoSpecificoPianura = passo10k * 1.15; // Z2 aerobica: +15% rispetto ai 10k
+                        
+                    } else if (tagTipo.includes("ripetute") || tagTipo.includes("qualit") || dicituraDettagli.includes("ripetute") || dicituraDettagli.includes("qualit")) {
+                        skipNaismithDovutoATempoFisso = true;
+                        
+                        const numeroSettimanaConfig = indice + 1; 
+                        const isSettimanaDispari = (numeroSettimanaConfig % 2 !== 0);
+                        
+                        let descrizioneRipetute = "";
+                        let quanteRipetute = 0;
+
+                        if (isSettimanaDispari) {
+                            // 🏃 SETTIMANE DISPARI: BREVI A TEMPO (VO2Max e Potenza) - 8x, 10x, 12x da 1'15"
+                            quanteRipetute = 8;
+                            if (numeroSettimanaConfig > 3) quanteRipetute = 10;
+                            if (numeroSettimanaConfig > 7) quanteRipetute = 12;
+                            
+                            const passoBreve = passo10k * 0.90; // 🔥 10% più veloce del ritmo 10k
+                            
+                            descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 1'15" @${formattaPasso(passoBreve)}/km (Rec. 1'30" da fermo) + Defat.`;
+                            
+                            const kmFrazioni = (quanteRipetute * 1.25) / passoBreve;
+                            all.details.distance = Math.round((3 + kmFrazioni) * 10) / 10; 
+                            all.details.durationMin = Math.round(15 + (quanteRipetute * 1.25) + ((quanteRipetute - 1) * 1.5) + 5);
+                        } else {
+                            // 🏃 SETTIMANE PARI: LUNGHE A TEMPO (Tolleranza Lattato) - 2x, 4x, 5x da 5'
+                            quanteRipetute = 2; // Partenza base prudente richiesta
+                            if (numeroSettimanaConfig > 4) quanteRipetute = 4;
+                            if (numeroSettimanaConfig > 8) quanteRipetute = 5;
+                            
+                            const passoLungo = passo10k; // Ritmo 10k puro (Soglia)
+                            
+                            descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 5' @${formattaPasso(passoLungo)}/km (Rec. 2'30" Corsa Lenta) + Defat.`;
+                            
+                            const kmFrazioni = (quanteRipetute * 5) / passoLungo;
+                            const kmRecuperi = ((quanteRipetute - 1) * 2.5) / (passo10k * 1.15); 
+                            all.details.distance = Math.round((3 + kmFrazioni + kmRecuperi) * 10) / 10;
+                            
+                            all.details.durationMin = Math.round(15 + (quanteRipetute * 5) + ((quanteRipetute - 1) * 2.5) + 5);
+                        }
+
+                        all.details.ascent = Math.round(dplusCorrenteLungo * 0.12); // Pendenze collinari stimate minime
+                        all.summary = `🏃 Ripetute: ${descrizioneRipetute}`;
+
+                    } else if (tagTipo.includes("lento") || dicituraDettagli.includes("lento") || dicituraDettagli.includes("fondo")) {
+                        all.details.distance = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
+                        all.details.ascent = Math.round(dplusCorrenteLungo * 0.4);
+                        passoSpecificoPianura = passo10k * 1.15; // Z2 Fondo Lento: +15% rispetto ai 10k
+                    }
+
+                    if (all.km !== undefined) all.km = all.details.distance;
+                    if (all.asc !== undefined) all.asc = all.details.ascent;
+
+                    // Calcolo della durata temporale
+                    if (!skipNaismithDovutoATempoFisso) {
+                        const kmEquivalenti = all.details.distance + (all.details.ascent / 100);
+                        all.details.durationMin = Math.round(kmEquivalenti * passoSpecificoPianura);
+                    }
                     if (all.durationMin !== undefined) all.durationMin = all.details.durationMin;
-                    
+
                     totaleKmSettimanale += all.details.distance;
                     totaleDplusSettimanale += all.details.ascent;
+
+                    // Sincronizzazione finale delle stringhe descrittive
+                    const kmRiferimento = all.details.distance;
+                    const ascRiferimento = all.details.ascent;
+                    const tempoStimatoh = Math.floor(all.details.durationMin / 60);
+                    const tempoStimatom = all.details.durationMin % 60;
+                    const stringaTempo = tempoStimatoh > 0 ? `${tempoStimatoh}h ${tempoStimatom}m` : `${tempoStimatom} min`;
+
+                    if (!tagTipo.includes("ripetute") && !dicituraDettagli.includes("ripetute")) {
+                        all.summary = `${tagTipo.charAt(0).toUpperCase() + tagTipo.slice(1)} di ${kmRiferimento} km`;
+                    }
+                    
+                    all.dettagli = `🏃 Sforzo stimato: ${stringaTempo} | ${kmRiferimento} km | +${ascRiferimento}m D+`;
+                    all.details.detailText = `Distanza: ${kmRiferimento} km, Dislivello: +${ascRiferimento} m, Tempo: ${stringaTempo}`;
                 }
-
-                // Sincronizziamo i testi delle descrizioni grafiche nelle card
-                const kmRiferimento = all.details.distance || all.km || 0;
-                const ascRiferimento = all.details.ascent || all.asc || 0;
-
-                if (all.summary) all.summary = all.summary.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`);
-                if (all.dettagli) all.dettagli = all.dettagli.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
-                if (all.details.detailText) all.details.detailText = all.details.detailText.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
 
                 return all;
             });
@@ -251,6 +309,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         alert("Impossibile completare il ricalcolo basato sui lunghi: " + error.message);
     }
 }
+
 export function esportaPianoInJSON(STATE) {
     const datiDaSalvare = STATE.planDataAI || STATE.planData;
     
@@ -259,10 +318,8 @@ export function esportaPianoInJSON(STATE) {
         return;
     }
 
-    // Trasformiamo l'oggetto in stringa JSON formattata pulita (indentata a 2 spazi)
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datiDaSalvare, null, 2));
     
-    // Creiamo un elemento "a" temporaneo nell'HTML per simulare il click di download
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `piano_allenamento_trail_${new Date().toISOString().split('T')[0]}.json`);
@@ -271,6 +328,7 @@ export function esportaPianoInJSON(STATE) {
     downloadAnchor.click();
     downloadAnchor.remove();
 }
+
 export function importaPianoDaJSON(funzioniCallback, STATE) {
     const { saveState, mostraCardPiano, renderPianoAI, renderPianoLocale, avviaCaricamentoGPX, apriModaleModifica } = funzioniCallback;
 
@@ -302,7 +360,6 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
                             const kmRiferimento = all.details.distance || all.km || 0;
                             const ascRiferimento = all.details.ascent || all.asc || 0;
 
-                            // Rigeneriamo i testi puliti per l'interfaccia grafica
                             if (all.summary) all.summary = all.summary.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`);
                             if (all.dettagli) all.dettagli = all.dettagli.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
                             if (all.details.detailText) all.details.detailText = all.details.detailText.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
@@ -313,10 +370,8 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
                     return settimana;
                 });
 
-                // Ricompattiamo l'oggetto corretto da salvare
                 const pianoPulito = pianoCaricato.settimane ? { ...pianoCaricato, settimane } : { settimane };
 
-                // Ripristiniamo lo stato corretto e lanciamo il rendering
                 if (STATE.planDataAI) {
                     STATE.planDataAI = pianoPulito;
                     mostraCardPiano('ai');
@@ -340,4 +395,3 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
 
     fileInput.click();
 }
-
