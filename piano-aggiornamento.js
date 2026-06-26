@@ -22,9 +22,9 @@ export function analizzaStatoPiano(pianoAttuale) {
 
     settimane.forEach(settimana => {
         const dataSettimana = new Date(settimana.startDate);
-        let haAllenamentiCompletati = settimana.allenamenti.some(a => (a.completed || (a.details && a.details.completed)));
+        let haAllenamentiCompletati = settimana.allenamenti && settimana.allenamenti.some(a => (a.completed || (a.details && a.details.completed)));
         
-        if (dataSettimana < oggi || haAllenamentiCompletati) {
+        if ((dataSettimana < oggi || haAllenamentiCompletati) && settimana.allenamenti) {
             settimana.allenamenti.forEach(all => {
                 const tipoAttivita = all.type || all.tipo || "";
                 if (tipoAttivita === "Riposo" || tipoAttivita === "Palestra") return;
@@ -74,7 +74,7 @@ export function analizzaStatoPiano(pianoAttuale) {
 }
 
 /**
- * Ricalcolo Matematico Locale basato sulla Progressione Biologica del Lungo
+ * Ricalcolo Matematico Locale basato sulla Progression Biologica del Lungo
  */
 export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpostazioni, STATE, funzioniCallback) {
     console.log("Avvio ricalcolo locale basato sulla progressione del lungo...", report, nuoveImpostazioni);
@@ -85,12 +85,11 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         const oggi = new Date();
         oggi.setHours(0, 0, 0, 0);
 
-        // 1. Isoliamo lo storico dal futuro basandoci sulla struttura flessibile dello stato
         const settimaneAttuali = STATE.planDataAI?.settimane || STATE.planData || [];
 
         const settimanePassate = settimaneAttuali.filter(w => {
             const dataSettimana = new Date(w.startDate);
-            const haCompletati = w.allenamenti.some(a => a.completed || (a.details && a.details.completed));
+            const haCompletati = w.allenamenti && w.allenamenti.some(a => a.completed || (a.details && a.details.completed));
             return dataSettimana < oggi || haCompletati;
         });
 
@@ -101,11 +100,11 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
             return;
         }
 
-        // 2. Troviamo l'ultimo lungo reale eseguito nel passato per agganciare la curva
         let ultimoLungoReale = 16; 
         let ultimoDplusReale = 700;
 
         for (let i = settimanePassate.length - 1; i >= 0; i--) {
+            if (!settimanePassate[i].allenamenti) continue;
             const lungoDomenica = settimanePassate[i].allenamenti.find(a => {
                 const t = (a.type || a.tipo || "").toLowerCase();
                 return t.includes("lungo");
@@ -119,7 +118,6 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
             }
         }
 
-        // 3. Definiamo i vincoli della progressione prendendo i valori corretti dall'HTML
         const kmGara = parseFloat(nuoveImpostazioni.obbKm) || 54;
         const dplusGara = parseFloat(nuoveImpostazioni.dislivelloGara) || parseFloat(nuoveImpostazioni.obbAsc) || 4000;
         
@@ -132,10 +130,8 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         let kmCorrentiLungo = ultimoLungoReale;
         let dplusCorrenteLungo = ultimoDplusReale;
 
-        // Recuperiamo il passo del test sui 10km (es. 5.8 per 5:48/km)
         const passo10k = parseFloat(nuoveImpostazioni.passoBasePianura) || 5.8;
 
-        // 4. Ricalcoliamo la griglia dei Lunghi Futuri
         const settimaneFutureRicalcolate = settimaneFuture.map((settimana, indice) => {
             const nuovaSettimana = JSON.parse(JSON.stringify(settimana));
             
@@ -162,135 +158,125 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
             let totaleKmSettimanale = 0;
             let totaleDplusSettimanale = 0;
 
-            // 5. Applichiamo la cascata percentuale infrasettimanale mettendo in sicurezza gli oggetti
-            nuovaSettimana.allenamenti = nuovaSettimana.allenamenti.map(all => {
-                if (!all.details) all.details = {};
-                
-                const isCompleted = all.completed || all.details.completed;
-                if (isCompleted) {
-                    totaleKmSettimanale += all.details.distance || all.km || 0;
-                    totaleDplusSettimanale += all.details.ascent || all.asc || 0;
-                    return all; 
-                }
+            if (nuovaSettimana.allenamenti) {
+                nuovaSettimana.allenamenti = nuovaSettimana.allenamenti.map(all => {
+                    if (!all.details) all.details = {};
+                    
+                    const isCompleted = all.completed || all.details.completed;
+                    if (isCompleted) {
+                        totaleKmSettimanale += all.details.distance || all.km || 0;
+                        totaleDplusSettimanale += all.details.ascent || all.asc || 0;
+                        return all; 
+                    }
 
-                const tagTipo = (all.type || all.tipo || "").toLowerCase();
-                const dicituraDettagli = (all.dettagli || all.summary || "").toLowerCase();
-                
-                const isCorsa = tagTipo.includes("corsa") || tagTipo.includes("lungo") || tagTipo.includes("lento") || tagTipo.includes("ripetute") || tagTipo.includes("qualit");
-                const isPalestraORiposo = tagTipo.includes("palestra") || tagTipo.includes("riposo");
+                    const tagTipo = (all.type || all.tipo || "").toLowerCase();
+                    const dicituraDettagli = (all.dettagli || all.summary || "").toLowerCase();
+                    
+                    const isCorsa = tagTipo.includes("corsa") || tagTipo.includes("lungo") || tagTipo.includes("lento") || tagTipo.includes("ripetute") || tagTipo.includes("qualit");
+                    const isPalestraORiposo = tagTipo.includes("palestra") || tagTipo.includes("riposo");
 
-                if (isCorsa && !isPalestraORiposo) {
-                    let passoSpecificoPianura = passo10k;
-                    let skipNaismithDovutoATempoFisso = false;
+                    if (isCorsa && !isPalestraORiposo) {
+                        let passoSpecificoPianura = passo10k;
+                        let skipNaismithDovutoATempoFisso = false;
 
-                    const formattaPasso = (passoDecimale) => {
-                        const m = Math.floor(passoDecimale);
-                        const s = Math.round((passoDecimale - m) * 60).toString().padStart(2, '0');
-                        return `${m}:${s}`;
-                    };
+                        const formattaPasso = (passoDecimale) => {
+                            const m = Math.floor(passoDecimale);
+                            const s = Math.round((passoDecimale - m) * 60).toString().padStart(2, '0');
+                            return `${m}:${s}`;
+                        };
 
-                    if (tagTipo.includes("lungo") || dicituraDettagli.includes("lungo")) {
-                        all.details.distance = kmCorrentiLungo;
-                        all.details.ascent = dplusCorrenteLungo;
-                        passoSpecificoPianura = passo10k * 1.15; // Z2 aerobica: +15% rispetto ai 10k
-                        
-                    } else if (tagTipo.includes("ripetute") || tagTipo.includes("qualit") || dicituraDettagli.includes("ripetute") || dicituraDettagli.includes("qualit")) {
-                        skipNaismithDovutoATempoFisso = true;
-                        
-                        const numeroSettimanaConfig = indice + 1; 
-                        const isSettimanaDispari = (numeroSettimanaConfig % 2 !== 0);
-                        
-                        let descrizioneRipetute = "";
-                        let quanteRipetute = 0;
+                        if (tagTipo.includes("lungo") || dicituraDettagli.includes("lungo")) {
+                            all.details.distance = kmCorrentiLungo;
+                            all.details.ascent = dplusCorrenteLungo;
+                            passoSpecificoPianura = passo10k * 1.15;
+                            
+                        } else if (tagTipo.includes("ripetute") || tagTipo.includes("qualit") || dicituraDettagli.includes("ripetute") || dicituraDettagli.includes("qualit")) {
+                            skipNaismithDovutoATempoFisso = true;
+                            
+                            const numeroSettimanaConfig = indice + 1; 
+                            const isSettimanaDispari = (numeroSettimanaConfig % 2 !== 0);
+                            
+                            let descrizioneRipetute = "";
+                            let quanteRipetute = 0;
 
-                        if (isSettimanaDispari) {
-                            // 🏃 SETTIMANE DISPARI: BREVI A TEMPO (VO2Max e Potenza) - 8x, 10x, 12x da 1'15"
-                            quanteRipetute = 8;
-                            if (numeroSettimanaConfig > 3) quanteRipetute = 10;
-                            if (numeroSettimanaConfig > 7) quanteRipetute = 12;
-                            
-                            const passoBreve = passo10k * 0.90; // 🔥 10% più veloce del ritmo 10k
-                            
-                            descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 1'15" @${formattaPasso(passoBreve)}/km (Rec. 1'30" da fermo) + Defat.`;
-                            
-                            const kmFrazioni = (quanteRipetute * 1.25) / passoBreve;
-                            all.details.distance = Math.round((3 + kmFrazioni) * 10) / 10; 
-                            all.details.durationMin = Math.round(15 + (quanteRipetute * 1.25) + ((quanteRipetute - 1) * 1.5) + 5);
-                        } else {
-                            // 🏃 SETTIMANE PARI: LUNGHE A TEMPO (Tolleranza Lattato) - 2x, 4x, 5x da 5'
-                            quanteRipetute = 2; // Partenza base prudente richiesta
-                            if (numeroSettimanaConfig > 4) quanteRipetute = 4;
-                            if (numeroSettimanaConfig > 8) quanteRipetute = 5;
-                            
-                            const passoLungo = passo10k; // Ritmo 10k puro (Soglia)
-                            
-                            descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 5' @${formattaPasso(passoLungo)}/km (Rec. 2'30" Corsa Lenta) + Defat.`;
-                            
-                            const kmFrazioni = (quanteRipetute * 5) / passoLungo;
-                            const kmRecuperi = ((quanteRipetute - 1) * 2.5) / (passo10k * 1.15); 
-                            all.details.distance = Math.round((3 + kmFrazioni + kmRecuperi) * 10) / 10;
-                            
-                            all.details.durationMin = Math.round(15 + (quanteRipetute * 5) + ((quanteRipetute - 1) * 2.5) + 5);
+                            if (isSettimanaDispari) {
+                                quanteRipetute = 8;
+                                if (numeroSettimanaConfig > 3) quanteRipetute = 10;
+                                if (numeroSettimanaConfig > 7) quanteRipetute = 12;
+                                
+                                const passoBreve = passo10k * 0.90;
+                                descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 1'15" @${formattaPasso(passoBreve)}/km (Rec. 1'30" da fermo) + Defat.`;
+                                
+                                const kmFrazioni = (quanteRipetute * 1.25) / passoBreve;
+                                all.details.distance = Math.round((3 + kmFrazioni) * 10) / 10; 
+                                all.details.durationMin = Math.round(15 + (quanteRipetute * 1.25) + ((quanteRipetute - 1) * 1.5) + 5);
+                            } else {
+                                quanteRipetute = 2; 
+                                if (numeroSettimanaConfig > 4) quanteRipetute = 4;
+                                if (numeroSettimanaConfig > 8) quanteRipetute = 5;
+                                
+                                const passoLungo = passo10k;
+                                descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 5' @${formattaPasso(passoLungo)}/km (Rec. 2'30" Corsa Lenta) + Defat.`;
+                                
+                                const kmFrazioni = (quanteRipetute * 5) / passoLungo;
+                                const kmRecuperi = ((quanteRipetute - 1) * 2.5) / (passo10k * 1.15); 
+                                all.details.distance = Math.round((3 + kmFrazioni + kmRecuperi) * 10) / 10;
+                                all.details.durationMin = Math.round(15 + (quanteRipetute * 5) + ((quanteRipetute - 1) * 2.5) + 5);
+                            }
+
+                            all.details.ascent = Math.round(dplusCorrenteLungo * 0.12);
+                            all.summary = `🏃 Ripetute: ${descrizioneRipetute}`;
+
+                        } else if (tagTipo.includes("lento") || dicituraDettagli.includes("lento") || dicituraDettagli.includes("fondo")) {
+                            all.details.distance = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
+                            all.details.ascent = Math.round(dplusCorrenteLungo * 0.4);
+                            passoSpecificoPianura = passo10k * 1.15;
                         }
 
-                        all.details.ascent = Math.round(dplusCorrenteLungo * 0.12); // Pendenze collinari stimate minime
-                        all.summary = `🏃 Ripetute: ${descrizioneRipetute}`;
+                        if (all.km !== undefined) all.km = all.details.distance;
+                        if (all.asc !== undefined) all.asc = all.details.ascent;
 
-                    } else if (tagTipo.includes("lento") || dicituraDettagli.includes("lento") || dicituraDettagli.includes("fondo")) {
-                        all.details.distance = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
-                        all.details.ascent = Math.round(dplusCorrenteLungo * 0.4);
-                        passoSpecificoPianura = passo10k * 1.15; // Z2 Fondo Lento: +15% rispetto ai 10k
+                        if (!skipNaismithDovutoATempoFisso) {
+                            const kmEquivalenti = (all.details.distance || 0) + ((all.details.ascent || 0) / 100);
+                            all.details.durationMin = Math.round(kmEquivalenti * passoSpecificoPianura);
+                        }
+                        if (all.durationMin !== undefined) all.durationMin = all.details.durationMin;
+
+                        totaleKmSettimanale += (all.details.distance || 0);
+                        totaleDplusSettimanale += (all.details.ascent || 0);
+
+                        const kmRiferimento = all.details.distance || 0;
+                        const ascRiferimento = all.details.ascent || 0;
+                        const tempoStimatoh = Math.floor((all.details.durationMin || 0) / 60);
+                        const tempoStimatom = (all.details.durationMin || 0) % 60;
+                        const stringaTempo = tempoStimatoh > 0 ? `${tempoStimatoh}h ${tempoStimatom}m` : `${tempoStimatom} min`;
+
+                        if (!tagTipo.includes("ripetute") && !dicituraDettagli.includes("ripetute")) {
+                            all.summary = `${tagTipo.charAt(0).toUpperCase() + tagTipo.slice(1)} di ${kmRiferimento} km`;
+                        }
+                        
+                        all.dettagli = `🏃 Sforzo stimato: ${stringaTempo} | ${kmRiferimento} km | +${ascRiferimento}m D+`;
+                        all.details.detailText = `Distanza: ${kmRiferimento} km, Dislivello: +${ascRiferimento} m, Tempo: ${stringaTempo}`;
                     }
 
-                    if (all.km !== undefined) all.km = all.details.distance;
-                    if (all.asc !== undefined) all.asc = all.details.ascent;
-
-                    // Calcolo della durata temporale
-                    if (!skipNaismithDovutoATempoFisso) {
-                        const kmEquivalenti = all.details.distance + (all.details.ascent / 100);
-                        all.details.durationMin = Math.round(kmEquivalenti * passoSpecificoPianura);
-                    }
-                    if (all.durationMin !== undefined) all.durationMin = all.details.durationMin;
-
-                    totaleKmSettimanale += all.details.distance;
-                    totaleDplusSettimanale += all.details.ascent;
-
-                    // Sincronizzazione finale delle stringhe descrittive
-                    const kmRiferimento = all.details.distance;
-                    const ascRiferimento = all.details.ascent;
-                    const tempoStimatoh = Math.floor(all.details.durationMin / 60);
-                    const tempoStimatom = all.details.durationMin % 60;
-                    const stringaTempo = tempoStimatoh > 0 ? `${tempoStimatoh}h ${tempoStimatom}m` : `${tempoStimatom} min`;
-
-                    if (!tagTipo.includes("ripetute") && !dicituraDettagli.includes("ripetute")) {
-                        all.summary = `${tagTipo.charAt(0).toUpperCase() + tagTipo.slice(1)} di ${kmRiferimento} km`;
-                    }
-                    
-                    all.dettagli = `🏃 Sforzo stimato: ${stringaTempo} | ${kmRiferimento} km | +${ascRiferimento}m D+`;
-                    all.details.detailText = `Distanza: ${kmRiferimento} km, Dislivello: +${ascRiferimento} m, Tempo: ${stringaTempo}`;
-                }
-
-                return all;
-            });
-
-            // Ricalcolo dei riassunti di riga delle card
-            if (nuovaSettimana.details) {
-                nuovaSettimana.details.totaleKm = Math.round(totaleKmSettimanale * 10) / 10;
-                nuovaSettimana.details.totaleDplus = totaleDplusSettimanale;
+                    return all;
+                });
             }
+
+            if (!nuovaSettimana.details) nuovaSettimana.details = {};
+            nuovaSettimana.details.totaleKm = Math.round(totaleKmSettimanale * 10) / 10;
+            nuovaSettimana.details.totaleDplus = totaleDplusSettimanale;
             nuovaSettimana.totaleKm = Math.round(totaleKmSettimanale * 10) / 10;
             nuovaSettimana.totaleDplus = totaleDplusSettimanale;
 
             return nuovaSettimana;
         });
 
-        // 6. Consolidamento finale del piano nello stato corretto
         const pianoConsolidatoLocale = {
             descrizione_generale: `Piano ricalcolato localmente (Progressione Lunghi) il ${new Date().toLocaleDateString('it-IT')}. Target: ${kmGara}km.`,
             settimane: [...settimanePassate, ...settimaneFutureRicalcolate]
         };
 
-        // 7. Aggiornamento e Rendering grafico forzato
         if (STATE.planDataAI) {
             STATE.planDataAI = pianoConsolidatoLocale;
             mostraCardPiano('ai');
@@ -351,7 +337,6 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
                     throw new Error("Formato del file non riconosciuto. Struttura settimane mancante.");
                 }
 
-                // --- 🔄 FIX: Sincronizzazione forzata dei testi per evitare i codici grezzi ---
                 settimane = settimane.map(settimana => {
                     if (settimana.allenamenti) {
                         settimana.allenamenti = settimana.allenamenti.map(all => {
