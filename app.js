@@ -4,7 +4,11 @@ import { generaPianoLogico, CORSA_TYPES, getDefaultDetails, calculatePlanDates }
 import { generaPianoAI, ricalcolaSettimaneFutureAI, pulisciEParseJSONAI } from './piano-ai.js';
 import { renderPianoLocale, renderPianoAI } from './ui.js';
 import { analizzaStatoPiano } from './piano-aggiornamento.js';
-import { eseguiRimodulazioneMatematicaLocale } from './piano-aggiornamento.js';
+import { 
+    eseguiRimodulazioneMatematicaLocale, 
+    esportaPianoInJSON, 
+    importaPianoDaJSON 
+} from './piano-aggiornamento.js';
 
 const STORAGE_KEY = "trailcoach_v17_modular";
 let STATE = { settings: {}, planData: null, planDataAI: null };
@@ -23,6 +27,24 @@ document.addEventListener('DOMContentLoaded', () => {
         mostraCardPiano('local');
         renderPianoLocale(STATE.planData, STATE.settings.descrizione_generale, avviaCaricamentoGPX, apriModaleModifica);
     }
+});
+// Listener per l'esportazione
+document.getElementById("btnEsporta").addEventListener("click", () => {
+    esportaPianoInJSON(STATE);
+});
+
+// Listener per l'importazione
+document.getElementById("btnImporta").addEventListener("click", () => {
+    // Passiamo le funzioni necessarie per ridisegnare la UI dopo l'import
+    const funzioniCallback = { 
+        saveState, 
+        mostraCardPiano, 
+        renderPianoAI, 
+        renderPianoLocale, 
+        avviaCaricamentoGPX, 
+        apriModaleModifica 
+    };
+    importaPianoDaJSON(funzioniCallback, STATE);
 });
 
 // --- GESTIONE DELLO STATO (LOCAL STORAGE) ---
