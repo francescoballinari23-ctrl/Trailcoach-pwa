@@ -43,7 +43,7 @@
             font-size: 15px;
         }
         .btn-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-         {
+        .btn-group button, .btn {
             flex: 1;
             padding: 12px;
             border: none;
@@ -52,9 +52,11 @@
             cursor: pointer;
             font-size: 15px;
             transition: background 0.2s;
+            white-space: nowrap;
         }
         .btn-primary { background-color: var(--primary-color); color: white; }
         .btn-accent { background-color: var(--accent-color); color: white; }
+        .btn-secondary { background-color: #7f8c8d; color: white; }
         .btn-danger { background-color: #c0392b; color: white; }
         .week-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
         .chk-btn {
@@ -127,21 +129,24 @@
 <div class="container">
     <h1>🏔️ TrailCoach v1.7.2</h1>
 
+    <!-- Menu comandi principale con i due nuovi bottoni di backup JSON sempre accessibili -->
     <div class="btn-group">
-        < id="toggleSettings" class="btn-primary">⚙️ Impostazioni Piano</button>
+        <button id="toggleSettings" class="btn-primary">⚙️ Impostazioni Piano</button>
         <button id="updatePlanBtn" class="btn-accent" style="background-color: #d35400;">🔄 Aggiorna Settimane Future</button>
+        <button id="btnEsporta" class="btn btn-secondary">📤 Esporta JSON</button>
+        <button id="btnImporta" class="btn btn-secondary">📥 Importa JSON</button>
         <button id="resetData" class="btn-danger">🗑️ Resetta Tutto</button>
     </div>
 
-    <div class="card" id="settingsCard">
-       <label for="livello">Il tuo Record attuale sui 10km su strada</label>
-<select id="livello">
-    <option value="5.8" selected>Intermedio (10k in ~58 min | Passo ~5:48/km)</option>
-    <option value="6.5">Principiante (10k in ~1h 05m | Passo ~6:30/km)</option>
-    <option value="5.0">Avanzato (10k in ~50 min | Passo ~5:00/km)</option>
-    <option value="4.2">Elite (10k in ~42 min | Passo ~4:12/km)</option>
-</select>
-
+    <!-- Modificato: aggiunto style="display: none;" per nascondere la card all'avvio -->
+    <div class="card" id="settingsCard" style="display: none;">
+        <label for="livello">Il tuo Record attuale sui 10km su strada</label>
+        <select id="livello">
+            <option value="5.8" selected>Intermedio (10k in ~58 min | Passo ~5:48/km)</option>
+            <option value="6.5">Principiante (10k in ~1h 05m | Passo ~6:30/km)</option>
+            <option value="5.0">Avanzato (10k in ~50 min | Passo ~5:00/km)</option>
+            <option value="4.2">Elite (10k in ~42 min | Passo ~4:12/km)</option>
+        </select>
 
         <label for="obbKm">Obiettivo Chilometri Settimanali Massimi (km)</label>
         <input type="number" id="obbKm" value="50" min="10">
@@ -196,10 +201,8 @@
 
     <div class="card" id="aiPlanCard" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; color:#8e44ad;">🧠 Piano Ottimizzato dall'AI</h3>
+            <h3 style="margin:0; color:#8e44ad;">🧠 Piano Optimizzato dall'AI</h3>
             <button onclick="esportaInPDF('piano-generato')" class="btn-accent" style="background:#8e44ad; padding: 6px 12px; font-size:12px; flex:none;">📄 Esporta PDF</button>
-            <button id="btnEsporta" class="btn btn-secondary">📤 Esporta Backup JSON</button>
-<button id="btnImporta" class="btn btn-secondary">📥 Importa Backup JSON</button>
         </div>
         <div id="piano-generato"></div>
     </div>
