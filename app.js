@@ -13,7 +13,7 @@ import {
 const STORAGE_KEY = "trailcoach_v17_modular";
 let STATE = { settings: {}, planData: null, planDataAI: null };
 
-// --- INIZIALIZZAZIONE ---
+// --- INIZIALIZZAZIONE SICURA ---
 document.addEventListener('DOMContentLoaded', () => {
     loadState();
     inizializzaInterfacciaDinamica();
@@ -25,30 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
     } else if (STATE.planData) {
         mostraCardPiano('local');
-        renderPianoLocale(STATE.planData, STATE.settings.descrizione_generale, avviaCaricamentoGPX, apriModaleModifica);
+        renderPianoLocale(STATE.planData, STATE.settings.descrizione_generale || "", avviaCaricamentoGPX, apriModaleModifica);
     }
-});
-// Listener per l'esportazione
-document.getElementById("btnEsporta").addEventListener("click", () => {
-    esportaPianoInJSON(STATE);
-});
-
-// Listener per l'importazione
-document.getElementById("btnImporta").addEventListener("click", () => {
-    // Passiamo le funzioni necessarie per ridisegnare la UI dopo l'import
-    const funzioniCallback = { 
-        saveState, 
-        mostraCardPiano, 
-        renderPianoAI, 
-        renderPianoLocale, 
-        avviaCaricamentoGPX, 
-        apriModaleModifica 
-    };
-    importaPianoDaJSON(funzioniCallback, STATE);
 });
 
 // --- GESTIONE DELLO STATO (LOCAL STORAGE) ---
-function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }
+function saveState() { 
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); 
+}
 
 function loadState() {
     const datiSalvati = localStorage.getItem(STORAGE_KEY);
@@ -58,7 +42,7 @@ function loadState() {
     const s = STATE.settings;
     if (!s) return;
 
-    // Ripristina i valori nei campi di testo delle impostazioni
+    // Ripristina i valori nei campi di testo delle impostazioni se esistono nel DOM
     if (document.getElementById("livello")) document.getElementById("livello").value = s.livello || 'intermedio';
     if (document.getElementById("obbKm")) document.getElementById("obbKm").value = s.obbKm || 50;
     if (document.getElementById("obbAsc")) document.getElementById("obbAsc").value = s.obbAsc || 2000;
@@ -76,12 +60,12 @@ function loadState() {
 
 function catturaImpostazioniSchermo() {
     return {
-        livello: document.getElementById("livello").value,
-        obbKm: parseFloat(document.getElementById("obbKm").value) || 50,
-        obbAsc: parseInt(document.getElementById("obbAsc").value) || 2000,
-        settimane: parseInt(document.getElementById("settimane").value) || 12,
-        dataGara: document.getElementById("dataGara").value,
-        tempoObiettivo: parseFloat(document.getElementById("tempoObiettivo").value) || 6,
+        livello: document.getElementById("livello")?.value || 'intermedio',
+        obbKm: parseFloat(document.getElementById("obbKm")?.value) || 50,
+        obbAsc: parseInt(document.getElementById("obbAsc")?.value) || 2000,
+        settimane: parseInt(document.getElementById("settimane")?.value) || 12,
+        dataGara: document.getElementById("dataGara")?.value || '',
+        tempoObiettivo: parseFloat(document.getElementById("tempoObiettivo")?.value) || 6,
         giorniCorsa: [...document.querySelectorAll(".chk-btn[data-type='corsa'].active")].map(b => b.dataset.day),
         giorniPalestra: [...document.querySelectorAll(".chk-btn[data-type='palestra'].active")].map(b => b.dataset.day)
     };
@@ -90,101 +74,149 @@ function catturaImpostazioniSchermo() {
 function mostraCardPiano(tipo) {
     const cardLocal = document.getElementById("PlandCard");
     const cardAI = document.getElementById("aiPlanCard");
-    if (tipo === 'local') { cardLocal.style.display = 'block'; cardAI.style.display = 'none'; }
-    else if (tipo === 'ai') { cardLocal.style.display = 'none'; cardAI.style.display = 'block'; }
+    if (tipo === 'local') { 
+        if(cardLocal) cardLocal.style.display = 'block'; 
+        if(cardAI) cardAI.style.display = 'none'; 
+    } else if (tipo === 'ai') { 
+        if(cardLocal) cardLocal.style.display = 'none'; 
+        if(cardAI) cardAI.style.display = 'block'; 
+    }
 }
 
-// --- GESTIONE BOTTONI FISSI ---
+// --- GESTIONE BOTTONI FISSI (PROTETTI DA NULL-POINTER) ---
 function agganciaBottoniStatici() {
+    
+    // Listener Esportazione protetto
+    const btnEsporta = document.getElementById("btnEsporta");
+    if (btnEsporta) {
+        btnEsporta.onclick = () => esportaPianoInJSON(STATE);
+    }
+
+    // Listener Importazione protetto
+    const btnImporta = document.getElementById("btnImporta");
+    if (btnImporta) {
+        btnImporta.onclick = () => {
+            const funzioniCallback = { 
+                saveState, 
+                mostraCardPiano, 
+                renderPianoAI, 
+                renderPianoLocale, 
+                avviaCaricamentoGPX, 
+                apriModaleModifica 
+            };
+            importaPianoDaJSON(funzioniCallback, STATE);
+        };
+    }
+
     // Toggle Pannello Impostazioni
-    document.getElementById("toggleSettings").onclick = () => {
-        const card = document.getElementById("settingsCard");
-        card.style.display = (card.style.display === "none" || card.style.display === "") ? "block" : "none";
-    };
+    const toggleSettings = document.getElementById("toggleSettings");
+    if (toggleSettings) {
+        toggleSettings.onclick = () => {
+            const card = document.getElementById("settingsCard");
+            if (card) card.style.display = (card.style.display === "none" || card.style.display === "") ? "block" : "none";
+        };
+    }
 
     // Reset Applicazione Totale + Svuotamento Cache Profonda
-    document.getElementById("resetData").onclick = async () => {
-        if (confirm("Vuoi cancellare definitivamente i dati, svuotare la cache e forzare il riavvio dell'app?")) {
-            localStorage.removeItem(STORAGE_KEY);
-            if ('caches' in window) {
-                try {
-                    const cacheNames = await caches.keys();
-                    await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
-                    console.log("Tutte le cache del Service Worker sono state eliminate.");
-                } catch (err) {
-                    console.error("Errore durante lo svuotamento della cache:", err);
+    const resetData = document.getElementById("resetData");
+    if (resetData) {
+        resetData.onclick = async () => {
+            if (confirm("Vuoi cancellare definitivamente i dati, svuotare la cache e forzare il riavvio dell'app?")) {
+                localStorage.removeItem(STORAGE_KEY);
+                if ('caches' in window) {
+                    try {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
+                        console.log("Tutte le cache del Service Worker sono state eliminate.");
+                    } catch (err) {
+                        console.error("Errore durante lo svuotamento della cache:", err);
+                    }
                 }
+                window.location.reload(true);
             }
-            window.location.reload(true);
-        }
-    };
+        };
+    }
 
     // Genera Piano Locale
-    document.getElementById("genLocal").onclick = () => {
-        const settings = catturaImpostazioniSchermo();
-        if (!settings.dataGara || settings.giorniCorsa.length === 0) { alert("Inserisci la data della gara e almeno un giorno di corsa!"); return; }
-        
-        const { raceDate } = calculatePlanDates(settings.dataGara, settings.settimane);
-        const dataFormattata = new Date(raceDate).toLocaleDateString('it-IT');
-        settings.descrizione_generale = `Piano locale per livello ${settings.livello}, termina il ${dataFormattata}. Target picco: ${settings.obbKm} km, +${settings.obbAsc}m D+.`;
+    const genLocal = document.getElementById("genLocal");
+    if (genLocal) {
+        genLocal.onclick = () => {
+            const settings = catturaImpostazioniSchermo();
+            if (!settings.dataGara || settings.giorniCorsa.length === 0) { alert("Inserisci la data della gara e almeno un giorno di corsa!"); return; }
+            
+            const { raceDate } = calculatePlanDates(settings.dataGara, settings.settimane);
+            const dataFormattata = new Date(raceDate).toLocaleDateString('it-IT');
+            settings.descrizione_generale = `Piano locale per livello ${settings.livello}, termina il ${dataFormattata}. Target picco: ${settings.obbKm} km, +${settings.obbAsc}m D+.`;
 
-        STATE.settings = settings;
-        STATE.planData = generaPianoLogico(settings);
-        STATE.planDataAI = null;
+            STATE.settings = settings;
+            STATE.planData = generaPianoLogico(settings);
+            STATE.planDataAI = null;
 
-        saveState();
-        document.getElementById("settingsCard").style.display = "none";
-        mostraCardPiano('local');
-        renderPianoLocale(STATE.planData, STATE.settings.descrizione_generale, avviaCaricamentoGPX, apriModaleModifica);
-    };
+            saveState();
+            const settingsCard = document.getElementById("settingsCard");
+            if (settingsCard) settingsCard.style.display = "none";
+            mostraCardPiano('local');
+            renderPianoLocale(STATE.planData, STATE.settings.descrizione_generale, avviaCaricamentoGPX, apriModaleModifica);
+        };
+    }
 
     // Genera Piano AI
-    document.getElementById("genAI").onclick = async () => {
-        const settings = catturaImpostazioniSchermo();
-        if (!settings.dataGara) { alert("Manca la data della gara!"); return; }
+    const genAI = document.getElementById("genAI");
+    if (genAI) {
+        genAI.onclick = async () => {
+            const settings = catturaImpostazioniSchermo();
+            if (!settings.dataGara) { alert("Manca la data della gara!"); return; }
 
-        const aiContainer = document.getElementById("piano-generato");
-        document.getElementById("settingsCard").style.display = "none";
-        mostraCardPiano('ai');
-        aiContainer.innerHTML = "<p>⏳ L'Intelligenza Artificiale sta elaborando i dislivelli e i carichi progressivi. Attendi...</p>";
+            const aiContainer = document.getElementById("piano-generato");
+            const settingsCard = document.getElementById("settingsCard");
+            if (settingsCard) settingsCard.style.display = "none";
+            mostraCardPiano('ai');
+            if (aiContainer) aiContainer.innerHTML = "<p>⏳ L'Intelligenza Artificiale sta elaborando i dislivelli e i carichi progressivi. Attendi...</p>";
 
-        try {
-            STATE.settings = settings;
-            const rispostaTesto = await generaPianoAI(settings);
-            const oggettoPianoAI = pulisciEParseJSONAI(rispostaTesto);
+            try {
+                STATE.settings = settings;
+                const rispostaTesto = await generaPianoAI(settings);
+                const oggettoPianoAI = pulisciEParseJSONAI(rispostaTesto);
 
-            STATE.planDataAI = oggettoPianoAI;
-            STATE.planData = null;
-            saveState();
+                STATE.planDataAI = oggettoPianoAI;
+                STATE.planData = null;
+                saveState();
 
-            renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
-        } catch (err) {
-            console.error(err);
-            aiContainer.innerHTML = `<p style="color:red;">❌ Errore durante la generazione AI: ${err.message}</p>`;
-        }
-    };
+                renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
+            } catch (err) {
+                console.error(err);
+                if (aiContainer) aiContainer.innerHTML = `<p style="color:red;">❌ Errore durante la generazione AI: ${err.message}</p>`;
+            }
+        };
+    }
 
-    // Intercettiamo il tuo vecchio bottone "Update" per aprire il nuovo Pop-up di riepilogo grafico
-    document.getElementById("updatePlanBtn").onclick = () => {
-        if (!STATE.planData && !STATE.planDataAI) { alert("Nessun piano attivo da analizzare."); return; }
-        const tipoAttivo = STATE.planDataAI ? 'ai' : 'local';
-        mostraPopupAndamento(tipoAttivo);
-    };
+    // Bottone Update per Pop-up di riepilogo grafico
+    const updatePlanBtn = document.getElementById("updatePlanBtn");
+    if (updatePlanBtn) {
+        updatePlanBtn.onclick = () => {
+            if (!STATE.planData && !STATE.planDataAI) { alert("Nessun piano attivo da analizzare."); return; }
+            const tipoAttivo = STATE.planDataAI ? 'ai' : 'local';
+            mostraPopupAndamento(tipoAttivo);
+        };
+    }
 }
 
 // --- LOGICA INTERFACCIA SELEZIONE GIORNI (ANTI-CONFLITTO) ---
 function inizializzaInterfacciaDinamica() {
-    document.getElementById("settingsCard").addEventListener("click", (e) => {
-        if (e.target.classList.contains("chk-btn")) {
-            const { day, type } = e.target.dataset;
-            if (type === 'corsa' && !e.target.classList.contains('active')) {
-                document.querySelector(`.chk-btn[data-day="${day}"][data-type="palestra"]`)?.classList.remove('active');
-            } else if (type === 'palestra' && !e.target.classList.contains('active')) {
-                document.querySelector(`.chk-btn[data-day="${day}"][data-type="corsa"]`)?.classList.remove('active');
+    const settingsCard = document.getElementById("settingsCard");
+    if (settingsCard) {
+        settingsCard.addEventListener("click", (e) => {
+            if (e.target.classList.contains("chk-btn")) {
+                const { day, type } = e.target.dataset;
+                if (type === 'corsa' && !e.target.classList.contains('active')) {
+                    document.querySelector(`.chk-btn[data-day="${day}"][data-type="palestra"]`)?.classList.remove('active');
+                } else if (type === 'palestra' && !e.target.classList.contains('active')) {
+                    document.querySelector(`.chk-btn[data-day="${day}"][data-type="corsa"]`)?.classList.remove('active');
+                }
+                e.target.classList.toggle("active");
             }
-            e.target.classList.toggle("active");
-        }
-    });
+        });
+    }
 }
 
 // --- LOGICA MODIFICA ALLENAMENTI MODALE ---
@@ -196,12 +228,14 @@ function apriModaleModifica(tipoPiano, wIdx, aIdx) {
     const attivita = piano[wIdx].allenamenti[aIdx];
 
     const cType = tipoPiano === 'local' ? attivita.type : attivita.tipo;
-    const cDetails = tipoPiano === 'local' ? attivita.details.detailText : attivita.dettagli;
-    const cKm = tipoPiano === 'local' ? attivita.details.distance : attivita.km;
-    const cAsc = tipoPiano === 'local' ? attivita.details.ascent : attivita.asc;
-    const cDur = tipoPiano === 'local' ? attivita.details.durationMin : attivita.durationMin;
+    const cDetails = tipoPiano === 'local' ? (attivita.details?.detailText || "") : (attivita.dettagli || "");
+    const cKm = tipoPiano === 'local' ? (attivita.details?.distance || 0) : (attivita.km || 0);
+    const cAsc = tipoPiano === 'local' ? (attivita.details?.ascent || 0) : (attivita.asc || 0);
+    const cDur = tipoPiano === 'local' ? (attivita.details?.durationMin || 60) : (attivita.durationMin || 60);
 
     const modalForm = document.getElementById("modalForm");
+    if (!modalForm) return;
+
     let options = CORSA_TYPES.map(t => `<option value="${t}" ${cType === t ? 'selected' : ''}>${t}</option>`).join('');
     options += `<option value="Palestra" ${cType === 'Palestra' ? 'selected' : ''}>🏋️ Palestra</option>`;
     options += `<option value="Riposo" ${cType === 'Riposo' ? 'selected' : ''}>💤 Riposo</option>`;
@@ -210,69 +244,83 @@ function apriModaleModifica(tipoPiano, wIdx, aIdx) {
         <label>Tipo Allenamento</label><select id="editType">${options}</select>
         <label>Dettagli</label><input id="editDetails" type="text" value="${cDetails}" />
         <div id="runFields">
-            <label>Chilometri (km)</label><input id="editKm" type="number" step="0.1" value="${cKm || 0}" />
-            <label>Dislivello (m)</label><input id="editAsc" type="number" value="${cAsc || 0}" />
+            <label>Chilometri (km)</label><input id="editKm" type="number" step="0.1" value="${cKm}" />
+            <label>Dislivello (m)</label><input id="editAsc" type="number" value="${cAsc}" />
         </div>
-        <label>Durata (min)</label><input id="editDuration" type="number" value="${cDur || 60}" />
+        <label>Durata (min)</label><input id="editDuration" type="number" value="${cDur}" />
     `;
 
-    document.getElementById("editModal").style.display = 'flex';
+    const editModal = document.getElementById("editModal");
+    if (editModal) editModal.style.display = 'flex';
 
     const editTypeSelect = document.getElementById("editType");
     const runFields = document.getElementById("runFields");
     
-    editTypeSelect.onchange = () => {
-        const val = editTypeSelect.value;
-        runFields.style.display = (val === "Palestra" || val === "Riposo") ? "none" : "block";
-        document.getElementById("editDetails").value = getDefaultDetails(val);
-    };
-    if (cType === "Palestra" || cType === "Riposo") runFields.style.display = "none";
+    if (editTypeSelect && runFields) {
+        editTypeSelect.onchange = () => {
+            const val = editTypeSelect.value;
+            runFields.style.display = (val === "Palestra" || val === "Riposo") ? "none" : "block";
+            const detailsInput = document.getElementById("editDetails");
+            if (detailsInput) detailsInput.value = getDefaultDetails(val);
+        };
+        if (cType === "Palestra" || cType === "Riposo") runFields.style.display = "none";
+    }
 }
 
-document.getElementById("saveEditBtn").onclick = () => {
-    const { tipoPiano, wIdx, aIdx } = modificaInCorso;
-    const piano = tipoPiano === 'local' ? STATE.planData : STATE.planDataAI.settimane;
-    const attivita = piano[wIdx].allenamenti[aIdx];
+const saveEditBtn = document.getElementById("saveEditBtn");
+if (saveEditBtn) {
+    saveEditBtn.onclick = () => {
+        const { tipoPiano, wIdx, aIdx } = modificaInCorso;
+        if (tipoPiano === null) return;
 
-    const nType = document.getElementById("editType").value;
-    const nDetails = document.getElementById("editDetails").value;
-    const nDuration = parseInt(document.getElementById("editDuration").value) || 0;
+        const piano = tipoPiano === 'local' ? STATE.planData : STATE.planDataAI.settimane;
+        const attivita = piano[wIdx].allenamenti[aIdx];
 
-    if (tipoPiano === 'local') {
-        attivita.type = nType;
-        attivita.details.detailText = nDetails;
-        attivita.details.durationMin = nDuration;
-        if (nType !== "Palestra" && nType !== "Riposo") {
-            attivita.details.distance = parseFloat(document.getElementById("editKm").value) || 0;
-            attivita.details.ascent = parseInt(document.getElementById("editAsc").value) || 0;
-            attivita.summary = `🏃 ${nType} — ${attivita.details.distance} km`;
+        const nType = document.getElementById("editType").value;
+        const nDetails = document.getElementById("editDetails").value;
+        const nDuration = parseInt(document.getElementById("editDuration").value) || 0;
+
+        if (tipoPiano === 'local') {
+            if (!attivita.details) attivita.details = {};
+            attivita.type = nType;
+            attivita.details.detailText = nDetails;
+            attivita.details.durationMin = nDuration;
+            if (nType !== "Palestra" && nType !== "Riposo") {
+                attivita.details.distance = parseFloat(document.getElementById("editKm").value) || 0;
+                attivita.details.ascent = parseInt(document.getElementById("editAsc").value) || 0;
+                attivita.summary = `🏃 ${nType} — ${attivita.details.distance} km`;
+            } else {
+                attivita.details.distance = 0; attivita.details.ascent = 0;
+                attivita.summary = nType === "Palestra" ? "🏋️ Palestra" : "Riposo";
+            }
+            attivita.details.gpxData = null; attivita.details.completed = false;
         } else {
-            attivita.details.distance = 0; attivita.details.ascent = 0;
-            attivita.summary = nType === "Palestra" ? "🏋️ Palestra" : "Riposo";
+            attivita.tipo = nType;
+            attivita.dettagli = nDetails;
+            attivita.durationMin = nDuration;
+            if (nType !== "Palestra" && nType !== "Riposo") {
+                attivita.km = parseFloat(document.getElementById("editKm").value) || 0;
+                attivita.asc = parseInt(document.getElementById("editAsc").value) || 0;
+            } else {
+                attivita.km = 0; attivita.asc = 0;
+            }
+            attivita.gpxData = null; attivita.completed = false;
         }
-        attivita.details.gpxData = null; attivita.details.completed = false;
-    } else {
-        attivita.tipo = nType;
-        attivita.dettagli = nDetails;
-        attivita.durationMin = nDuration;
-        if (nType !== "Palestra" && nType !== "Riposo") {
-            attivita.km = parseFloat(document.getElementById("editKm").value) || 0;
-            attivita.asc = parseInt(document.getElementById("editAsc").value) || 0;
-        } else {
-            attivita.km = 0; attivita.asc = 0;
-        }
-        attivita.gpxData = null; attivita.completed = false;
-    }
 
-    saveState();
-    document.getElementById("editModal").style.display = 'none';
-    if (tipoPiano === 'local') renderPianoLocale(STATE.planData, STATE.settings.descrizione_generale, avviaCaricamentoGPX, apriModaleModifica);
-    else renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
-};
+        saveState();
+        const editModal = document.getElementById("editModal");
+        if (editModal) editModal.style.display = 'none';
+        
+        if (tipoPiano === 'local') renderPianoLocale(STATE.planData, STATE.settings.descrizione_generale, avviaCaricamentoGPX, apriModaleModifica);
+        else renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
+    };
+}
 
 // --- STRUMENTO PARSING GPX ---
 function avviaCaricamentoGPX(tipoPiano, wIdx, aIdx) {
     const inputInvisibile = document.getElementById("hiddenFileInput");
+    if (!inputInvisibile) return;
+
     inputInvisibile.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -286,6 +334,7 @@ function avviaCaricamentoGPX(tipoPiano, wIdx, aIdx) {
             const attivita = piano[wIdx].allenamenti[aIdx];
 
             if (tipoPiano === 'local') {
+                if (!attivita.details) attivita.details = {};
                 attivita.details.gpxData = gpxEstratto; attivita.details.completed = true;
             } else {
                 attivita.gpxData = gpxEstratto; attivita.completed = true;
@@ -353,7 +402,6 @@ function estraiDatiDaStringaGPX(xmlString) {
 
 // --- LOGICA INTERFACCIA ED ESTRAZIONE MODALE POP-UP ---
 export function mostraPopupAndamento(tipoPiano) {
-    // Estrae i dati direttamente dallo stato in esecuzione dell'app
     const pianoLogico = tipoPiano === 'local' ? STATE.planData : STATE.planDataAI?.settimane;
     
     if (!pianoLogico) {
@@ -433,8 +481,6 @@ function rimuoviPopup() {
 
 function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
     console.log("Apertura selezione modalità di ricalcolo per:", tipoPiano);
-
-    // Catturiamo le impostazioni attualmente presenti a schermo per mostrarle nei bottoni
     const nuoveImpostazioni = catturaImpostazioniSchermo();
 
     const modalSceltaHtml = `
@@ -462,7 +508,6 @@ function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
 
     document.body.insertAdjacentHTML('beforeend', modalSceltaHtml);
 
-    // Gestione dei Click
     document.getElementById("btn-scelta-chiudi").onclick = () => rimuoviPopupScelta();
 
     document.getElementById("btn-scelta-locale").onclick = () => {
@@ -472,7 +517,7 @@ function eseguiRicalcoloPianoFuturo(tipoPiano, report) {
 
     document.getElementById("btn-scelta-ai").onclick = () => {
         rimuoviPopupScelta();
-        avviaRimodulazioneAI(tipoPiano, report, true, nuoveImpostazioni); // true = applica sempre le nuove impostazioni dello schermo
+        avviaRimodulazioneAI(tipoPiano, report, true, nuoveImpostazioni);
     };
 }
 
@@ -482,7 +527,6 @@ function rimuoviPopupScelta() {
 }
 
 // --- LOGICA DI RIMODULAZIONE DEFINITIVA ---
-
 async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni, nuoveImpostazioni) {
     if (!STATE.planData && !STATE.planDataAI) { 
         alert("Nessun piano attivo da rimodulare."); 
@@ -502,7 +546,7 @@ async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni,
 
         const settimanePassate = settimaneAttuali.filter(w => {
             const dataSettimana = new Date(w.startDate);
-            const haCompletati = w.allenamenti.some(a => a.completed || (a.details && a.details.completed));
+            const haCompletati = w.allenamenti && w.allenamenti.some(a => a.completed || (a.details && a.details.completed));
             return dataSettimana < oggi || haCompletati;
         });
 
@@ -518,8 +562,6 @@ async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni,
         if (applicaNuoveImpostazioni) {
             STATE.settings = nuoveImpostazioni;
         }
-
-        console.log("Inviando all'AI. Settimane future:", settimaneFuture.length, "Impostazioni:", settingsDaUsare);
 
         const settingsArricchiti = {
             ...settingsDaUsare,
@@ -552,23 +594,18 @@ async function avviaRimodulazioneAI(tipoPiano, report, applicaNuoveImpostazioni,
     }
 }
 
-// UNICA DICHIARAZIONE CORRETTA: Raccordo verso l'algoritmo geometrico dei Lunghi
 function avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni) {
-    // Generiamo al volo la stringa descrittiva per il piano locale se l'utente ha cambiato i parametri a schermo
     const dataFormattata = nuoveImpostazioni.dataGara ? new Date(nuoveImpostazioni.dataGara).toLocaleDateString('it-IT') : '';
-    const nuovaDescrizione = `Piano locale ricalcolato, termina il ${dataFormattata}. Target picco: ${nuoveImpostazioni.obbKm} km, +${nuoveImpostazioni.dislivelloGara || nuoveImpostazioni.obbAsc}m D+.`;
+    const nuovaDescrizione = `Piano locale ricalcolato, termina il ${dataFormattata}. Target picco: ${nuoveImpostazioni.obbKm} km, +${nuoveImpostazioni.obbAsc}m D+.`;
     
-    // Aggiorniamo la descrizione nello stato prima del rendering
     STATE.settings.descrizione_generale = nuovaDescrizione;
 
     eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpostazioni, STATE, {
         saveState,
         mostraCardPiano,
         renderPianoAI,
-        // Iniettiamo una funzione wrapper per allineare i parametri che la UI si aspetta per il piano locale
         renderPianoLocale: (pData, gpxCall, modCall) => renderPianoLocale(pData, STATE.settings.descrizione_generale, gpxCall, modCall),
         avviaCaricamentoGPX,
         apriModaleModifica
     });
 }
-
