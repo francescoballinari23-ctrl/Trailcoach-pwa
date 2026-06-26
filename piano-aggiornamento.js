@@ -251,3 +251,71 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         alert("Impossibile completare il ricalcolo basato sui lunghi: " + error.message);
     }
 }
+export function esportaPianoInJSON(STATE) {
+    const datiDaSalvare = STATE.planDataAI || STATE.planData;
+    
+    if (!datiDaSalvare || datiDaSalvare.length === 0) {
+        alert("Nessun piano presente da esportare!");
+        return;
+    }
+
+    // Trasformiamo l'oggetto in stringa JSON formattata pulita (indentata a 2 spazi)
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datiDaSalvare, null, 2));
+    
+    // Creiamo un elemento "a" temporaneo nell'HTML per simulare il click di download
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `piano_allenamento_trail_${new Date().toISOString().split('T')[0]}.json`);
+    
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+}
+export function importaPianoDaJSON(funzioniCallback, STATE) {
+    const { saveState, mostraCardPiano, renderPianoAI, renderPianoLocale, avviaCaricamentoGPX, apriModaleModifica } = funzioniCallback;
+
+    // Creiamo un input file nascosto al volo per far scegliere il file
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+
+    fileInput.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = lettoreEvent => {
+            try {
+                const pianoCaricato = JSON.parse(lettoreEvent.target.result);
+                
+                // Controllo di validità minimale (verifichiamo se ha la struttura corretta)
+                const settimane = pianoCaricato.settimane || (Array.isArray(pianoCaricato) ? pianoCaricato : null);
+                
+                if (!settimane) {
+                    throw new Error("Formato del file non riconosciuto. Struttura settimane mancante.");
+                }
+
+                // Ripristiniamo lo stato corretto a seconda di come gestisci l'app
+                if (STATE.planDataAI) {
+                    STATE.planDataAI = pianoCaricato.settimane ? pianoCaricato : { settimane: pianoCaricato };
+                    mostraCardPiano('ai');
+                    renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
+                } else {
+                    STATE.planData = settimane;
+                    mostraCardPiano('local');
+                    renderPianoLocale(STATE.planData, avviaCaricamentoGPX, apriModaleModifica);
+                }
+
+                saveState(); // Salva nel localStorage così non si perde al refresh
+                alert("🎯 Piano caricato e ripristinato con successo!");
+
+            } catch (error) {
+                console.error("Errore nell'importazione:", error);
+                alert("Errore nel caricamento del file: " + error.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    fileInput.click();
+}
