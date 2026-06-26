@@ -274,7 +274,6 @@ export function esportaPianoInJSON(STATE) {
 export function importaPianoDaJSON(funzioniCallback, STATE) {
     const { saveState, mostraCardPiano, renderPianoAI, renderPianoLocale, avviaCaricamentoGPX, apriModaleModifica } = funzioniCallback;
 
-    // Creiamo un input file nascosto al volo per far scegliere il file
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = '.json';
@@ -288,16 +287,38 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
             try {
                 const pianoCaricato = JSON.parse(lettoreEvent.target.result);
                 
-                // Controllo di validità minimale (verifichiamo se ha la struttura corretta)
-                const settimane = pianoCaricato.settimane || (Array.isArray(pianoCaricato) ? pianoCaricato : null);
+                let settimane = pianoCaricato.settimane || (Array.isArray(pianoCaricato) ? pianoCaricato : null);
                 
                 if (!settimane) {
                     throw new Error("Formato del file non riconosciuto. Struttura settimane mancante.");
                 }
 
-                // Ripristiniamo lo stato corretto a seconda di come gestisci l'app
+                // --- 🔄 FIX: Sincronizzazione forzata dei testi per evitare i codici grezzi ---
+                settimane = settimane.map(settimana => {
+                    if (settimana.allenamenti) {
+                        settimana.allenamenti = settimana.allenamenti.map(all => {
+                            if (!all.details) all.details = {};
+                            
+                            const kmRiferimento = all.details.distance || all.km || 0;
+                            const ascRiferimento = all.details.ascent || all.asc || 0;
+
+                            // Rigeneriamo i testi puliti per l'interfaccia grafica
+                            if (all.summary) all.summary = all.summary.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`);
+                            if (all.dettagli) all.dettagli = all.dettagli.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
+                            if (all.details.detailText) all.details.detailText = all.details.detailText.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
+                            
+                            return all;
+                        });
+                    }
+                    return settimana;
+                });
+
+                // Ricompattiamo l'oggetto corretto da salvare
+                const pianoPulito = pianoCaricato.settimane ? { ...pianoCaricato, settimane } : { settimane };
+
+                // Ripristiniamo lo stato corretto e lanciamo il rendering
                 if (STATE.planDataAI) {
-                    STATE.planDataAI = pianoCaricato.settimane ? pianoCaricato : { settimane: pianoCaricato };
+                    STATE.planDataAI = pianoPulito;
                     mostraCardPiano('ai');
                     renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
                 } else {
@@ -306,8 +327,8 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
                     renderPianoLocale(STATE.planData, avviaCaricamentoGPX, apriModaleModifica);
                 }
 
-                saveState(); // Salva nel localStorage così non si perde al refresh
-                alert("🎯 Piano caricato e ripristinato con successo!");
+                saveState(); 
+                alert("🎯 Piano ripristinato e testi sincronizzati con successo!");
 
             } catch (error) {
                 console.error("Errore nell'importazione:", error);
@@ -319,3 +340,4 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
 
     fileInput.click();
 }
+
