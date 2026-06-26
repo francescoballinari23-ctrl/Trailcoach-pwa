@@ -1,4 +1,4 @@
-// piano-locale.js - Logica di calcolo deterministica per Trail/Ultra basata sulla settimana di picco
+// piano-locale.js - Logica di calcolo deterministica per Trail/Ultra basata sulla progressione biologica e passo utente
 
 export const CORSA_TYPES = [
     "Corsa Lenta", "Corsa Facile", "Lungo Lento", "Corsa in Collina",
@@ -8,27 +8,16 @@ export const CORSA_TYPES = [
 const nomiGiorniBrevi = { "Lunedì": "Lun", "Martedì": "Mar", "Mercoledì": "Mer", "Giovedì": "Gio", "Venerdì": "Ven", "Sabato": "Sab", "Domenica": "Dom" };
 const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 
-export function paceByLevel(l) { return l === "principiante" ? 6.2 : l === "intermedio" ? 5.8 : 5.4; }
-
-export function getDefaultDetails(type) {
-    switch(type) {
-        case "Corsa Lenta": case "Corsa Facile": return "Corri a ritmo tranquillo (Z1/Z2), focus sulla resistenza. Durata tipica: 1 ora.";
-        case "Lungo Lento": case "Lungo trail": return "Lungo specifico a sensazione. Target: correre le discese e camminare forte le salite.";
-        case "Corsa in Collina": case "Ripetute collinari": return "Riscaldamento + Ripetute in salita costanti + Defaticamento.";
-        case "Ripetute Veloci": return "Ripetute in piano (es. 6x400m o 4x800m) con recupero attivo.";
-        case "Fartlek": return "Gioco di velocità: alterna tratti veloci e lenti in modo spontaneo.";
-        case "Progressivo": return "Inizia lento e aumenta il ritmo ogni 2-3 km, finendo a ritmo gara.";
-        case "Palestra": return "Allenamento di Forza o Core, 45-60 min. Focus su gambe, schiena e stabilità.";
-        case "Riposo": return "Giorno di recupero completo. Ideale per stretching o mobilità.";
-        case "GARA 🎉": return "Giorno dell'obiettivo finale! Gestisci il ritmo e alimentati con precisione.";
-        default: return "Dettagli specifici per l'allenamento. Modifica liberamente.";
-    }
-}
-
 export function addDays(date, days) {
     const result = new Date(date);
     result.setDate(result.getDate() + days); 
     return result;
+}
+
+export function formattaPasso(passoDecimale) {
+    const m = Math.floor(passoDecimale);
+    const s = Math.round((passoDecimale - m) * 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
 }
 
 export function calculatePlanDates(dataGara, settimane) {
@@ -50,91 +39,65 @@ export function calculatePlanDates(dataGara, settimane) {
 }
 
 export function generaPianoLogico(settings) {
-    const { livello, obbKm, obbAsc, settimane, giorniCorsa, giorniPalestra, dataGara, tempoObiettivo } = settings;
-    const runsCount = giorniCorsa.length;
+    const { livello, obbKm, obbAsc, settimane, giorniCorsa, giorniPalestra, dataGara, passoBasePianura } = settings;
     const { startDate, settimaneReali } = calculatePlanDates(dataGara, settimane);
     const plan = [];
 
-    // 1. Parametri Gara e Ritmo Medio
-    const tempoMinutiGara = tempoObiettivo * 60;
-    const passoMedioGara = tempoMinutiGara / obbKm; 
+    // Parametri Base
+    const targetKmGara = parseFloat(obbKm) || 54;
+    const targetDplusGara = parseFloat(obbAsc) || 4000;
+    const passo10k = parseFloat(passoBasePianura) || 5.8; // Passo 10k di riferimento fornito dall'utente (es. 5.8 = 5:48/km)
+    
+    // Configurazione Picco
+    const lungoPiccoTarget = Math.round(targetKmGara * 0.70); 
+    const dplusPiccoTarget = Math.round(lungoPiccoTarget * (targetDplusGara / targetKmGara)); 
+    
+    // Punto di partenza (Giorno 1) per la progressione dei lunghi
+    // 16km base per ultra, oppure un volume proporzionale se la gara è più breve
+    let kmCorrentiLungo = Math.min(16, targetKmGara * 0.4); 
+    let dplusCorrenteLungo = Math.round(kmCorrentiLungo * (targetDplusGara / targetKmGara));
 
-    const settPiccoIdx = settimaneReali - 3; 
-    const kmLungoPicco = obbKm * 0.80;
-    const tempoLungoPiccoMin = tempoMinutiGara * 0.80;
-
-    // Generiamo i dati strutturali dei lunghi
-    const datiLunghiSettimanali = [];
+    // Generazione della griglia strutturale delle settimane (Lungo, Ripetute e Lenti)
     for (let w = 1; w <= settimaneReali; w++) {
-        let kmLungo = 0;
-        let tempoLungo = 0;
-        let tipoFocus = "";
-        let b2bKmMancanti = 0;
-        let b2bTempoMancanti = 0;
+        const weekStartDate = addDays(startDate, (w - 1) * 7);
+        const isUltimaSettimana = (w === settimaneReali);
+        const isScaricoFisso = (!isUltimaSettimana && (w - 1) % 4 === 3); // Ogni 4 settimane
+        const isTaperingFinale = (settimaneReali - w) <= 2; 
 
-        if (w === settimaneReali) {
-            kmLungo = obbKm;
-            tempoLungo = tempoMinutiGara;
-            tipoFocus = "🏁 GARA TARGET";
-        } else if (w === settimaneReali - 1) {
-            kmLungo = kmLungoPicco * 0.40; 
-            tempoLungo = tempoLungoPiccoMin * 0.40;
-            tipoFocus = "Scarico e Tapering finale";
-        } else if (w === settimaneReali - 2) {
-            kmLungo = kmLungoPicco * 0.70;
-            tempoLungo = tempoLungoPiccoMin * 0.70;
-            tipoFocus = "Inizio scarico pre-gara";
+        // 1. Calcolo Progressione Biologica dei Lunghi
+        let focusSettimana = "";
+        
+        if (isUltimaSettimana) {
+            kmCorrentiLungo = targetKmGara;
+            dplusCorrenteLungo = targetDplusGara;
+            focusSettimana = "🏁 GARA TARGET";
+        } else if (isScaricoFisso && !isTaperingFinale) {
+            // Settimana di scarico periodica (-20%)
+            kmCorrentiLungo = Math.round((kmCorrentiLungo * 0.8) * 10) / 10;
+            dplusCorrenteLungo = Math.round(dplusCorrenteLungo * 0.8);
+            focusSettimana = "Fase di scarico ciclico";
+        } else if (!isTaperingFinale) {
+            // Crescita progressiva naturale (+10% km, +12% dplus) fino al picco
+            kmCorrentiLungo = Math.min(lungoPiccoTarget, Math.round((kmCorrentiLungo * 1.10) * 10) / 10);
+            dplusCorrenteLungo = Math.min(dplusPiccoTarget, Math.round(dplusCorrenteLungo * 1.12));
+            focusSettimana = "Costruzione progressiva volume";
         } else {
-            const distanzaDaPicco = settPiccoIdx - (w - 1);
-            const fattoreScalatura = Math.pow(0.90, distanzaDaPicco);
-            
-            kmLungo = kmLungoPicco * fattoreScalatura;
-            tempoLungo = tempoLungoPiccoMin * fattoreScalatura;
-            
-            if ((w - 1) % 4 === 3 && w < settPiccoIdx) {
-                kmLungo *= 0.75;
-                tempoLungo *= 0.75;
-                tipoFocus = "Fase di scarico ciclico";
-            } else {
-                tipoFocus = "Costruzione progressiva volume";
+            // Tapering (le ultime 2 settimane prima della gara)
+            const settimaneMancantiAllaGara = settimaneReali - w;
+            if (settimaneMancantiAllaGara === 2) {
+                kmCorrentiLungo = Math.round(lungoPiccoTarget * 0.7); 
+                dplusCorrenteLungo = Math.round(dplusPiccoTarget * 0.6);
+                focusSettimana = "Inizio scarico pre-gara";
+            } else { // 1 settimana prima
+                kmCorrentiLungo = Math.round(lungoPiccoTarget * 0.4); 
+                dplusCorrenteLungo = Math.round(dplusPiccoTarget * 0.3);
+                focusSettimana = "Scarico e Tapering finale";
             }
         }
 
-        // GESTIONE TETTO 8 ORE (480 MINUTI) CON BACK-TO-BACK AUTOMATICO
-        if (w < settimaneReali && tempoLungo > 480) {
-            const tempoTotaleTeorico = tempoLungo;
-            const kmTotaliTeorici = kmLungo;
-
-            // Il lungo principale viene limitato a 7 ore (420 minuti) per sicurezza
-            tempoLungo = 420;
-            kmLungo = tempoLungo / passoMedioGara;
-
-            // La parte eccedente viene spostata al giorno prima (Back-to-Back)
-            b2bTempoMancanti = tempoTotaleTeorico - tempoLungo;
-            b2bKmMancanti = kmTotaliTeorici - kmLungo;
-            tipoFocus += " | ⚠️ Back-to-Back nel Weekend (Lungo diviso in 2 giorni)";
-        }
-
-        datiLunghiSettimanali.push({ 
-            kmLungo: +kmLungo.toFixed(1), 
-            tempoLungo: Math.round(tempoLungo), 
-            focus: tipoFocus,
-            b2bKm: +b2bKmMancanti.toFixed(1),
-            b2bTempo: Math.round(b2bTempoMancanti)
-        });
-    }
-
-    // 3. Costruzione della timeline del piano
-    for (let w = 1; w <= settimaneReali; w++) {
-        const weekStartDate = addDays(startDate, (w - 1) * 7);
-        const infoLungo = datiLunghiSettimanali[w - 1];
-        const isUltimaSettimana = (w === settimaneReali);
-        
-        const kmSupportoTotale = isUltimaSettimana ? (obbKm * 0.3) : (infoLungo.kmLungo * 1.22); 
-        const ascesaSupportoTotale = isUltimaSettimana ? (obbAsc * 0.2) : (obbAsc * (infoLungo.kmLungo / obbKm) * 0.5);
-
-        const settimana = [];
-        let totalKm = 0, totalAsc = 0;
+        // 2. Assegnazione tipologie di corsa ai giorni
+        const allenamentiSettimana = [];
+        let totaleKmSettimanale = 0, totaleDplusSettimanale = 0;
         let runAssignments = {};
         const runDaysCopy = [...giorniCorsa];
 
@@ -142,119 +105,142 @@ export function generaPianoLogico(settings) {
             runAssignments["Domenica"] = "GARA 🎉";
             if (runDaysCopy.includes("Domenica")) runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
             if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
-            runDaysCopy.forEach(day => { runAssignments[day] = "Corsa Facile"; });
+            runDaysCopy.forEach(day => { runAssignments[day] = "Corsa Facile (attivazione)"; });
         } else {
-            // Se c'è un Back-to-Back attivo, occupiamo forzatamente sia Sabato che Domenica
-            if (infoLungo.b2bKm > 0) {
-                runAssignments["Sabato"] = "Lungo B2B (Fase 1)";
-                runAssignments["Domenica"] = "Lungo trail (Fase 2)";
-                if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
-                if (runDaysCopy.includes("Domenica")) runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
-            } else {
-                // Altrimenti gestione standard sul weekend
-                if (runDaysCopy.includes("Sabato")) { runAssignments["Sabato"] = "Lungo trail"; runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1); }
-                else if (runDaysCopy.includes("Domenica")) { runAssignments["Domenica"] = "Lungo trail"; runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1); }
-            }
+            if (runDaysCopy.includes("Sabato")) { runAssignments["Sabato"] = "Lungo trail"; runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1); }
+            else if (runDaysCopy.includes("Domenica")) { runAssignments["Domenica"] = "Lungo trail"; runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1); }
             
-            if (runDaysCopy.length > 0) { runAssignments[runDaysCopy[0]] = "Ripetute collinari"; runDaysCopy.splice(0, 1); }
-            runDaysCopy.forEach(day => { runAssignments[day] = "Fondo lento"; });
+            if (runDaysCopy.length > 0) { runAssignments[runDaysCopy[0]] = "Ripetute / Qualità"; runDaysCopy.splice(0, 1); }
+            runDaysCopy.forEach(day => { runAssignments[day] = "Fondo Lento"; });
         }
 
-        const numeroCorseFondo = giorniCorsa.filter(d => runAssignments[d] === "Fondo lento").length || 1;
-
+        // 3. Compilazione dei dettagli giornalieri
         for (const day of GIORNI) {
-            // Inseriamo forzatamente il giorno di corsa nel weekend se c'è un B2B attivo, anche se non selezionato dall'utente
-            const calcolaComeCorsa = giorniCorsa.includes(day) || (infoLungo.b2bKm > 0 && (day === "Sabato" || day === "Domenica"));
+            let det = { distance: 0, ascent: 0, durationMin: 0, detailText: "", completed: false, gpxData: null };
+            let type = "Riposo";
+            let summary = "Riposo";
 
             if (isUltimaSettimana && giorniPalestra.includes(day)) {
-                settimana.push({day, type:"Riposo", summary:"Riposo pre-gara", details:{detailText:"Niente pesi, focus su mobilità e idratazione.", distance: 0, ascent: 0, durationMin: 0, completed: false, gpxData: null}});
-            } else if (giorniPalestra.includes(day) && runAssignments[day] !== "Lungo B2B (Fase 1)") { 
-                // Evita sovrapposizioni se la palestra era di sabato e c'è il B2B forzato
-                settimana.push({day, type:"Palestra", summary:"🏋️ Palestra", details:{detailText:getDefaultDetails("Palestra"), distance: 0, ascent: 0, durationMin: 45, completed: false, gpxData: null}});
-            } else if (runAssignments[day] === "GARA 🎉") {
-                const minutiInteri = Math.floor(passoMedioGara);
-                const secondiCalcolati = Math.round((passoMedioGara - minutiInteri) * 60);
-                const secondiFormattati = String(secondiCalcolati).padStart(2, '0');
+                type = "Riposo";
+                summary = "Riposo pre-gara";
+                det.detailText = "Niente pesi, focus su mobilità e idratazione.";
+            } else if (giorniPalestra.includes(day)) { 
+                type = "Palestra";
+                summary = "🏋️ Palestra";
+                det.durationMin = 45;
+                det.detailText = "Allenamento di Forza o Core, 45-60 min. Focus su gambe, schiena e stabilità.";
+            } else if (runAssignments[day]) {
+                type = runAssignments[day];
+                let kmGiorno = 0, dplusGiorno = 0, durataMinuti = 0, descSpecifico = "";
                 
-                const det = { 
-                    distance: obbKm, 
-                    ascent: obbAsc, 
-                    durationMin: Math.round(tempoMinutiGara), 
-                    detailText: "🏁 Giorno dell'obiettivo! Gestisci il ritmo stimato a " + minutiInteri + ":" + secondiFormattati + "/km.", 
-                    completed: false, 
-                    gpxData: null 
-                };
-                totalKm += det.distance; totalAsc += det.ascent;
-                settimana.push({day, type:"GARA 🎉", summary:`🏁 TARGET GARA — ${det.distance} km`, details:det});
-            } else if (calcolaComeCorsa && runAssignments[day]) {
-                const type = runAssignments[day];
-                let det;
-
-                if (type === "Lungo trail") {
-                    det = {
-                        distance: infoLungo.kmLungo,
-                        ascent: Math.round(obbAsc * (infoLungo.kmLungo / obbKm)),
-                        durationMin: infoLungo.tempoLungo,
-                        detailText: `Lungo specifico a sensazione. Target: correre le discese e camminare forte le salite.`,
-                        completed: false, gpxData: null
-                    };
-                } else if (type === "Lungo trail (Fase 2)") {
-                    det = {
-                        distance: infoLungo.kmLungo,
-                        ascent: Math.round(obbAsc * (infoLungo.kmLungo / obbKm)),
-                        durationMin: infoLungo.tempoLungo,
-                        detailText: `Seconda parte del Lungo Combinato (Back-to-Back). Corri su gambe stanche, ottimo per simulare il finale della Ultra.`,
-                        completed: false, gpxData: null
-                    };
-                } else if (type === "Lungo B2B (Fase 1)") {
-                    det = {
-                        distance: infoLungo.b2bKm,
-                        ascent: Math.round(obbAsc * (infoLungo.b2bKm / obbKm)),
-                        durationMin: infoLungo.b2bTempo,
-                        detailText: `Prima parte del Lungo Combinato (Back-to-Back). Gestisci il ritmo senza esagerare, domani si replica.`,
-                        completed: false, gpxData: null
-                    };
-                } else if (type === "Ripetute collinari") {
-                    const kmQualita = +(kmSupportoTotale * 0.4).toFixed(1);
-                    det = {
-                        distance: kmQualita,
-                        ascent: Math.round(ascesaSupportoTotale * 0.6),
-                        durationMin: Math.round(kmQualita * paceByLevel(livello)),
-                        detailText: `Riscaldamento + Ripetute in salita costanti + Defaticamento.`,
-                        completed: false, gpxData: null
-                    };
-                } else {
-                    const kmFondo = +(kmSupportoTotale * 0.6 / numeroCorseFondo).toFixed(1);
-                    det = {
-                        distance: kmFondo,
-                        ascent: Math.round(ascesaSupportoTotale * 0.4 / numeroCorseFondo),
-                        durationMin: Math.round(kmFondo * paceByLevel(livello)),
-                        detailText: `Corsa rigenerante di supporto per fare volume articolare.`,
-                        completed: false, gpxData: null
-                    };
+                if (type === "GARA 🎉") {
+                    kmGiorno = targetKmGara;
+                    dplusGiorno = targetDplusGara;
+                    
+                    const oreStimate = Math.floor((kmGiorno + (dplusGiorno / 100)) * (passo10k * 1.30) / 60);
+                    durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * (passo10k * 1.30)); 
+                    descSpecifico = `🏁 Giorno dell'obiettivo! Divertiti e gestisci il ritmo.`;
+                    
+                } else if (type === "Lungo trail") {
+                    kmGiorno = kmCorrentiLungo;
+                    dplusGiorno = dplusCorrenteLungo;
+                    
+                    const passoZ2 = passo10k * 1.15; // Z2 Aerobico
+                    durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * passoZ2);
+                    descSpecifico = `Lungo specifico a sensazione in ambiente trail. Cammina le salite ripide.`;
+                    
+                } else if (type === "Ripetute / Qualità") {
+                    // Logica Fisiologica Ripetute a Tempo
+                    const isSettimanaDispari = (w % 2 !== 0);
+                    let quanteRipetute = 0;
+                    
+                    if (isSettimanaDispari) {
+                        // 🏃 BREVI: VO2Max (Frazioni da 1'15")
+                        quanteRipetute = 8;
+                        if (w > 3) quanteRipetute = 10;
+                        if (w > 7) quanteRipetute = 12;
+                        
+                        const passoBreve = passo10k * 0.90; // 10% più veloce della soglia
+                        descSpecifico = `Riscl. 15' + ${quanteRipetute}x 1'15" @${formattaPasso(passoBreve)}/km (Rec. 1'30" da fermo) + Defat.`;
+                        
+                        const kmFrazioni = (quanteRipetute * 1.25) / passoBreve;
+                        kmGiorno = Math.round((3 + kmFrazioni) * 10) / 10; // 3km fisso riscl/defat
+                        durataMinuti = Math.round(15 + (quanteRipetute * 1.25) + ((quanteRipetute - 1) * 1.5) + 5);
+                        
+                    } else {
+                        // 🏃 LUNGHE: Tolleranza Lattato (Frazioni da 5')
+                        quanteRipetute = 2;
+                        if (w > 4) quanteRipetute = 4;
+                        if (w > 8) quanteRipetute = 5;
+                        
+                        const passoLungo = passo10k; // Soglia pura
+                        descSpecifico = `Riscl. 15' + ${quanteRipetute}x 5' @${formattaPasso(passoLungo)}/km (Rec. 2'30" Corsa Lenta) + Defat.`;
+                        
+                        const kmFrazioni = (quanteRipetute * 5) / passoLungo;
+                        const kmRecuperi = ((quanteRipetute - 1) * 2.5) / (passo10k * 1.15); 
+                        kmGiorno = Math.round((3 + kmFrazioni + kmRecuperi) * 10) / 10;
+                        durataMinuti = Math.round(15 + (quanteRipetute * 5) + ((quanteRipetute - 1) * 2.5) + 5);
+                    }
+                    dplusGiorno = Math.round(dplusCorrenteLungo * 0.12);
+                    
+                } else { // Fondo Lento o Corsa Facile pre-gara
+                    kmGiorno = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
+                    if (isUltimaSettimana) kmGiorno = 5; 
+                    dplusGiorno = Math.round(dplusCorrenteLungo * 0.4);
+                    
+                    const passoZ2 = passo10k * 1.15;
+                    durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * passoZ2);
+                    descSpecifico = `Fondo lento rigenerante. Volume aerobico senza forzare.`;
                 }
 
-                totalKm += det.distance; totalAsc += det.ascent;
-                settimana.push({day, type, summary:`🏃 ${type} — ${det.distance} km`, details:det});
-            } else {
-                settimana.push({day, type:"Riposo", summary:"Riposo", details:{detailText:getDefaultDetails("Riposo"), distance: 0, ascent: 0, durationMin: 0, completed: false, gpxData: null}});
+                det.distance = kmGiorno;
+                det.ascent = dplusGiorno;
+                det.durationMin = durataMinuti;
+                
+                const tempoStimatoh = Math.floor(durataMinuti / 60);
+                const tempoStimatom = durataMinuti % 60;
+                const stringaTempo = tempoStimatoh > 0 ? `${tempoStimatoh}h ${tempoStimatom}m` : `${tempoStimatom} min`;
+
+                det.detailText = `Distanza: ${kmGiorno} km, Dislivello: +${dplusGiorno} m, Tempo: ${stringaTempo}. \n${descSpecifico}`;
+                
+                if (type === "Ripetute / Qualità") {
+                    summary = `🏃 Ripetute: ${descSpecifico}`;
+                } else if (type === "GARA 🎉") {
+                    summary = `🏁 TARGET GARA — ${kmGiorno} km`;
+                } else {
+                    summary = `${type} di ${kmGiorno} km`;
+                }
+
+                totaleKmSettimanale += kmGiorno;
+                totaleDplusSettimanale += dplusGiorno;
             }
+
+            allenamentiSettimana.push({day, type, summary, dettagli: det.detailText, details: det});
         }
 
-        const oreVisualizzate = Math.floor(infoLungo.tempoLungo / 60);
-        const minutiVisualizzati = infoLungo.tempoLungo % 60;
-        let stringaFocus = infoLungo.focus + " | Dom: " + infoLungo.kmLungo + "km (~" + oreVisualizzate + "h" + minutiVisualizzati + "m)";
-        if (infoLungo.b2bKm > 0) {
-            stringaFocus += " + Sab: " + infoLungo.b2bKm + "km (~" + Math.floor(infoLungo.b2bTempo/60) + "h" + (infoLungo.b2bTempo%60) + "m)";
-        }
+        // Calcolo della durata del lungo del weekend per il riassunto della riga
+        const passoZ2LungoInfo = passo10k * 1.15;
+        const durataLungoSettimana = Math.round((kmCorrentiLungo + (dplusCorrenteLungo / 100)) * passoZ2LungoInfo);
+        const infoOre = Math.floor(durataLungoSettimana / 60);
+        const infoMinuti = durataLungoSettimana % 60;
+        
+        let stringaFocusFinale = `${focusSettimana} | Dom: ${kmCorrentiLungo}km (~${infoOre}h ${infoMinuti}m)`;
+        if (isUltimaSettimana) stringaFocusFinale = "Obiettivo raggiunto, scarica e divertiti in gara!";
 
         plan.push({
             settimana: w,
             startDate: `${weekStartDate.getFullYear()}-${String(weekStartDate.getMonth() + 1).padStart(2, '0')}-${String(weekStartDate.getDate()).padStart(2, '0')}`,
-            targetKm: +totalKm.toFixed(1), targetAsc: Math.round(totalAsc),
-            allenamenti: settimana,
-            isScarico: infoLungo.focus.includes("scarico") || infoLungo.focus.includes("Tapering"),
-            focus: stringaFocus
+            totaleKm: Math.round(totaleKmSettimanale * 10) / 10, 
+            totaleDplus: totaleDplusSettimanale,
+            targetKm: Math.round(totaleKmSettimanale * 10) / 10, 
+            targetAsc: totaleDplusSettimanale,
+            allenamenti: allenamentiSettimana,
+            isScarico: focusSettimana.includes("scarico") || focusSettimana.includes("Tapering"),
+            focus: stringaFocusFinale,
+            details: {
+                totaleKm: Math.round(totaleKmSettimanale * 10) / 10, 
+                totaleDplus: totaleDplusSettimanale
+            }
         });
     }
 
