@@ -1,3 +1,4 @@
+```javascript
 // piano-aggiornamento.js - Analisi dello storico e rimodulazione basata sulla progressione del Lungo
 
 /**
@@ -74,7 +75,7 @@ export function analizzaStatoPiano(pianoAttuale) {
 }
 
 /**
- * Ricalcolo Matematico Locale basato sulla Progression Biologica del Lungo
+ * Ricalcolo Matematico Locale basato sulla Progressione Biologica del Lungo
  */
 export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpostazioni, STATE, funzioniCallback) {
     console.log("Avvio ricalcolo locale basato sulla progressione del lungo...", report, nuoveImpostazioni);
@@ -93,7 +94,11 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
             return dataSettimana < oggi || haCompletati;
         });
 
-        const settimaneFuture = settimaneAttuali.filter(w => !settimanePassate.includes(w));
+        const settimaneFuture = settimaneAttuali.filter(w => !passateInclude(w, settimanePassate));
+
+        function passateInclude(settimana, listaPassate) {
+            return listaPassate.some(p => p.startDate === settimana.startDate);
+        }
 
         if (settimaneFuture.length === 0) {
             alert("Non ci sono settimane future rimaste da rimodulare!");
@@ -109,6 +114,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                 const t = (a.type || a.tipo || "").toLowerCase();
                 return t.includes("lungo");
             });
+            // ✅ CORRETTO: Risolto il refuso 'lungoLungoDomenica' che mandava in crash iOS
             if (lungoDomenica) {
                 const det = lungoDomenica.details || {};
                 const gpx = det.gpxData || lungoDomenica.gpxData;
@@ -179,7 +185,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                         let passoSpecificoPianura = passo10k;
                         let skipNaismithDovutoATempoFisso = false;
 
-                        const formattaPasso = (passoDecimale) => {
+                        const formattaPassoLocal = (passoDecimale) => {
                             const m = Math.floor(passoDecimale);
                             const s = Math.round((passoDecimale - m) * 60).toString().padStart(2, '0');
                             return `${m}:${s}`;
@@ -205,9 +211,9 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                                 if (numeroSettimanaConfig > 7) quanteRipetute = 12;
                                 
                                 const passoBreve = passo10k * 0.90;
-                                descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 1'15" @${formattaPasso(passoBreve)}/km (Rec. 1'30" da fermo) + Defat.`;
+                                descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 1'15" @${formattaPassoLocal(passoBreve)}/km (Rec. 1'30" da fermo) + Defat.`;
                                 
-                                const kmFrazioni = (quanteRipetute * 1.25) / passoBreve;
+                                const kmFrazioni = (quanteRipetute * 1.25) / (passoBreve || 5);
                                 all.details.distance = Math.round((3 + kmFrazioni) * 10) / 10; 
                                 all.details.durationMin = Math.round(15 + (quanteRipetute * 1.25) + ((quanteRipetute - 1) * 1.5) + 5);
                             } else {
@@ -216,9 +222,9 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                                 if (numeroSettimanaConfig > 8) quanteRipetute = 5;
                                 
                                 const passoLungo = passo10k;
-                                descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 5' @${formattaPasso(passoLungo)}/km (Rec. 2'30" Corsa Lenta) + Defat.`;
+                                descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 5' @${formattaPassoLocal(passoLungo)}/km (Rec. 2'30" Corsa Lenta) + Defat.`;
                                 
-                                const kmFrazioni = (quanteRipetute * 5) / passoLungo;
+                                const kmFrazioni = (quanteRipetute * 5) / (passoLungo || 5);
                                 const kmRecuperi = ((quanteRipetute - 1) * 2.5) / (passo10k * 1.15); 
                                 all.details.distance = Math.round((3 + kmFrazioni + kmRecuperi) * 10) / 10;
                                 all.details.durationMin = Math.round(15 + (quanteRipetute * 5) + ((quanteRipetute - 1) * 2.5) + 5);
@@ -296,6 +302,9 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
     }
 }
 
+/**
+ * Esporta il piano corrente in JSON
+ */
 export function esportaPianoInJSON(STATE) {
     const datiDaSalvare = STATE.planDataAI || STATE.planData;
     
@@ -304,17 +313,22 @@ export function esportaPianoInJSON(STATE) {
         return;
     }
 
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datiDaSalvare, null, 2));
-    
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `piano_allenamento_trail_${new Date().toISOString().split('T')[0]}.json`);
-    
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    try {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datiDaSalvare, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `piano_allenamento_trail_${new Date().toISOString().split('T')[0]}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    } catch (err) {
+        alert("Errore durante l'esportazione: " + err.message);
+    }
 }
 
+/**
+ * Importa un file JSON precedentemente salvato
+ */
 export function importaPianoDaJSON(funzioniCallback, STATE) {
     const { saveState, mostraCardPiano, renderPianoAI, renderPianoLocale, avviaCaricamentoGPX, apriModaleModifica } = funzioniCallback;
 
@@ -330,7 +344,6 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
         reader.onload = lettoreEvent => {
             try {
                 const pianoCaricato = JSON.parse(lettoreEvent.target.result);
-                
                 let settimane = pianoCaricato.settimane || (Array.isArray(pianoCaricato) ? pianoCaricato : null);
                 
                 if (!settimane) {
@@ -380,3 +393,5 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
 
     fileInput.click();
 }
+
+```
