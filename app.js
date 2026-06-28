@@ -100,7 +100,13 @@ function agganciaBottoniStatici() {
                 saveState, 
                 mostraCardPiano, 
                 renderPianoAI, 
-                renderPianoLocale, 
+                // Allineamento sicuro dei parametri per ui.js in fase di importazione file
+                renderPianoLocale: (pData, desc, gpxCall, modCall) => {
+                    const descrizioneEffettiva = (typeof desc === 'string') ? desc : (STATE.settings?.descrizione_generale || "");
+                    const clickGPX = (typeof desc === 'function') ? desc : gpxCall;
+                    const clickEdit = (typeof gpxCall === 'function') ? gpxCall : modCall;
+                    renderPianoLocale(pData, descrizioneEffettiva, clickGPX, clickEdit);
+                }, 
                 avviaCaricamentoGPX, 
                 apriModaleModifica 
             };
@@ -121,7 +127,7 @@ function agganciaBottoniStatici() {
     const resetData = document.getElementById("resetData");
     if (resetData) {
         resetData.onclick = async () => {
-            if (confirm("Vuoi cancellare definitivamente i dati, svuotare la cache e forzare il riavvio dell'app?")) {
+            if (confirm("Vuoi cancellare definitivamento i dati, svuotare la cache e forzare il riavvio dell'app?")) {
                 localStorage.removeItem(STORAGE_KEY);
                 if ('caches' in window) {
                     try {
@@ -604,7 +610,14 @@ function avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni) {
         saveState,
         mostraCardPiano,
         renderPianoAI,
-        renderPianoLocale: (pData, gpxCall, modCall) => renderPianoLocale(pData, STATE.settings.descrizione_generale, gpxCall, modCall),
+        // ✅ CORRETTO: la funzione freccia ora espande e intercetta correttamente i 4 argomenti richiesti da ui.js
+        renderPianoLocale: (pData, desc, gpxCall, modCall) => {
+            const descrizioneEffettiva = (typeof desc === 'string') ? desc : STATE.settings.descrizione_generale;
+            const clickGPX = (typeof desc === 'function') ? desc : gpxCall;
+            const clickEdit = (typeof gpxCall === 'function') ? gpxCall : modCall;
+            
+            renderPianoLocale(pData, descrizioneEffettiva, clickGPX, clickEdit);
+        },
         avviaCaricamentoGPX,
         apriModaleModifica
     });
