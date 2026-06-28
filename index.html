@@ -31,6 +31,7 @@
             margin-bottom: 15px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             border: 1px solid var(--border-color);
+            box-sizing: border-box;
         }
         label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--primary-color); font-size: 14px; }
         input, select {
@@ -122,6 +123,13 @@
             background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000;
         }
         .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        /* Protezione rendering per html2canvas su Safari mobile */
+        #planView, #piano-generato {
+            min-height: 50px;
+            overflow: visible;
+            clear: both;
+        }
     </style>
 </head>
 <body>
@@ -230,11 +238,19 @@
 
     window.esportaInPDF = async function(elementId) {
         const elemento = document.getElementById(elementId);
-        if (!elemento) return;
+        if (!elemento || elemento.children.length === 0) {
+            alert("⚠️ Generazione annullata: Il contenitore del piano è vuoto.");
+            return;
+        }
         alert("⏳ Generazione PDF in corso...");
         try {
             const { jsPDF } = window.jspdf;
-            const canvas = await html2canvas(elemento, { scale: 2, useCORS: true });
+            const canvas = await html2canvas(elemento, { 
+                scale: 2, 
+                useCORS: true,
+                logging: false,
+                allowTaint: true
+            });
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
             const imgWidth = 210;
@@ -259,6 +275,6 @@
     };
 </script>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
