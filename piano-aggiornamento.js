@@ -1,4 +1,4 @@
-```javascript
+
 // piano-aggiornamento.js - Analisi dello storico e rimodulazione basata sulla progressione del Lungo
 
 /**
