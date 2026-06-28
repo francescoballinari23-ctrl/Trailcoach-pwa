@@ -109,7 +109,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                 const t = (a.type || a.tipo || "").toLowerCase();
                 return t.includes("lungo");
             });
-            if (lungoLungoDomenica) {
+            if (lungoDomenica) {
                 const det = lungoDomenica.details || {};
                 const gpx = det.gpxData || lungoDomenica.gpxData;
                 ultimoLungoReale = gpx ? gpx.distanceKm : (det.distance || lungoDomenica.km || 16);
