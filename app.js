@@ -1,24 +1,4 @@
-window.onerror = function(message, source, lineno) {
-    alert("❌ ERRORE:\n" + message + "\n\nFile: " + source + "\nRiga: " + lineno);
-    return false;
-};
-alert("1. app.js intercettato da Safari");
-
-
-// CATTURA GLI ERRORI PRIMA CHE SAFARI LI NASCONDA
-window.onerror = function(message, source, lineno, colno, error) {
-    alert("❌ ERRORE RISCONTRATO:\n" + message + "\n\nFile: " + source + "\nRiga: " + lineno);
-    return false;
-};
-
-window.addEventListener('unhandledrejection', function (event) {
-    alert("❌ PROMESSA FALLITA:\n" + event.reason);
-});
-
-alert("🚀 Sistema di tracciamento avviato in app.js!");
-
-// app.js - Cabina di regia principale (Event Handlers & State Management)
-
+// 1. GLI IMPORT DEVONO ESSERE SEMPRE IN CIMA ASSOLUTA AL FILE
 import { generaPianoLogico, CORSA_TYPES, getDefaultDetails, calculatePlanDates } from './piano-locale.js';
 import { generaPianoAI, ricalcolaSettimaneFutureAI, pulisciEParseJSONAI } from './piano-ai.js';
 import { renderPianoLocale, renderPianoAI } from './ui.js';
@@ -28,6 +8,19 @@ import {
     esportaPianoInJSON, 
     importaPianoDaJSON 
 } from './piano-aggiornamento.js';
+
+// 2. SISTEMA DI TRACCIAMENTO ERRORI PER SAFARI IOS (SUBITO SOTTO GLI IMPORT)
+window.onerror = function(message, source, lineno, colno, error) {
+    alert("❌ ERRORE RISCONTRATO:\n" + message + "\n\nFile: " + source + "\nRiga: " + lineno);
+    return false;
+};
+
+window.addEventListener('unhandledrejection', function (event) {
+    alert("❌ PROMESSA FALLITA:\n" + event.reason);
+});
+
+// Questo alert ora apparirà correttamente sul tuo iPhone confermando il caricamento
+alert("🚀 Sistema di tracciamento avviato in app.js!");
 
 const STORAGE_KEY = "trailcoach_v17_modular";
 let STATE = { settings: {}, planData: null, planDataAI: null };
@@ -119,7 +112,6 @@ function agganciaBottoniStatici() {
                 saveState, 
                 mostraCardPiano, 
                 renderPianoAI, 
-                // Allineamento sicuro dei parametri per ui.js in fase di importazione file
                 renderPianoLocale: (pData, desc, gpxCall, modCall) => {
                     const descrizioneEffettiva = (typeof desc === 'string') ? desc : (STATE.settings?.descrizione_generale || "");
                     const clickGPX = (typeof desc === 'function') ? desc : gpxCall;
@@ -210,7 +202,7 @@ function agganciaBottoniStatici() {
                 renderPianoAI(STATE.planDataAI, avviaCaricamentoGPX, apriModaleModifica);
             } catch (err) {
                 console.error(err);
-                if (aiContainer) aiContainer.innerHTML = `<p style="color:red;">❌ Errore durante la generazione AI: ${err.message}</p>`;
+                if (aiContainer) aiContainer.innerHTML = `<p style="color:red;">❌ Errore durante la generation AI: ${err.message}</p>`;
             }
         };
     }
@@ -388,9 +380,9 @@ function estraiDatiDaStringaGPX(xmlString) {
         
         let durataMinuti = 0;
         if (primoTempoStr && ultimoTempoStr) {
-            const dataInizio = new Date(primoTempoStr);
+            const dataIninizio = new Date(primoTempoStr);
             const dataFine = new Date(ultimoTempoStr);
-            durataMinuti = Math.round((dataFine - dataInizio) / 1000 / 60);
+            durataMinuti = Math.round((dataFine - dataIninizio) / 1000 / 60);
         }
 
         let km = 0, dPlus = 0;
@@ -426,7 +418,8 @@ function estraiDatiDaStringaGPX(xmlString) {
 }
 
 // --- LOGICA INTERFACCIA ED ESTRAZIONE MODALE POP-UP ---
-export function mostraPopupAndamento(tipoPiano) {
+// MODIFICATO: rimosso il comando 'export' davanti alla funzione principale di controllo interno per preservare la stabilità di esecuzione su iOS
+function mostraPopupAndamento(tipoPiano) {
     const pianoLogico = tipoPiano === 'local' ? STATE.planData : STATE.planDataAI?.settimane;
     
     if (!pianoLogico) {
@@ -629,7 +622,6 @@ function avviaRimodulazioneMatematica(tipoPiano, report, nuoveImpostazioni) {
         saveState,
         mostraCardPiano,
         renderPianoAI,
-        // ✅ CORRETTO: la funzione freccia ora espande e intercetta correttamente i 4 argomenti richiesti da ui.js
         renderPianoLocale: (pData, desc, gpxCall, modCall) => {
             const descrizioneEffettiva = (typeof desc === 'string') ? desc : STATE.settings.descrizione_generale;
             const clickGPX = (typeof desc === 'function') ? desc : gpxCall;
