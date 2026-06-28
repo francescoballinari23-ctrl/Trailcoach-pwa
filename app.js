@@ -1,3 +1,10 @@
+window.onerror = function(message, source, lineno) {
+    alert("❌ ERRORE:\n" + message + "\n\nFile: " + source + "\nRiga: " + lineno);
+    return false;
+};
+alert("1. app.js intercettato da Safari");
+
+
 // CATTURA GLI ERRORI PRIMA CHE SAFARI LI NASCONDA
 window.onerror = function(message, source, lineno, colno, error) {
     alert("❌ ERRORE RISCONTRATO:\n" + message + "\n\nFile: " + source + "\nRiga: " + lineno);
