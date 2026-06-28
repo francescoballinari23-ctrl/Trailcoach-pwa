@@ -1,4 +1,4 @@
-```javascript
+
 // sw.js - Service Worker con gestione aggiornamenti e pulizia cache profonda
 
 const CACHE_NAME = 'trailcoach-v2.1'; // Incrementato per forzare l'aggiornamento su iOS
