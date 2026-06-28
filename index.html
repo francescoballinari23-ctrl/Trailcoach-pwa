@@ -129,7 +129,6 @@
 <div class="container">
     <h1>🏔️ TrailCoach v1.7.2</h1>
 
-    <!-- Menu comandi principale con i due nuovi bottoni di backup JSON sempre accessibili -->
     <div class="btn-group">
         <button id="toggleSettings" class="btn-primary">⚙️ Impostazioni Piano</button>
         <button id="updatePlanBtn" class="btn-accent" style="background-color: #d35400;">🔄 Aggiorna Settimane Future</button>
@@ -138,7 +137,6 @@
         <button id="resetData" class="btn-danger">🗑️ Resetta Tutto</button>
     </div>
 
-    <!-- Modificato: aggiunto style="display: none;" per nascondere la card all'avvio -->
     <div class="card" id="settingsCard" style="display: none;">
         <label for="livello">Il tuo Record attuale sui 10km su strada</label>
         <select id="livello">
@@ -194,15 +192,15 @@
     <div class="card" id="PlandCard" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
             <h3 style="margin:0; color:var(--primary-color);">📋 Il tuo Piano di Allenamento</h3>
-            <button onclick="esportaInPDF('planView')" class="btn-accent" style="padding: 6px 12px; font-size:12px; flex:none;">📄 Esporta PDF</button>
+            <button onclick="window.esportaInPDF('planView')" class="btn-accent" style="padding: 6px 12px; font-size:12px; flex:none;">📄 Esporta PDF</button>
         </div>
         <div id="planView"></div>
     </div>
 
     <div class="card" id="aiPlanCard" style="display:none;">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; color:#8e44ad;">🧠 Piano Optimizzato dall'AI</h3>
-            <button onclick="esportaInPDF('piano-generato')" class="btn-accent" style="background:#8e44ad; padding: 6px 12px; font-size:12px; flex:none;">📄 Esporta PDF</button>
+            <h3 style="margin:0; color:#8e44ad;">🧠 Piano Ottimizzato dall'AI</h3>
+            <button onclick="window.esportaInPDF('piano-generato')" class="btn-accent" style="background:#8e44ad; padding: 6px 12px; font-size:12px; flex:none;">📄 Esporta PDF</button>
         </div>
         <div id="piano-generato"></div>
     </div>
@@ -216,13 +214,51 @@
         <div id="modalForm"></div>
         <div class="btn-group" style="margin-top:15px;">
             <button id="saveEditBtn" class="btn-accent">Salva</button>
-            <button onclick="closeEditDialog()" class="btn-primary" style="background:#7f8c8d;">Annulla</button>
+            <button onclick="window.closeEditDialog()" class="btn-primary" style="background:#7f8c8d;">Annulla</button>
         </div>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script type="module" src="./app.js"></script>
+
+<script>
+    window.closeEditDialog = function() {
+        const modal = document.getElementById("editModal");
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.esportaInPDF = async function(elementId) {
+        const elemento = document.getElementById(elementId);
+        if (!elemento) return;
+        alert("⏳ Generazione PDF in corso...");
+        try {
+            const { jsPDF } = window.jspdf;
+            const canvas = await html2canvas(elemento, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 210;
+            const pageHeight = 295;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+            pdf.save('Piano_Allenamento_Trail.pdf');
+        } catch (err) {
+            alert("Errore esportazione PDF: " + err.message);
+        }
+    };
+</script>
+
+<script type="module" src="app.js"></script>
 </body>
 </html>
