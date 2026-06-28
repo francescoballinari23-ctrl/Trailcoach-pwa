@@ -1,3 +1,15 @@
+// CATTURA GLI ERRORI PRIMA CHE SAFARI LI NASCONDA
+window.onerror = function(message, source, lineno, colno, error) {
+    alert("❌ ERRORE RISCONTRATO:\n" + message + "\n\nFile: " + source + "\nRiga: " + lineno);
+    return false;
+};
+
+window.addEventListener('unhandledrejection', function (event) {
+    alert("❌ PROMESSA FALLITA:\n" + event.reason);
+});
+
+alert("🚀 Sistema di tracciamento avviato in app.js!");
+
 // app.js - Cabina di regia principale (Event Handlers & State Management)
 
 import { generaPianoLogico, CORSA_TYPES, getDefaultDetails, calculatePlanDates } from './piano-locale.js';
