@@ -1,64 +1,3 @@
-// piano-locale.js - Logica di calcolo deterministica per Trail/Ultra basata sulla progressione biologica e passo utente
-
-export const CORSA_TYPES = [
-    "Corsa Lenta", "Corsa Facile", "Lungo Lento", "Corsa in Collina",
-    "Ripetute Veloci", "Fartlek", "Progressivo", "Interval Training", "Tempo Run", "GARA 🎉"
-];
-
-const nomiGiorniBrevi = { "Lunedì": "Lun", "Martedì": "Mar", "Mercoledì": "Mer", "Giovedì": "Gio", "Venerdì": "Ven", "Sabato": "Sab", "Domenica": "Dom" };
-const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
-
-export function addDays(date, days) {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days); 
-    return result;
-}
-
-export function formattaPasso(passoDecimale) {
-    const m = Math.floor(passoDecimale);
-    const s = Math.round((passoDecimale - m) * 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-}
-
-export function calculatePlanDates(dataGara, settimane) {
-    if (!dataGara) {
-        const oggi = new Date();
-        dataGara = `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`;
-    }
-    const parts = dataGara.split('-');
-    const raceDate = new Date(parts[0], parts[1] - 1, parts[2]); 
-    raceDate.setHours(0, 0, 0, 0);
-    const daysBeforeRace = (settimane || 12) * 7;
-    let startDate = addDays(raceDate, -daysBeforeRace); 
-    
-    const dayOfWeek = startDate.getDay(); 
-    if (dayOfWeek === 0) startDate = addDays(startDate, -6);
-    else if (dayOfWeek > 1) startDate = addDays(startDate, -(dayOfWeek - 1));
-    
-    const fineRangeStandard = addDays(startDate, (settimane || 12) * 7);
-    let settimaneReali = settimane || 12;
-    if (raceDate >= fineRangeStandard) settimaneReali = settimane + 1;
-    
-    return { startDate, raceDate, settimaneReali };
-}
-
-/**
- * Fornisce i parametri iniziali e i valori di default per l'applicazione
- * Risolve l'errore di importazione in app.js
- */
-export function getDefaultDetails() {
-    return {
-        livello: "5.8",
-        obbKm: 50,
-        obbAsc: 2000,
-        settimane: 12,
-        giorniCorsa: ["Martedì", "Giovedì", "Sabato"],
-        giorniPalestra: ["Lunedì", "Mercoledì"],
-        passoBasePianura: "5.8",
-        dataGara: ""
-    };
-}
-
 export function generaPianoLogico(settings) {
     const sicuroSettings = settings || {};
     const livello = sicuroSettings.livello || "5.8";
@@ -70,8 +9,11 @@ export function generaPianoLogico(settings) {
     const dataGara = sicuroSettings.dataGara;
     const passoBasePianura = sicuroSettings.passoBasePianura || livello;
 
-    const { startDate, settimaneReali } = calculatePlanDates(dataGara, settimane);
+    const { startDate, raceDate, settimaneReali } = calculatePlanDates(dataGara, settimane);
     const plan = [];
+
+    // Determina l'esatto giorno della settimana in cui cade la gara (es. "Sabato", "Domenica")
+    const giornoDellaGaraTesto = GIORNI[(raceDate.getDay() === 0 ? 6 : raceDate.getDay() - 1)];
 
     const targetKmGara = parseFloat(obbKm) || 54;
     const targetDplusGara = parseFloat(obbAsc) || 4000;
@@ -112,7 +54,6 @@ export function generaPianoLogico(settings) {
             kmProgressioneFisiologica = Math.min(lungoPiccoTarget, Math.round((kmProgressioneFisiologica * 1.10) * 10) / 10);
             dplusProgressioneFisiologica = Math.min(dplusPiccoTarget, Math.round(dplusProgressioneFisiologica * 1.12));
         } else {
-            const settimaneMancantiAllaGara = semanas => settimaneReali - w;
             const settimaneMancantiAllaGaraVal = settimaneReali - w;
             if (settimaneMancantiAllaGaraVal === 2) {
                 kmCorrentiLungo = Math.round(lungoPiccoTarget * 0.7); 
@@ -152,11 +93,21 @@ export function generaPianoLogico(settings) {
         
         const runDaysCopy = Array.isArray(giorniCorsa) ? [...giorniCorsa] : [];
 
-        // --- ASSEGNAZIONE DEI GIORNI DI CORSA ---
+        // --- ASSEGNAZIONE DEI GIORNI DI CORSA CORRETTA ---
         if (isUltimaSettimana) {
-            runAssignments["Domenica"] = "GARA 🎉";
-            if (runDaysCopy.includes("Domenica")) runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
-            if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
+            // Piazza la gara esattamente nel giorno calcolato da dataGara
+            runAssignments[giornoDellaGaraTesto] = "GARA 🎉";
+            
+            // Rimuove il giorno della gara e la vigilia per evitare allenamenti pesanti prima dello start
+            if (runDaysCopy.includes(giornoDellaGaraTesto)) runDaysCopy.splice(runDaysCopy.indexOf(giornoDellaGaraTesto), 1);
+            
+            const indiceGara = GIORNI.indexOf(giornoDellaGaraTesto);
+            if (indiceGara > 0) {
+                const giornoVigilia = GIORNI[indiceGara - 1];
+                if (runDaysCopy.includes(giornoVigilia)) runDaysCopy.splice(runDaysCopy.indexOf(giornoVigilia), 1);
+            }
+            
+            // Mantiene solo brevi attivazioni negli altri giorni di corsa rimasti
             runDaysCopy.forEach(day => { runAssignments[day] = "Corsa Facile (attivazione)"; });
         } else if (richiedeBackToBack) {
             runAssignments["Sabato"] = "B2B - Lungo Sabato";
@@ -229,7 +180,6 @@ export function generaPianoLogico(settings) {
                     const isSettimanaDispari = (w % 2 !== 0);
                     let quanteRipetute = 0;
                     
-                    if (isSettimariDispari = (w % 2 !== 0)) { /* fix inline check */ }
                     if (isSettimanaDispari) {
                         quanteRipetute = w > 7 ? 12 : (w > 3 ? 10 : 8);
                         const passoBreve = passo10k * 0.90; 
@@ -282,7 +232,7 @@ export function generaPianoLogico(settings) {
         }
         
         let stringaFocusFinale = `${focusSettimana} | ${infoStringaFocusLungo}`;
-        if (isUltimaSettimana) stringaFocusFinale = "Obiettivo raggiunto, scarica e divertiti in gara!";
+        if (isUltimaSettimana) stringaFocusFinale = `Obiettivo raggiunto! La gara sarà di ${giornoDellaGaraTesto}.`;
 
         plan.push({
             settimana: w,
