@@ -1,3 +1,64 @@
+// piano-locale.js - Logica di calcolo deterministica per Trail/Ultra basata sulla progressione biologica e passo utente
+
+export const CORSA_TYPES = [
+    "Corsa Lenta", "Corsa Facile", "Lungo Lento", "Corsa in Collina",
+    "Ripetute Veloci", "Fartlek", "Progressivo", "Interval Training", "Tempo Run", "GARA 🎉"
+];
+
+const nomiGiorniBrevi = { "Lunedì": "Lun", "Martedì": "Mar", "Mercoledì": "Mer", "Giovedì": "Gio", "Venerdì": "Ven", "Sabato": "Sab", "Domenica": "Dom" };
+const GIORNI = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+
+export function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days); 
+    return result;
+}
+
+export function formattaPasso(passoDecimale) {
+    const m = Math.floor(passoDecimale);
+    const s = Math.round((passoDecimale - m) * 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+export function calculatePlanDates(dataGara, settimane) {
+    if (!dataGara) {
+        const oggi = new Date();
+        dataGara = `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`;
+    }
+    const parts = dataGara.split('-');
+    const raceDate = new Date(parts[0], parts[1] - 1, parts[2]); 
+    raceDate.setHours(0, 0, 0, 0);
+    const daysBeforeRace = (settimane || 12) * 7;
+    let startDate = addDays(raceDate, -daysBeforeRace); 
+    
+    const dayOfWeek = startDate.getDay(); 
+    if (dayOfWeek === 0) startDate = addDays(startDate, -6);
+    else if (dayOfWeek > 1) startDate = addDays(startDate, -(dayOfWeek - 1));
+    
+    const fineRangeStandard = addDays(startDate, (settimane || 12) * 7);
+    let settimaneReali = settimane || 12;
+    if (raceDate >= fineRangeStandard) settimaneReali = settimane + 1;
+    
+    return { startDate, raceDate, settimaneReali };
+}
+
+/**
+ * Fornisce i parametri iniziali e i valori di default per l'applicazione
+ * Risolve l'errore di importazione in app.js
+ */
+export function getDefaultDetails() {
+    return {
+        livello: "5.8",
+        obbKm: 50,
+        obbAsc: 2000,
+        settimane: 12,
+        giorniCorsa: ["Martedì", "Giovedì", "Sabato"],
+        giorniPalestra: ["Lunedì", "Mercoledì"],
+        passoBasePianura: "5.8",
+        dataGara: ""
+    };
+}
+
 export function generaPianoLogico(settings) {
     const sicuroSettings = settings || {};
     const livello = sicuroSettings.livello || "5.8";
@@ -95,10 +156,7 @@ export function generaPianoLogico(settings) {
 
         // --- ASSEGNAZIONE DEI GIORNI DI CORSA CORRETTA ---
         if (isUltimaSettimana) {
-            // Piazza la gara esattamente nel giorno calcolato da dataGara
             runAssignments[giornoDellaGaraTesto] = "GARA 🎉";
-            
-            // Rimuove il giorno della gara e la vigilia per evitare allenamenti pesanti prima dello start
             if (runDaysCopy.includes(giornoDellaGaraTesto)) runDaysCopy.splice(runDaysCopy.indexOf(giornoDellaGaraTesto), 1);
             
             const indiceGara = GIORNI.indexOf(giornoDellaGaraTesto);
@@ -106,8 +164,6 @@ export function generaPianoLogico(settings) {
                 const giornoVigilia = GIORNI[indiceGara - 1];
                 if (runDaysCopy.includes(giornoVigilia)) runDaysCopy.splice(runDaysCopy.indexOf(giornoVigilia), 1);
             }
-            
-            // Mantiene solo brevi attivazioni negli altri giorni di corsa rimasti
             runDaysCopy.forEach(day => { runAssignments[day] = "Corsa Facile (attivazione)"; });
         } else if (richiedeBackToBack) {
             runAssignments["Sabato"] = "B2B - Lungo Sabato";
