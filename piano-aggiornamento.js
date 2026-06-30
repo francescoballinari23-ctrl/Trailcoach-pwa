@@ -363,7 +363,7 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
                             return all;
                         });
                     }
-                    return... settimana;
+                    return settimana;
                 });
 
                 const pianoPulito = pianoCaricato.settimane ? { ...pianoCaricato, settimane } : { settimane };
