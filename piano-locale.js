@@ -262,10 +262,10 @@ export function generaPianoLogico(settings) {
 
                 det.distance = kmGiorno;
                 det.ascent = dplusGiorno;
-                det.durationMin = durationMinuti;
+                det.durationMin = durataMinuti;
                 
                 const tempoStimatoh = Math.floor(durataMinuti / 60);
-                const tempoStimatom = durationMinuti % 60;
+                const tempoStimatom = durataMinuti % 60;
                 const stringaTempo = tempoStimatoh > 0 ? `${tempoStimatoh}h ${tempoStimatom}m` : `${tempoStimatom} min`;
 
                 det.detailText = `Distanza: ${kmGiorno} km, Dislivello: +${dplusGiorno} m, Tempo: ${stringaTempo}. \n${descSpecifico}`;
