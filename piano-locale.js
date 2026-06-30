@@ -22,7 +22,6 @@ export function formattaPasso(passoDecimale) {
 
 export function calculatePlanDates(dataGara, settimane) {
     if (!dataGara) {
-        // Fallback se la data gara non è ancora selezionata o valida
         const oggi = new Date();
         dataGara = `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`;
     }
@@ -43,9 +42,27 @@ export function calculatePlanDates(dataGara, settimane) {
     return { startDate, raceDate, settimaneReali };
 }
 
+/**
+ * Fornisce i parametri iniziali e i valori di default per l'applicazione
+ * Risolve l'errore di importazione in app.js
+ */
+export function getDefaultDetails() {
+    return {
+        livello: "5.8",
+        obbKm: 50,
+        obbAsc: 2000,
+        settimane: 12,
+        giorniCorsa: ["Martedì", "Giovedì", "Sabato"],
+        giorniPalestra: ["Lunedì", "Mercoledì"],
+        passoBasePianura: "5.8",
+        dataGara: ""
+    };
+}
+
 export function generaPianoLogico(settings) {
-    // Iniezione di sicurezza: se settings è indefinito, evita il crash assoluto
     const sicuroSettings = settings || {};
+    
+    // Utilizzo dei fallback coerenti con getDefaultDetails
     const livello = sicuroSettings.livello || "5.8";
     const obbKm = sicuroSettings.obbKm || 50;
     const obbAsc = sicuroSettings.obbAsc || 2000;
@@ -58,18 +75,18 @@ export function generaPianoLogico(settings) {
     const { startDate, settimaneReali } = calculatePlanDates(dataGara, settimane);
     const plan = [];
 
-    // Parametri Base
     const targetKmGara = parseFloat(obbKm) || 54;
     const targetDplusGara = parseFloat(obbAsc) || 4000;
     const passo10k = parseFloat(passoBasePianura) || 5.8; 
     
-    // Configurazione Picco
     const lungoPiccoTarget = Math.round(targetKmGara * 0.70); 
     const dplusPiccoTarget = Math.round(lungoPiccoTarget * (targetDplusGara / targetKmGara)); 
     
-    // Punto di partenza per la progressione dei lunghi
-    let kmCorrentiLungo = Math.min(16, targetKmGara * 0.4); 
-    let dplusCorrenteLungo = Math.round(kmCorrentiLungo * (targetDplusGara / targetKmGara));
+    const kmPartenzaLungo = Math.min(16, targetKmGara * 0.4); 
+    const dplusPartenzaLungo = Math.round(kmPartenzaLungo * (targetDplusGara / targetKmGara));
+
+    let kmProgressioneFisiologica = kmPartenzaLungo;
+    let dplusProgressioneFisiologica = dplusPartenzaLungo;
 
     for (let w = 1; w <= settimaneReali; w++) {
         const weekStartDate = addDays(startDate, (w - 1) * 7);
@@ -78,19 +95,24 @@ export function generaPianoLogico(settings) {
         const isTaperingFinale = (settimaneReali - w) <= 2; 
 
         let focusSettimana = "";
+        let kmCorrentiLungo = kmProgressioneFisiologica;
+        let dplusCorrenteLungo = dplusProgressioneFisiologica;
         
         if (isUltimaSettimana) {
             kmCorrentiLungo = targetKmGara;
             dplusCorrenteLungo = targetDplusGara;
             focusSettimana = "🏁 GARA TARGET";
         } else if (isScaricoFisso && !isTaperingFinale) {
-            kmCorrentiLungo = Math.round((kmCorrentiLungo * 0.8) * 10) / 10;
-            dplusCorrenteLungo = Math.round(dplusCorrenteLungo * 0.8);
+            kmCorrentiLungo = Math.round((kmProgressioneFisiologica * 0.8) * 10) / 10;
+            dplusCorrenteLungo = Math.round(dplusProgressioneFisiologica * 0.8);
             focusSettimana = "Fase di scarico ciclico";
+            
+            kmProgressioneFisiologica = Math.min(lungoPiccoTarget, Math.round((kmProgressioneFisiologica * 1.10) * 10) / 10);
+            dplusProgressioneFisiologica = Math.min(dplusPiccoTarget, Math.round(dplusProgressioneFisiologica * 1.12));
         } else if (!isTaperingFinale) {
-            kmCorrentiLungo = Math.min(lungoPiccoTarget, Math.round((kmCorrentiLungo * 1.10) * 10) / 10);
-            dplusCorrenteLungo = Math.min(dplusPiccoTarget, Math.round(dplusCorrenteLungo * 1.12));
             focusSettimana = "Costruzione progressiva volume";
+            kmProgressioneFisiologica = Math.min(lungoPiccoTarget, Math.round((kmProgressioneFisiologica * 1.10) * 10) / 10);
+            dplusProgressioneFisiologica = Math.min(dplusPiccoTarget, Math.round(dplusProgressioneFisiologica * 1.12));
         } else {
             const settimaneMancantiAllaGara = settimaneReali - w;
             if (settimaneMancantiAllaGara === 2) {
@@ -107,8 +129,8 @@ export function generaPianoLogico(settings) {
         const allenamentiSettimana = [];
         let totaleKmSettimanale = 0, totaleDplusSettimanale = 0;
         let runAssignments = {};
+        let giornoLungoEffettivo = "Dom"; 
         
-        // FIX SAFARI: Assicuriamo che runDaysCopy sia sempre un array valido manipolabile
         const runDaysCopy = Array.isArray(giorniCorsa) ? [...giorniCorsa] : [];
 
         if (isUltimaSettimana) {
@@ -117,8 +139,16 @@ export function generaPianoLogico(settings) {
             if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
             runDaysCopy.forEach(day => { runAssignments[day] = "Corsa Facile (attivazione)"; });
         } else {
-            if (runDaysCopy.includes("Sabato")) { runAssignments["Sabato"] = "Lungo trail"; runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1); }
-            else if (runDaysCopy.includes("Domenica")) { runAssignments["Domenica"] = "Lungo trail"; runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1); }
+            if (runDaysCopy.includes("Sabato")) { 
+                runAssignments["Sabato"] = "Lungo trail"; 
+                giornoLungoEffettivo = "Sab";
+                runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1); 
+            }
+            else if (runDaysCopy.includes("Domenica")) { 
+                runAssignments["Domenica"] = "Lungo trail"; 
+                giornoLungoEffettivo = "Dom";
+                runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1); 
+            }
             
             if (runDaysCopy.length > 0) { runAssignments[runDaysCopy[0]] = "Ripetute / Qualità"; runDaysCopy.splice(0, 1); }
             runDaysCopy.forEach(day => { runAssignments[day] = "Fondo Lento"; });
@@ -147,50 +177,36 @@ export function generaPianoLogico(settings) {
                     dplusGiorno = targetDplusGara;
                     durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * (passo10k * 1.30)); 
                     descSpecifico = `🏁 Giorno dell'obiettivo! Divertiti e gestisci il ritmo.`;
-                    
                 } else if (type === "Lungo trail") {
                     kmGiorno = kmCorrentiLungo;
                     dplusGiorno = dplusCorrenteLungo;
                     const passoZ2 = passo10k * 1.15; 
                     durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * passoZ2);
                     descSpecifico = `Lungo specifico a sensazione in ambiente trail. Cammina le salite ripide.`;
-                    
                 } else if (type === "Ripetute / Qualità") {
                     const isSettimanaDispari = (w % 2 !== 0);
                     let quanteRipetute = 0;
                     
                     if (isSettimanaDispari) {
-                        quanteRipetute = 8;
-                        if (w > 3) quanteRipetute = 10;
-                        if (w > 7) quanteRipetute = 12;
-                        
+                        quanteRipetute = w > 7 ? 12 : (w > 3 ? 10 : 8);
                         const passoBreve = passo10k * 0.90; 
                         descSpecifico = `Riscl. 15' + ${quanteRipetute}x 1'15" @${formattaPasso(passoBreve)}/km (Rec. 1'30" da fermo) + Defat.`;
-                        
                         const kmFrazioni = (quanteRipetute * 1.25) / (passoBreve || 5);
                         kmGiorno = Math.round((3 + kmFrazioni) * 10) / 10; 
                         durataMinuti = Math.round(15 + (quanteRipetute * 1.25) + ((quanteRipetute - 1) * 1.5) + 5);
-                        
                     } else {
-                        quanteRipetute = 2;
-                        if (w > 4) quanteRipetute = 4;
-                        if (w > 8) quanteRipetute = 5;
-                        
+                        quanteRipetute = w > 8 ? 5 : (w > 4 ? 4 : 2);
                         const passoLungo = passo10k; 
                         descSpecifico = `Riscl. 15' + ${quanteRipetute}x 5' @${formattaPasso(passoLungo)}/km (Rec. 2'30" Corsa Lenta) + Defat.`;
-                        
                         const kmFrazioni = (quanteRipetute * 5) / (passoLungo || 5);
                         const kmRecuperi = ((quanteRipetute - 1) * 2.5) / (passo10k * 1.15); 
                         kmGiorno = Math.round((3 + kmFrazioni + kmRecuperi) * 10) / 10;
                         durataMinuti = Math.round(15 + (quanteRipetute * 5) + ((quanteRipetute - 1) * 2.5) + 5);
                     }
                     dplusGiorno = Math.round(dplusCorrenteLungo * 0.12);
-                    
                 } else { 
-                    kmGiorno = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
-                    if (isUltimaSettimana) kmGiorno = 5; 
+                    kmGiorno = isUltimaSettimana ? 5 : Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
                     dplusGiorno = Math.round(dplusCorrenteLungo * 0.4);
-                    
                     const passoZ2 = passo10k * 1.15;
                     durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * passoZ2);
                     descSpecifico = `Fondo lento rigenerante. Volume aerobico senza forzare.`;
@@ -226,7 +242,7 @@ export function generaPianoLogico(settings) {
         const infoOre = Math.floor(durataLungoSettimana / 60);
         const infoMinuti = durataLungoSettimana % 60;
         
-        let stringaFocusFinale = `${focusSettimana} | Dom: ${kmCorrentiLungo}km (~${infoOre}h ${infoMinuti}m)`;
+        let stringaFocusFinale = `${focusSettimana} | ${giornoLungoEffettivo}: ${kmCorrentiLungo}km (~${infoOre}h ${infoMinuti}m)`;
         if (isUltimaSettimana) stringaFocusFinale = "Obiettivo raggiunto, scarica e divertiti in gara!";
 
         plan.push({
