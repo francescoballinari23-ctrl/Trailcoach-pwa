@@ -1,4 +1,3 @@
-```javascript
 // piano-aggiornamento.js - Analisi dello storico e rimodulazione basata sulla progressione del Lungo
 
 /**
@@ -187,7 +186,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                         const formattaPassoLocal = (passoDecimale) => {
                             const m = Math.floor(passoDecimale);
                             const s = Math.round((passoDecimale - m) * 60).toString().padStart(2, '0');
-                            return `${m}:${s}`;
+                            return m + ":" + s;
                         };
 
                         if (tagTipo.includes("lungo") || dicituraDettagli.includes("lungo")) {
@@ -210,7 +209,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                                 if (numeroSettimanaConfig > 7) quanteRipetute = 12;
                                 
                                 const passoBreve = passo10k * 0.90;
-                                descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 1'15" @${formattaPassoLocal(passoBreve)}/km (Rec. 1'30" da fermo) + Defat.`;
+                                descrizioneRipetute = "Riscl. 15' + " + quanteRipetute + "x 1'15\" @" + formattaPassoLocal(passoBreve) + "/km (Rec. 1'30\" da fermo) + Defat.";
                                 
                                 const kmFrazioni = (quanteRipetute * 1.25) / (passoBreve || 5);
                                 all.details.distance = Math.round((3 + kmFrazioni) * 10) / 10; 
@@ -221,7 +220,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                                 if (numeroSettimanaConfig > 8) quanteRipetute = 5;
                                 
                                 const passoLungo = passo10k;
-                                descrizioneRipetute = `Riscl. 15' + ${quanteRipetute}x 5' @${formattaPassoLocal(passoLungo)}/km (Rec. 2'30" Corsa Lenta) + Defat.`;
+                                descrizioneRipetute = "Riscl. 15' + " + quanteRipetute + "x 5' @" + formattaPassoLocal(passoLungo) + "/km (Rec. 2'30\" Corsa Lenta) + Defat.";
                                 
                                 const kmFrazioni = (quanteRipetute * 5) / (passoLungo || 5);
                                 const kmRecuperi = ((quanteRipetute - 1) * 2.5) / (passo10k * 1.15); 
@@ -230,7 +229,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                             }
 
                             all.details.ascent = Math.round(dplusCorrenteLungo * 0.12);
-                            all.summary = `🏃 Ripetute: ${descrizioneRipetute}`;
+                            all.summary = "🏃 Ripetute: " + descrizioneRipetute;
 
                         } else if (tagTipo.includes("lento") || dicituraDettagli.includes("lento") || dicituraDettagli.includes("fondo")) {
                             all.details.distance = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
@@ -254,14 +253,14 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
                         const ascRiferimento = all.details.ascent || 0;
                         const tempoStimatoh = Math.floor((all.details.durationMin || 0) / 60);
                         const tempoStimatom = (all.details.durationMin || 0) % 60;
-                        const stringaTempo = tempoStimatoh > 0 ? `${tempoStimatoh}h ${tempoStimatom}m` : `${tempoStimatom} min`;
+                        const stringaTempo = tempoStimatoh > 0 ? (tempoStimatoh + "h " + tempoStimatom + "m") : (tempoStimatom + " min");
 
                         if (!tagTipo.includes("ripetute") && !dicituraDettagli.includes("ripetute")) {
-                            all.summary = `${tagTipo.charAt(0).toUpperCase() + tagTipo.slice(1)} di ${kmRiferimento} km`;
+                            all.summary = (tagTipo.charAt(0).toUpperCase() + tagTipo.slice(1)) + " di " + kmRiferimento + " km";
                         }
                         
-                        all.dettagli = `🏃 Sforzo stimato: ${stringaTempo} | ${kmRiferimento} km | +${ascRiferimento}m D+`;
-                        all.details.detailText = `Distanza: ${kmRiferimento} km, Dislivello: +${ascRiferimento} m, Tempo: ${stringaTempo}`;
+                        all.dettagli = "🏃 Sforzo stimato: " + stringaTempo + " | " + kmRiferimento + " km | +" + ascRiferimento + "m D+";
+                        all.details.detailText = "Distanza: " + kmRiferimento + " km, Dislivello: +" + ascRiferimento + " m, Tempo: " + stringaTempo;
                     }
 
                     return all;
@@ -278,7 +277,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         });
 
         const pianoConsolidatoLocale = {
-            descrizione_generale: `Piano ricalcolato localmente (Progressione Lunghi) il ${new Date().toLocaleDateString('it-IT')}. Target: ${kmGara}km.`,
+            descrizione_generale: "Piano ricalcolato localmente (Progressione Lunghi) il " + new Date().toLocaleDateString('it-IT') + ". Target: " + kmGara + "km.",
             settimane: [...settimanePassate, ...settimaneFutureRicalcolate]
         };
 
@@ -293,7 +292,7 @@ export function eseguiRimodulazioneMatematicaLocale(tipoPiano, report, nuoveImpo
         }
 
         saveState();
-        alert(`🎯 Ricalcolo basato sulla progressione dei Lunghi completato! Le settimane future sono state riadattate partendo dai tuoi 16 km reali.`);
+        alert("🎯 Ricalcolo basato sulla progressione dei Lunghi completato! Le settimane future sono state riadattate partendo dai tuoi 16 km reali.");
 
     } catch (error) {
         console.error("Errore nel ricalcolo locale dei lunghi:", error);
@@ -316,7 +315,7 @@ export function esportaPianoInJSON(STATE) {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datiDaSalvare, null, 2));
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `piano_allenamento_trail_${new Date().toISOString().split('T')[0]}.json`);
+        downloadAnchor.setAttribute("download", "piano_allenamento_trail_" + new Date().toISOString().split('T')[0] + ".json");
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
@@ -357,14 +356,14 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
                             const kmRiferimento = all.details.distance || all.km || 0;
                             const ascRiferimento = all.details.ascent || all.asc || 0;
 
-                            if (all.summary) all.summary = all.summary.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`);
-                            if (all.dettagli) all.dettagli = all.dettagli.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
-                            if (all.details.detailText) all.details.detailText = all.details.detailText.replace(/(\d+(\.\d+)?)\s*km/gi, `${kmRiferimento} km`).replace(/\+(\d+)\s*m/gi, `+${ascRiferimento} m`);
+                            if (all.summary) all.summary = all.summary.replace(/(\d+(\.\d+)?)\s*km/gi, kmRiferimento + " km");
+                            if (all.dettagli) all.dettagli = all.dettagli.replace(/(\d+(\.\d+)?)\s*km/gi, kmRiferimento + " km").replace(/\+(\d+)\s*m/gi, "+" + ascRiferimento + " m");
+                            if (all.details.detailText) all.details.detailText = all.details.detailText.replace(/(\d+(\.\d+)?)\s*km/gi, kmRiferimento + " km").replace(/\+(\d+)\s*m/gi, "+" + ascRiferimento + " m");
                             
                             return all;
                         });
                     }
-                    return settimana;
+                    return... settimana;
                 });
 
                 const pianoPulito = pianoCaricato.settimane ? { ...pianoCaricato, settimane } : { settimane };
@@ -392,5 +391,3 @@ export function importaPianoDaJSON(funzioniCallback, STATE) {
 
     fileInput.click();
 }
-
-```
