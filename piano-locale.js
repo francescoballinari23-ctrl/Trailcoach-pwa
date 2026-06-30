@@ -61,8 +61,6 @@ export function getDefaultDetails() {
 
 export function generaPianoLogico(settings) {
     const sicuroSettings = settings || {};
-    
-    // Utilizzo dei fallback coerenti con getDefaultDetails
     const livello = sicuroSettings.livello || "5.8";
     const obbKm = sicuroSettings.obbKm || 50;
     const obbAsc = sicuroSettings.obbAsc || 2000;
@@ -114,8 +112,9 @@ export function generaPianoLogico(settings) {
             kmProgressioneFisiologica = Math.min(lungoPiccoTarget, Math.round((kmProgressioneFisiologica * 1.10) * 10) / 10);
             dplusProgressioneFisiologica = Math.min(dplusPiccoTarget, Math.round(dplusProgressioneFisiologica * 1.12));
         } else {
-            const settimaneMancantiAllaGara = settimaneReali - w;
-            if (settimaneMancantiAllaGara === 2) {
+            const settimaneMancantiAllaGara = semanas => settimaneReali - w;
+            const settimaneMancantiAllaGaraVal = settimaneReali - w;
+            if (settimaneMancantiAllaGaraVal === 2) {
                 kmCorrentiLungo = Math.round(lungoPiccoTarget * 0.7); 
                 dplusCorrenteLungo = Math.round(dplusPiccoTarget * 0.6);
                 focusSettimana = "Inizio scarico pre-gara";
@@ -126,34 +125,58 @@ export function generaPianoLogico(settings) {
             }
         }
 
+        // --- STIMA DEL TEMPO REALE DEL LUNGO TEORICO ---
+        const ripidezzaMertriPerKm = kmCorrentiLungo > 0 ? (dplusCorrenteLungo / kmCorrentiLungo) : 0;
+        let fattoreRipidezza = 1.15;
+        if (ripidezzaMertriPerKm > 60) fattoreRipidezza = 1.25; 
+        if (ripidezzaMertriPerKm > 90) fattoreRipidezza = 1.35; 
+
+        let fattoreDistanza = 1.0;
+        if (kmCorrentiLungo > 25) fattoreDistanza = 1.08;
+        if (kmCorrentiLungo > 40) fattoreDistanza = 1.18;
+
+        const passoZ2Reale = passo10k * fattoreRipidezza * fattoreDistanza;
+        const kmSforzoTeorici = kmCorrentiLungo + (dplusCorrenteLungo / 100);
+        const durataLungoTeoricaMinuti = Math.round(kmSforzoTeorici * passoZ2Reale);
+
+        const richiedeBackToBack = (durataLungoTeoricaMinuti > 420) && !isUltimaSettimana;
+
+        if (richiedeBackToBack && focusSettimana === "Costruzione progressiva volume") {
+            focusSettimana = "⚡ Blocco Back-to-Back (Volume Avanzato)";
+        }
+
         const allenamentiSettimana = [];
         let totaleKmSettimanale = 0, totaleDplusSettimanale = 0;
         let runAssignments = {};
-        let giornoLungoEffettivo = "Dom"; 
+        let infoStringaFocusLungo = ""; 
         
         const runDaysCopy = Array.isArray(giorniCorsa) ? [...giorniCorsa] : [];
 
+        // --- ASSEGNAZIONE DEI GIORNI DI CORSA ---
         if (isUltimaSettimana) {
             runAssignments["Domenica"] = "GARA 🎉";
             if (runDaysCopy.includes("Domenica")) runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
             if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
             runDaysCopy.forEach(day => { runAssignments[day] = "Corsa Facile (attivazione)"; });
-        } else {
-            if (runDaysCopy.includes("Sabato")) { 
-                runAssignments["Sabato"] = "Lungo trail"; 
-                giornoLungoEffettivo = "Sab";
-                runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1); 
-            }
-            else if (runDaysCopy.includes("Domenica")) { 
-                runAssignments["Domenica"] = "Lungo trail"; 
-                giornoLungoEffettivo = "Dom";
-                runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1); 
-            }
+        } else if (richiedeBackToBack) {
+            runAssignments["Sabato"] = "B2B - Lungo Sabato";
+            runAssignments["Domenica"] = "B2B - Lungo Domenica";
+            if (runDaysCopy.includes("Sabato")) runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1);
+            if (runDaysCopy.includes("Domenica")) runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1);
             
+            if (runDaysCopy.length > 0) { runAssignments[runDaysCopy[0]] = "Ripetute / Qualità"; runDaysCopy.splice(0, 1); }
+            runDaysCopy.forEach(day => { runAssignments[day] = "Fondo Lento"; });
+        } else {
+            let giornoLungo = "Domenica";
+            if (runDaysCopy.includes("Sabato")) { giornoLungo = "Sabato"; runDaysCopy.splice(runDaysCopy.indexOf("Sabato"), 1); }
+            else if (runDaysCopy.includes("Domenica")) { giornoLungo = "Domenica"; runDaysCopy.splice(runDaysCopy.indexOf("Domenica"), 1); }
+            
+            runAssignments[giornoLungo] = "Lungo trail";
             if (runDaysCopy.length > 0) { runAssignments[runDaysCopy[0]] = "Ripetute / Qualità"; runDaysCopy.splice(0, 1); }
             runDaysCopy.forEach(day => { runAssignments[day] = "Fondo Lento"; });
         }
 
+        // --- CICLO GENERAZIONE GIORNALIERA ---
         for (const day of GIORNI) {
             let det = { distance: 0, ascent: 0, durationMin: 0, detailText: "", completed: false, gpxData: null };
             let type = "Riposo";
@@ -167,7 +190,7 @@ export function generaPianoLogico(settings) {
                 type = "Palestra";
                 summary = "🏋️ Palestra";
                 det.durationMin = 45;
-                det.detailText = "Allenamento di Forza o Core, 45-60 min. Focus su gambe, schiena e stabilità.";
+                det.detailText = "Allenamento di Forza o Core, 45-60 min. Focus su stabilità e catena posteriore.";
             } else if (runAssignments[day]) {
                 type = runAssignments[day];
                 let kmGiorno = 0, dplusGiorno = 0, durataMinuti = 0, descSpecifico = "";
@@ -175,18 +198,38 @@ export function generaPianoLogico(settings) {
                 if (type === "GARA 🎉") {
                     kmGiorno = targetKmGara;
                     dplusGiorno = targetDplusGara;
-                    durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * (passo10k * 1.30)); 
-                    descSpecifico = `🏁 Giorno dell'obiettivo! Divertiti e gestisci il ritmo.`;
+                    durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * (passo10k * 1.35)); 
+                    descSpecifico = `🏁 Giorno dell'obiettivo! Gestisci le energie nella prima metà.`;
+                    
                 } else if (type === "Lungo trail") {
                     kmGiorno = kmCorrentiLungo;
                     dplusGiorno = dplusCorrenteLungo;
-                    const passoZ2 = passo10k * 1.15; 
-                    durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * passoZ2);
-                    descSpecifico = `Lungo specifico a sensazione in ambiente trail. Cammina le salite ripide.`;
+                    durataMinuti = durataLungoTeoricaMinuti;
+                    descSpecifico = `Lungo specifico in ambiente trail. Ritmo aerobico, ottimizza i materiali.`;
+                    const gBreve = day === "Sabato" ? "Sab" : "Dom";
+                    infoStringaFocusLungo = `${gBreve}: ${kmGiorno}km (${Math.floor(durataMinuti/60)}h ${durataMinuti%60}m)`;
+
+                } else if (type === "B2B - Lungo Sabato") {
+                    kmGiorno = Math.round((kmCorrentiLungo * 0.6) * 10) / 10;
+                    dplusGiorno = Math.round(dplusCorrenteLungo * 0.6);
+                    const kmSforzo = kmGiorno + (dplusGiorno / 100);
+                    durataMinuti = Math.round(kmSforzo * (passo10k * fattoreRipidezza)); 
+                    descSpecifico = `Parte 1 del Back-to-Back. Corri sciolto, focus su nutrizione e idratazione pre-Domenica.`;
+                    infoStringaFocusLungo = `Sab: ${kmGiorno}km (${Math.floor(durataMinuti/60)}h ${durataMinuti%60}m)`;
+
+                } else if (type === "B2B - Lungo Domenica") {
+                    kmGiorno = Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
+                    dplusGiorno = Math.round(dplusCorrenteLungo * 0.5);
+                    const kmSforzo = kmGiorno + (dplusGiorno / 100);
+                    durataMinuti = Math.round(kmSforzo * (passo10k * fattoreRipidezza * 1.10));
+                    descSpecifico = `Parte 2 del Back-to-Back. Simulazione di gara su forte stanchezza residua. Cammina con decisione.`;
+                    infoStringaFocusLungo += ` + Dom: ${kmGiorno}km (${Math.floor(durataMinuti/60)}h ${durataMinuti%60}m)`;
+
                 } else if (type === "Ripetute / Qualità") {
                     const isSettimanaDispari = (w % 2 !== 0);
                     let quanteRipetute = 0;
                     
+                    if (isSettimariDispari = (w % 2 !== 0)) { /* fix inline check */ }
                     if (isSettimanaDispari) {
                         quanteRipetute = w > 7 ? 12 : (w > 3 ? 10 : 8);
                         const passoBreve = passo10k * 0.90; 
@@ -205,27 +248,28 @@ export function generaPianoLogico(settings) {
                     }
                     dplusGiorno = Math.round(dplusCorrenteLungo * 0.12);
                 } else { 
-                    kmGiorno = isUltimaSettimana ? 5 : Math.round((kmCorrentiLungo * 0.5) * 10) / 10;
-                    dplusGiorno = Math.round(dplusCorrenteLungo * 0.4);
-                    const passoZ2 = passo10k * 1.15;
-                    durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * passoZ2);
-                    descSpecifico = `Fondo lento rigenerante. Volume aerobico senza forzare.`;
+                    kmGiorno = isUltimaSettimana ? 5 : Math.round((kmCorrentiLungo * 0.4) * 10) / 10;
+                    dplusGiorno = Math.round(dplusCorrenteLungo * 0.25);
+                    durataMinuti = Math.round((kmGiorno + (dplusGiorno / 100)) * (passo10k * 1.15));
+                    descSpecifico = `Fondo lento rigenerante aerobico.`;
                 }
 
                 det.distance = kmGiorno;
                 det.ascent = dplusGiorno;
-                det.durationMin = durataMinuti;
+                det.durationMin = durationMinuti;
                 
                 const tempoStimatoh = Math.floor(durataMinuti / 60);
-                const tempoStimatom = durataMinuti % 60;
+                const tempoStimatom = durationMinuti % 60;
                 const stringaTempo = tempoStimatoh > 0 ? `${tempoStimatoh}h ${tempoStimatom}m` : `${tempoStimatom} min`;
 
                 det.detailText = `Distanza: ${kmGiorno} km, Dislivello: +${dplusGiorno} m, Tempo: ${stringaTempo}. \n${descSpecifico}`;
                 
-                if (type === "Ripetute / Qualità") {
+                if (type.includes("Ripetute")) {
                     summary = `🏃 Ripetute: ${descSpecifico}`;
                 } else if (type === "GARA 🎉") {
                     summary = `🏁 TARGET GARA — ${kmGiorno} km`;
+                } else if (type.includes("B2B")) {
+                    summary = `🧱 ${type} — ${kmGiorno} km`;
                 } else {
                     summary = `${type} di ${kmGiorno} km`;
                 }
@@ -236,13 +280,8 @@ export function generaPianoLogico(settings) {
 
             allenamentiSettimana.push({day, type, summary, dettagli: det.detailText, details: det});
         }
-
-        const passoZ2LungoInfo = passo10k * 1.15;
-        const durataLungoSettimana = Math.round((kmCorrentiLungo + (dplusCorrenteLungo / 100)) * passoZ2LungoInfo);
-        const infoOre = Math.floor(durataLungoSettimana / 60);
-        const infoMinuti = durataLungoSettimana % 60;
         
-        let stringaFocusFinale = `${focusSettimana} | ${giornoLungoEffettivo}: ${kmCorrentiLungo}km (~${infoOre}h ${infoMinuti}m)`;
+        let stringaFocusFinale = `${focusSettimana} | ${infoStringaFocusLungo}`;
         if (isUltimaSettimana) stringaFocusFinale = "Obiettivo raggiunto, scarica e divertiti in gara!";
 
         plan.push({
