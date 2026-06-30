@@ -90,7 +90,6 @@ export async function ricalcolaSettimaneFutureAI(settings, settimaneMancanti) {
 
 /**
  * Pulisce la stringa ricevuta dall'AI ed esegue il parsing sicuro in JSON.
- * Ottimizzata per evitare eccezioni bloccanti su Safari iOS e priva di backticks.
  * @param {string} rawText - Testo grezzo ritornato dal server.
  * @returns {Object} - Oggetto JSON interpretato.
  */
@@ -100,10 +99,36 @@ export function pulisciEParseJSONAI(rawText) {
     }
 
     let cleanText = rawText.trim();
-    
-    // Generiamo la stringa con tre backtick senza scriverli letteralmente nel sorgente (evita problemi di interpretazione dei moduli)
     const treBacktick = String.fromCharCode(96, 96, 96);
     
     // 1. Estrazione se ci sono i blocchi di codice Markdown standard
     if (cleanText.indexOf(treBacktick) !== -1) {
-        // Regex dinamica equivalente a /
+        const espressioneRegolare = new RegExp(treBacktick + "(?:json)?([\\s\\S]*?)" + treBacktick);
+        const match = cleanText.match(espressioneRegolare);
+        if (match && match[1]) {
+            cleanText = match[1].trim();
+        }
+    }
+    
+    // 2. Isola l'inizio del JSON
+    const primoContenitore = Math.min(
+        cleanText.indexOf('{') === -1 ? Infinity : cleanText.indexOf('{'),
+        cleanText.indexOf('[') === -1 ? Infinity : cleanText.indexOf('[')
+    );
+    
+    const ultimoContenitore = Math.max(
+        cleanText.lastIndexOf('}'),
+        cleanText.lastIndexOf(']')
+    );
+    
+    if (primoContenitore !== Infinity && ultimoContenitore !== -1 && ultimoContenitore > primoContenitore) {
+        cleanText = cleanText.substring(primoContenitore, ultimoContenitore + 1);
+    }
+    
+    try {
+        return JSON.parse(cleanText);
+    } catch (e) {
+        console.error("Errore di parsing del testo pulito dell'AI:", cleanText);
+        throw new Error("La risposta dell'AI non contiene un formato JSON valido: " + e.message);
+    }
+}
