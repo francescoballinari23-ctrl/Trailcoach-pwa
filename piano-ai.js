@@ -1,8 +1,12 @@
-```javascript
 // piano-ai.js - Gestione dei flussi asincroni con Pipedream AI
 
 const WEBHOOK_URL = "https://eoakctnc24hsvp9.m.pipedream.net";
 
+/**
+ * Genera un nuovo piano di allenamento tramite intelligenza artificiale.
+ * @param {Object} settings - Impostazioni raccolte dalla UI.
+ * @returns {Promise<string>} - Risposta in formato testo dall'AI.
+ */
 export async function generaPianoAI(settings) {
     const controller = new AbortController();
     const timeout = setTimeout(() => { controller.abort(); }, 180000); // 3 minuti max
@@ -19,15 +23,32 @@ export async function generaPianoAI(settings) {
         });
 
         clearTimeout(timeout);
-        if (!response.ok) throw new Error(`Errore HTTP ${response.status}`);
         
-        return await response.text();
+        if (!response || !response.ok) {
+            throw new Error(`Errore HTTP ${response ? response.status : 'Sconosciuto'}`);
+        }
+        
+        const testoRisposta = await response.text();
+        if (!testoRisposta || testoRisposta.trim() === "") {
+            throw new Error("Il server AI ha restituito una risposta vuota.");
+        }
+
+        return testoRisposta;
     } catch (err) {
         clearTimeout(timeout);
+        if (err.name === 'AbortError') {
+            throw new Error("La richiesta all'AI è andata in timeout. Verifica la connessione a Internet.");
+        }
         throw err;
     }
 }
 
+/**
+ * Ricalcola le settimane future inviando lo storico e le impostazioni aggiornate.
+ * @param {Object} settings - Impostazioni arricchite con lo storico reale.
+ * @param {Array} settimaneMancanti - Lista delle sole settimane future rimaste.
+ * @returns {Promise<string>} - Risposta in formato testo dall'AI.
+ */
 export async function ricalcolaSettimaneFutureAI(settings, settimaneMancanti) {
     const controller = new AbortController();
     const timeout = setTimeout(() => { controller.abort(); }, 180000); // 3 minuti max
@@ -45,21 +66,39 @@ export async function ricalcolaSettimaneFutureAI(settings, settimaneMancanti) {
         });
 
         clearTimeout(timeout);
-        if (!response.ok) throw new Error(`Errore HTTP ${response.status}`);
-        return await response.text();
+
+        if (!response || !response.ok) {
+            throw new Error(`Errore HTTP ${response ? response.status : 'Connessione fallita'}`);
+        }
+
+        const testoRisposta = await response.text();
+        if (!testoRisposta || testoRisposta.trim() === "") {
+            throw new Error("Il server AI ha restituito dati vuoti per il ricalcolo.");
+        }
+
+        return testoRisposta;
     } catch (err) {
         clearTimeout(timeout);
+        if (err.name === 'AbortError') {
+            throw new Error("Il ricalcolo dell'AI è andato in timeout per inattività della rete.");
+        }
         throw err;
     }
 }
 
+/**
+ * Pulisce la stringa ricevuta dall'AI ed esegue il parsing sicuro in JSON.
+ * Ottimizzata per evitare eccezioni bloccanti su Safari iOS.
+ * @param {string} rawText - Testo grezzo ritornato dal server.
+ * @returns {Object} - Oggetto JSON interpretato.
+ */
 export function pulisciEParseJSONAI(rawText) {
     if (!rawText || typeof rawText !== 'string') {
-        throw new Error("Dati ricevuti dall'AI non validi o vuoti.");
+        throw new Error("I dati inviati dall'AI non sono testuali.");
     }
 
     let cleanText = rawText.trim();
     
-    // 1. Estrazione se ci sono i blocchi di codice Markdown 
-
-```
+    // 1. Estrazione se ci sono i blocchi di codice Markdown standard
+    if (cleanText.includes("```")) {
+        const match = cleanText.match(/
