@@ -25,7 +25,8 @@ export async function generaPianoAI(settings) {
         clearTimeout(timeout);
         
         if (!response || !response.ok) {
-            throw new Error(`Errore HTTP ${response ? response.status : 'Sconosciuto'}`);
+            const statusErr = response ? response.status : "Sconosciuto";
+            throw new Error("Errore HTTP " + statusErr);
         }
         
         const testoRisposta = await response.text();
@@ -68,7 +69,8 @@ export async function ricalcolaSettimaneFutureAI(settings, settimaneMancanti) {
         clearTimeout(timeout);
 
         if (!response || !response.ok) {
-            throw new Error(`Errore HTTP ${response ? response.status : 'Connessione fallita'}`);
+            const statusErr = response ? response.status : "Connessione fallita";
+            throw new Error("Errore HTTP " + statusErr);
         }
 
         const testoRisposta = await response.text();
@@ -88,7 +90,7 @@ export async function ricalcolaSettimaneFutureAI(settings, settimaneMancanti) {
 
 /**
  * Pulisce la stringa ricevuta dall'AI ed esegue il parsing sicuro in JSON.
- * Ottimizzata per evitare eccezioni bloccanti su Safari iOS.
+ * Ottimizzata per evitare eccezioni bloccanti su Safari iOS e priva di backticks.
  * @param {string} rawText - Testo grezzo ritornato dal server.
  * @returns {Object} - Oggetto JSON interpretato.
  */
@@ -99,6 +101,9 @@ export function pulisciEParseJSONAI(rawText) {
 
     let cleanText = rawText.trim();
     
+    // Generiamo la stringa con tre backtick senza scriverli letteralmente nel sorgente (evita problemi di interpretazione dei moduli)
+    const treBacktick = String.fromCharCode(96, 96, 96);
+    
     // 1. Estrazione se ci sono i blocchi di codice Markdown standard
-    if (cleanText.includes("```")) {
-        const match = cleanText.match(/
+    if (cleanText.indexOf(treBacktick) !== -1) {
+        // Regex dinamica equivalente a /
