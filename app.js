@@ -20,7 +20,7 @@ window.addEventListener('unhandledrejection', function (event) {
 });
 
 // Questo alert ora apparirà correttamente sul tuo iPhone confermando il caricamento
-alert("🚀 Sistema di tracciamento avviato in app.js!");
+alert("🚀 Apllicazione caricata correttamente!");
 
 const STORAGE_KEY = "trailcoach_v17_modular";
 let STATE = { settings: {}, planData: null, planDataAI: null };
